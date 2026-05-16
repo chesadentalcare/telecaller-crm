@@ -56,6 +56,29 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  fullQualificationSchema,
+  fullQualificationDefaults,
+  type FullQualificationValues,
+} from "@/lib/schemas/full-qualification"
+import {
+  callAttemptSchema,
+  callAttemptDefaults,
+  type CallAttemptValues,
+  type CallOutcome,
+} from "@/lib/schemas/call-attempt"
+import {
+  zoomMeetingSchema,
+  zoomMeetingDefaults,
+  type ZoomMeetingValues,
+} from "@/lib/schemas/zoom-meeting"
+import {
+  physicalMeetingSchema,
+  physicalMeetingDefaults,
+  type PhysicalMeetingValues,
+} from "@/lib/schemas/physical-meeting"
 
 // ─── Mock data — replace with real fetch when backend lands ─────────────
 type CallAttempt = {
@@ -198,14 +221,15 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         />
       )}
 
-      {/* Tabs */}
+      {/* Tabs — horizontally scrollable on mobile so all 5 stay readable
+          instead of wrapping to an uneven 3+2 grid. Snap to grid on sm+. */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="calls">Calls</TabsTrigger>
-          <TabsTrigger value="qualification">Qualification</TabsTrigger>
-          <TabsTrigger value="drip">Drip</TabsTrigger>
-          <TabsTrigger value="meetings">Meetings</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Calls</TabsTrigger>
+          <TabsTrigger value="qualification" className="shrink-0 text-xs sm:text-sm">Qualification</TabsTrigger>
+          <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
+          <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -330,7 +354,7 @@ function InfoRow({
   label,
   value,
 }: {
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
   label: string
   value: string
 }) {
@@ -343,33 +367,37 @@ function InfoRow({
   )
 }
 
+// Outcome metadata. Lives at module scope so the History list (rendered from
+// `lead.attempts`) can look up labels/icons by enum key without going through
+// the form's state.
+const OUTCOME_CONFIG: Record<CallOutcome, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
+  no_response:         { label: "No response",         color: "text-muted-foreground", icon: PhoneOff },
+  wrong_number:        { label: "Wrong number",        color: "text-destructive",      icon: XCircle },
+  not_interested:      { label: "Not interested",      color: "text-destructive",      icon: XCircle },
+  call_back_requested: { label: "Call back requested", color: "text-warning",          icon: Clock },
+  engaged:             { label: "Engaged",             color: "text-success",          icon: CheckCircle2 },
+  replied:             { label: "Replied (WhatsApp)",  color: "text-success",          icon: MessageSquare },
+}
+
 // ─── Calls Tab — Gap #2: Call Attempt Logger ───────────────────────────
 function CallsTab({ lead }: { lead: LeadDetail }) {
-  const [outcome, setOutcome] = useState<string>("")
-  const [notes, setNotes] = useState("")
+  const { control, handleSubmit, reset, formState } = useForm<CallAttemptValues>({
+    resolver: zodResolver(callAttemptSchema),
+    // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
+    // register the Select. zod catches the empty value on submit.
+    defaultValues: { ...callAttemptDefaults, outcome: "" as CallOutcome },
+    mode: "onChange",
+  })
+  const { errors, isSubmitting } = formState
 
-  const outcomeConfig: Record<string, { label: string; color: string; icon: any }> = {
-    no_response: { label: "No response", color: "text-muted-foreground", icon: PhoneOff },
-    wrong_number: { label: "Wrong number", color: "text-destructive", icon: XCircle },
-    not_interested: { label: "Not interested", color: "text-destructive", icon: XCircle },
-    call_back_requested: { label: "Call back requested", color: "text-warning", icon: Clock },
-    engaged: { label: "Engaged", color: "text-success", icon: CheckCircle2 },
-    replied: { label: "Replied (WhatsApp)", color: "text-success", icon: MessageSquare },
-  }
-
-  const handleLog = () => {
-    if (!outcome) {
-      toast.error("Please select an outcome")
-      return
-    }
+  const onSubmit = async (_values: CallAttemptValues) => {
+    // Real impl: POST to /api/telecaller/leads/:id/attempt via a mutation.
     toast.success("Call attempt logged")
-    setOutcome("")
-    setNotes("")
+    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
   }
 
   return (
     <div className="space-y-4">
-      {/* Logger form */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -381,36 +409,46 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Outcome</Label>
-            <Select value={outcome} onValueChange={setOutcome}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select outcome" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(outcomeConfig).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>
-                    {cfg.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Notes (optional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Discussion notes, follow-up time, key points..."
-              rows={3}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
+            <Controller
+              control={control}
+              name="outcome"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Outcome</Label>
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Select outcome" /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(OUTCOME_CONFIG) as [CallOutcome, typeof OUTCOME_CONFIG[CallOutcome]][]).map(([key, cfg]) => (
+                        <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.outcome && <p className="text-[11px] text-destructive">{errors.outcome.message}</p>}
+                </div>
+              )}
             />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button size="sm" onClick={handleLog} className="gap-1.5">
-              <Send className="size-3.5" />
-              Log Attempt
-            </Button>
-          </div>
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Notes (optional)</Label>
+                  <Textarea
+                    {...field}
+                    placeholder="Discussion notes, follow-up time, key points..."
+                    rows={3}
+                  />
+                </div>
+              )}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="submit" size="sm" disabled={isSubmitting} className="gap-1.5">
+                <Send className="size-3.5" />
+                Log Attempt
+              </Button>
+            </div>
+          </form>
 
           {lead.attempts.length + 1 >= 4 && (
             <Alert className="border-warning/30 bg-warning/5">
@@ -440,7 +478,7 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
           ) : (
             <ol className="space-y-3">
               {lead.attempts.map((a) => {
-                const cfg = outcomeConfig[a.outcome]
+                const cfg = OUTCOME_CONFIG[a.outcome as CallOutcome]
                 const Icon = cfg.icon
                 return (
                   <li key={a.id} className="flex gap-3 text-sm">
@@ -575,21 +613,29 @@ function FullQualificationDialog({
   onOpenChange: (v: boolean) => void
   lead: LeadDetail
 }) {
-  const [decisionMaker, setDecisionMaker] = useState(lead.decisionMaker ?? "")
-  const [timelineBucket, setTimelineBucket] = useState(lead.timelineBucket ?? "")
-  const [budgetRange, setBudgetRange] = useState(lead.budgetRange ?? "")
-  const [competitors, setCompetitors] = useState(lead.competitors ?? "")
-  const [fundingMethod, setFundingMethod] = useState(lead.fundingMethod ?? "")
-  const [dentistType, setDentistType] = useState(lead.dentistType ?? "")
-  const [practiceType, setPracticeType] = useState(lead.practiceType ?? "")
+  const { control, handleSubmit, reset, formState } = useForm<FullQualificationValues>({
+    resolver: zodResolver(fullQualificationSchema),
+    defaultValues: {
+      ...fullQualificationDefaults,
+      decisionMaker: lead.decisionMaker ?? "",
+      timelineBucket: lead.timelineBucket ?? "",
+      budgetRange: lead.budgetRange ?? "",
+      competitors: lead.competitors ?? "",
+      fundingMethod: lead.fundingMethod ?? "",
+      dentistType: lead.dentistType ?? "",
+      practiceType: lead.practiceType ?? "",
+    },
+    mode: "onChange",
+  })
+  const { errors, isSubmitting } = formState
 
-  const handleSave = () => {
-    if (!decisionMaker || !timelineBucket || !budgetRange || !competitors || !fundingMethod || !dentistType || !practiceType) {
-      toast.error("All 6 fields are required to fully qualify")
-      return
-    }
+  const onSubmit = async (_values: FullQualificationValues) => {
+    // Real save will mutate via TanStack Query — for now just acknowledge.
     toast.success("Full qualification saved — physical meeting gate unlocked")
     onOpenChange(false)
+    // Reset back to fresh defaults so reopening the dialog doesn't show
+    // stale values after a server round-trip.
+    reset()
   }
 
   return (
@@ -601,115 +647,149 @@ function FullQualificationDialog({
             All 6 fields are required before scheduling a physical meeting. Telecaller can move the timeline in any direction.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Decision Maker</Label>
-            <Input
-              value={decisionMaker}
-              onChange={(e) => setDecisionMaker(e.target.value)}
-              placeholder="Self / Partner / Spouse / Practice Manager"
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <div className="space-y-3 py-2">
+            <Controller
+              control={control}
+              name="decisionMaker"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Decision Maker</Label>
+                  <Input {...field} placeholder="Self / Partner / Spouse / Practice Manager" />
+                  {errors.decisionMaker && <p className="text-[11px] text-destructive">{errors.decisionMaker.message}</p>}
+                </div>
+              )}
             />
-          </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Timeline / Closing Date</Label>
-            <Select value={timelineBucket} onValueChange={setTimelineBucket}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select timeline" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="immediate">Immediate (this month)</SelectItem>
-                <SelectItem value="1-3 months">1-3 months</SelectItem>
-                <SelectItem value="3-6 months">3-6 months</SelectItem>
-                <SelectItem value="6_plus_month">6+ months</SelectItem>
-                <SelectItem value="just_exploring">Just exploring</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground">
-              Writes to SAP <code>OOPR.ClosingDate</code>. Telecaller can move any direction.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Budget Range</Label>
-            <Select value={budgetRange} onValueChange={setBudgetRange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select budget" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="<5L">Under ₹5L</SelectItem>
-                <SelectItem value="5-10L">₹5L - ₹10L</SelectItem>
-                <SelectItem value="10-25L">₹10L - ₹25L</SelectItem>
-                <SelectItem value="25L+">₹25L+</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Competitors being considered</Label>
-            <Input
-              value={competitors}
-              onChange={(e) => setCompetitors(e.target.value)}
-              placeholder="e.g., Carestream, Vatech, Planmeca"
+            <Controller
+              control={control}
+              name="timelineBucket"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Timeline / Closing Date</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Select timeline" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate (this month)</SelectItem>
+                      <SelectItem value="1-3 months">1-3 months</SelectItem>
+                      <SelectItem value="3-6 months">3-6 months</SelectItem>
+                      <SelectItem value="6_plus_month">6+ months</SelectItem>
+                      <SelectItem value="just_exploring">Just exploring</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    Writes to SAP <code>OOPR.ClosingDate</code>. Telecaller can move any direction.
+                  </p>
+                  {errors.timelineBucket && <p className="text-[11px] text-destructive">{errors.timelineBucket.message}</p>}
+                </div>
+              )}
             />
-            <p className="text-[10px] text-muted-foreground">
-              Writes to SAP <code>OPR3 Competitors</code>.
-            </p>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Funding Method</Label>
-            <Select value={fundingMethod} onValueChange={setFundingMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select funding" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="loan">Loan</SelectItem>
-                <SelectItem value="not_sure">Not sure yet</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <Controller
+              control={control}
+              name="budgetRange"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Budget Range</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Select budget" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="<5L">Under ₹5L</SelectItem>
+                      <SelectItem value="5-10L">₹5L - ₹10L</SelectItem>
+                      <SelectItem value="10-25L">₹10L - ₹25L</SelectItem>
+                      <SelectItem value="25L+">₹25L+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.budgetRange && <p className="text-[11px] text-destructive">{errors.budgetRange.message}</p>}
+                </div>
+              )}
+            />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Dentist Type</Label>
-              <Select value={dentistType} onValueChange={setDentistType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general_practitioner">General Practitioner</SelectItem>
-                  <SelectItem value="orthodontist">Orthodontist</SelectItem>
-                  <SelectItem value="endodontist">Endodontist</SelectItem>
-                  <SelectItem value="prosthodontist_implantologist">Prosthodontist / Implantologist</SelectItem>
-                  <SelectItem value="oral_maxillofacial_surgeon">Oral/Maxillofacial Surgeon</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Practice Type</Label>
-              <Select value={practiceType} onValueChange={setPracticeType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="solo_practice">Solo Practice</SelectItem>
-                  <SelectItem value="group_clinic">Group Clinic</SelectItem>
-                  <SelectItem value="multi_specialty_clinic">Multi-Specialty Clinic</SelectItem>
-                  <SelectItem value="chain_corporate">Chain / Corporate</SelectItem>
-                  <SelectItem value="hospital_or_academic">Hospital / Academic</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+            <Controller
+              control={control}
+              name="competitors"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Competitors being considered</Label>
+                  <Input {...field} placeholder="e.g., Carestream, Vatech, Planmeca" />
+                  <p className="text-[10px] text-muted-foreground">
+                    Writes to SAP <code>OPR3 Competitors</code>.
+                  </p>
+                  {errors.competitors && <p className="text-[11px] text-destructive">{errors.competitors.message}</p>}
+                </div>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="fundingMethod"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Funding Method</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Select funding" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="loan">Loan</SelectItem>
+                      <SelectItem value="not_sure">Not sure yet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.fundingMethod && <p className="text-[11px] text-destructive">{errors.fundingMethod.message}</p>}
+                </div>
+              )}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Controller
+                control={control}
+                name="dentistType"
+                render={({ field }) => (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dentist Type</Label>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general_practitioner">General Practitioner</SelectItem>
+                        <SelectItem value="orthodontist">Orthodontist</SelectItem>
+                        <SelectItem value="endodontist">Endodontist</SelectItem>
+                        <SelectItem value="prosthodontist_implantologist">Prosthodontist / Implantologist</SelectItem>
+                        <SelectItem value="oral_maxillofacial_surgeon">Oral/Maxillofacial Surgeon</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.dentistType && <p className="text-[11px] text-destructive">{errors.dentistType.message}</p>}
+                  </div>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="practiceType"
+                render={({ field }) => (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Practice Type</Label>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="solo_practice">Solo Practice</SelectItem>
+                        <SelectItem value="group_clinic">Group Clinic</SelectItem>
+                        <SelectItem value="multi_specialty_clinic">Multi-Specialty Clinic</SelectItem>
+                        <SelectItem value="chain_corporate">Chain / Corporate</SelectItem>
+                        <SelectItem value="hospital_or_academic">Hospital / Academic</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.practiceType && <p className="text-[11px] text-destructive">{errors.practiceType.message}</p>}
+                  </div>
+                )}
+              />
             </div>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Save Qualification</Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>Save Qualification</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
@@ -870,38 +950,23 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
 }
 
 // ── Gap #4: Zoom Meeting Form ──────────────────────────────────────────
-function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
+// `open` is UI state (dialog open/closed), not form state — kept as useState.
+// Everything that is form state goes through useForm + zod.
+function ZoomMeetingCard({ lead: _lead }: { lead: LeadDetail }) {
   const [open, setOpen] = useState(false)
-  const [meetingAt, setMeetingAt] = useState("")
-  const [layoutShared, setLayoutShared] = useState("")
-  const [designFeeStatus, setDesignFeeStatus] = useState("")
-  const [paymentProof, setPaymentProof] = useState<File | null>(null)
-  const [notes, setNotes] = useState("")
 
-  const handleSubmit = () => {
-    if (!meetingAt) {
-      toast.error("Please pick a meeting time")
-      return
-    }
-    if (!layoutShared) {
-      toast.error("Please indicate whether a layout was shared")
-      return
-    }
-    if (!designFeeStatus) {
-      toast.error("Please mark design fee discussion status")
-      return
-    }
-    if (designFeeStatus === "paid" && !paymentProof) {
-      toast.error("Upload payment proof when design fee is paid")
-      return
-    }
+  const { control, handleSubmit, reset, watch, formState } = useForm<ZoomMeetingValues>({
+    resolver: zodResolver(zoomMeetingSchema),
+    defaultValues: zoomMeetingDefaults,
+    mode: "onChange",
+  })
+  const { errors, isSubmitting } = formState
+  const designFeeStatus = watch("designFeeStatus")
+
+  const onSubmit = async (_values: ZoomMeetingValues) => {
     toast.success("Zoom meeting saved")
     setOpen(false)
-    setMeetingAt("")
-    setLayoutShared("")
-    setDesignFeeStatus("")
-    setPaymentProof(null)
-    setNotes("")
+    reset(zoomMeetingDefaults)
   }
 
   return (
@@ -930,73 +995,104 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
                 Capture meeting details and design fee outcome with the designer.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Meeting date &amp; time</Label>
-                <Input
-                  type="datetime-local"
-                  value={meetingAt}
-                  onChange={(e) => setMeetingAt(e.target.value)}
+            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+              <div className="space-y-3 py-2">
+                <Controller
+                  control={control}
+                  name="meetingAt"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Meeting date &amp; time</Label>
+                      <Input type="datetime-local" {...field} />
+                      {errors.meetingAt && <p className="text-[11px] text-destructive">{errors.meetingAt.message}</p>}
+                    </div>
+                  )}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Layout shared with designer?</Label>
-                <Select value={layoutShared} onValueChange={setLayoutShared}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yes">Yes — clinic floor plan shared</SelectItem>
-                    <SelectItem value="no">No — to share later</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Design fee outcome</Label>
-                <Select value={designFeeStatus} onValueChange={setDesignFeeStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="discussed">Discussed — pending decision</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="declined">Declined</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {designFeeStatus === "paid" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Payment proof</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => setPaymentProof(e.target.files?.[0] ?? null)}
-                      className="text-xs"
-                    />
-                    {paymentProof && (
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        <Upload className="size-3 mr-1" />
-                        {paymentProof.name}
-                      </Badge>
+
+                <Controller
+                  control={control}
+                  name="layoutShared"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Layout shared with designer?</Label>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Yes — clinic floor plan shared</SelectItem>
+                          <SelectItem value="no">No — to share later</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.layoutShared && <p className="text-[11px] text-destructive">{errors.layoutShared.message}</p>}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="designFeeStatus"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Design fee outcome</Label>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="discussed">Discussed — pending decision</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.designFeeStatus && <p className="text-[11px] text-destructive">{errors.designFeeStatus.message}</p>}
+                    </div>
+                  )}
+                />
+
+                {designFeeStatus === "paid" && (
+                  <Controller
+                    control={control}
+                    name="paymentProof"
+                    render={({ field: { onChange, value } }) => (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Payment proof</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+                            className="text-xs"
+                          />
+                          {value && (
+                            <Badge variant="outline" className="text-[10px] shrink-0">
+                              <Upload className="size-3 mr-1" />
+                              {value.name}
+                            </Badge>
+                          )}
+                        </div>
+                        {errors.paymentProof && <p className="text-[11px] text-destructive">{errors.paymentProof.message}</p>}
+                      </div>
                     )}
-                  </div>
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label className="text-xs">Notes (optional)</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Designer remarks, customer concerns, next steps..."
-                  rows={2}
+                  />
+                )}
+
+                <Controller
+                  control={control}
+                  name="notes"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Notes (optional)</Label>
+                      <Textarea
+                        {...field}
+                        placeholder="Designer remarks, customer concerns, next steps..."
+                        rows={2}
+                      />
+                    </div>
+                  )}
                 />
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button onClick={handleSubmit}>Save Meeting</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={isSubmitting}>Save Meeting</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </CardContent>
@@ -1005,32 +1101,40 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
 }
 
 // ── Gap #5: Schedule Physical Meeting + Handoff Confirmation ───────────
+// `scheduleOpen`/`handoffOpen` are dialog UI state. `assignedSalesperson` is
+// post-submit result state. None of those are form state — only meetingAt and
+// location go through RHF.
+const MOCK_SALESPEOPLE = ["Ravi Kumar", "Anita Verma", "Jagjit Singh"] as const
+
 function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [handoffOpen, setHandoffOpen] = useState(false)
-  const [meetingAt, setMeetingAt] = useState("")
-  const [location, setLocation] = useState("")
   const [assignedSalesperson, setAssignedSalesperson] = useState<string | null>(null)
+
+  const { control, handleSubmit, reset, getValues, formState } = useForm<PhysicalMeetingValues>({
+    resolver: zodResolver(physicalMeetingSchema),
+    defaultValues: physicalMeetingDefaults,
+    mode: "onChange",
+  })
+  const { errors, isSubmitting } = formState
 
   // Full-qual gate (per §8 Day 5 — qualificationGate middleware)
   const fullQualFields = [lead.decisionMaker, lead.timelineBucket, lead.budgetRange, lead.competitors, lead.fundingMethod, lead.dentistType && lead.practiceType]
   const isFullyQualified = fullQualFields.every((v) => !!v)
 
-  // Mock round-robin pick — backend will own this for real
-  const mockSalespeople = ["Ravi Kumar", "Anita Verma", "Jagjit Singh"]
-
-  const handleSchedule = () => {
-    if (!meetingAt || !location) {
-      toast.error("Date/time and location are required")
-      return
-    }
-    // Mock round-robin assignment — real impl is round-robin/territory
-    const picked = mockSalespeople[Math.floor(Math.random() * mockSalespeople.length)]
+  const onSubmit = async (_values: PhysicalMeetingValues) => {
+    // Mock round-robin assignment — real impl is round-robin/territory.
+    // Backend will fire lead.handoff_to_sales event here.
+    const picked = MOCK_SALESPEOPLE[Math.floor(Math.random() * MOCK_SALESPEOPLE.length)]
     setAssignedSalesperson(picked)
     setScheduleOpen(false)
     setHandoffOpen(true)
-    // Backend will fire lead.handoff_to_sales event here
   }
+
+  // Read meetingAt/location for the handoff confirmation card after submit.
+  // getValues() reads the latest submitted values without forcing a watch.
+  const submittedMeetingAt = getValues("meetingAt")
+  const submittedLocation = getValues("location")
 
   return (
     <Card>
@@ -1071,35 +1175,43 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
                 Submitting this transfers lead ownership to the assigned salesperson.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Date &amp; time</Label>
-                <Input
-                  type="datetime-local"
-                  value={meetingAt}
-                  onChange={(e) => setMeetingAt(e.target.value)}
+            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+              <div className="space-y-3 py-2">
+                <Controller
+                  control={control}
+                  name="meetingAt"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Date &amp; time</Label>
+                      <Input type="datetime-local" {...field} />
+                      {errors.meetingAt && <p className="text-[11px] text-destructive">{errors.meetingAt.message}</p>}
+                    </div>
+                  )}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Location</Label>
-                <Input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Clinic address or city"
+                <Controller
+                  control={control}
+                  name="location"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Location</Label>
+                      <Input {...field} placeholder="Clinic address or city" />
+                      {errors.location && <p className="text-[11px] text-destructive">{errors.location.message}</p>}
+                    </div>
+                  )}
                 />
+                <Alert className="bg-primary/5 border-primary/30">
+                  <AlertTriangle className="size-4 text-primary" />
+                  <AlertDescription className="text-xs">
+                    Confirming will fire <code className="text-[10px]">lead.handoff_to_sales</code> and
+                    reassign this lead to a salesperson via round-robin.
+                  </AlertDescription>
+                </Alert>
               </div>
-              <Alert className="bg-primary/5 border-primary/30">
-                <AlertTriangle className="size-4 text-primary" />
-                <AlertDescription className="text-xs">
-                  Confirming will fire <code className="text-[10px]">lead.handoff_to_sales</code> and
-                  reassign this lead to a salesperson via round-robin.
-                </AlertDescription>
-              </Alert>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
-              <Button onClick={handleSchedule}>Confirm &amp; Hand Off</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={isSubmitting}>Confirm &amp; Hand Off</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
@@ -1118,8 +1230,8 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
             <div className="space-y-3 py-2 text-sm">
               <div className="rounded-md border bg-card p-3 space-y-1.5">
                 <div className="flex justify-between"><span className="text-muted-foreground">Lead</span><span className="font-medium">{lead.name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Meeting at</span><span className="font-medium">{meetingAt ? new Date(meetingAt).toLocaleString() : "—"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="font-medium truncate ml-2">{location}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Meeting at</span><span className="font-medium">{submittedMeetingAt ? new Date(submittedMeetingAt).toLocaleString() : "—"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="font-medium truncate ml-2">{submittedLocation}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Assigned to</span><Badge className="text-[10px]">{assignedSalesperson}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Stage</span><Badge variant="outline" className="text-[10px]">Physical Meeting Scheduled</Badge></div>
               </div>
@@ -1128,7 +1240,7 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
               </p>
             </div>
             <DialogFooter>
-              <Button onClick={() => setHandoffOpen(false)}>Got it</Button>
+              <Button onClick={() => { setHandoffOpen(false); reset(physicalMeetingDefaults) }}>Got it</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

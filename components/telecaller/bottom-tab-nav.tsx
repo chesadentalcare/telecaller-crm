@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   LayoutDashboard,
   Inbox,
@@ -45,58 +45,29 @@ export function BottomTabNav({
 }: BottomTabNavProps) {
   const [moreOpen, setMoreOpen] = useState(false)
 
-  // 4 primary tabs always visible. Pick the most-used flows.
-  const primaryTabs = [
-    { id: "home", title: "Home", icon: LayoutDashboard },
-    { id: "pipeline", title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
-    { id: "new-lead", title: "Add Lead", icon: UserPlus },
-    { id: "drip", title: "Drip", icon: Timer, count: queueCounts.drip },
-  ]
+  // Both arrays depend on queueCounts. Memoize so the per-render array identity
+  // doesn't bust child memoization.
+  const primaryTabs = useMemo(
+    () => [
+      { id: "home",     title: "Home",     icon: LayoutDashboard },
+      { id: "pipeline", title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
+      { id: "new-lead", title: "Add Lead", icon: UserPlus },
+      { id: "drip",     title: "Drip",     icon: Timer, count: queueCounts.drip },
+    ],
+    [queueCounts],
+  )
 
-  // Overflow — shown in the "More" sheet
-  const moreItems = [
-    {
-      id: "qualification",
-      title: "Rapid Qualification",
-      icon: PhoneCall,
-      subtitle: "Qualify a lead",
-    },
-    {
-      id: "no-response",
-      title: "No Response",
-      icon: PhoneOff,
-      subtitle: "4+ failed calls",
-      count: queueCounts.noResponse,
-    },
-    {
-      id: "idle",
-      title: "Idle Queue",
-      icon: Moon,
-      subtitle: "No activity 7d",
-      count: queueCounts.idle,
-    },
-    {
-      id: "dormant",
-      title: "Dormant",
-      icon: Archive,
-      subtitle: "No activity 30d+",
-      count: queueCounts.dormant,
-    },
-    {
-      id: "reactivation",
-      title: "Reactivation Inbox",
-      icon: RotateCcw,
-      subtitle: "Returned from sales",
-      count: queueCounts.reactivation,
-    },
-    {
-      id: "six-month",
-      title: "6+ Month Funnel",
-      icon: CalendarClock,
-      subtitle: "Long-cycle nurture",
-      count: queueCounts.sixMonth,
-    },
-  ]
+  const moreItems = useMemo(
+    () => [
+      { id: "qualification", title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
+      { id: "no-response",   title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
+      { id: "idle",          title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
+      { id: "dormant",       title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
+      { id: "reactivation",  title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
+      { id: "six-month",     title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
+    ],
+    [queueCounts],
+  )
 
   const isMoreActive = moreItems.some((i) => i.id === activeView)
 

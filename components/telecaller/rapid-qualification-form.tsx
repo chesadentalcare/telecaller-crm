@@ -1,39 +1,53 @@
 "use client"
 
 import { useState } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import {
+  ClipboardList, Phone, Video, MapPin, Droplets, CheckCircle2,
+  User, Building2, Clock, IndianRupee,
+} from "lucide-react"
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { 
-  ClipboardList, 
-  Phone, 
-  Video,
-  MapPin,
-  Droplets,
-  CheckCircle2,
-  User,
-  Building2,
-  Clock,
-  IndianRupee,
-} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import {
+  rapidQualificationSchema,
+  rapidQualificationDefaults,
+  type RapidQualificationValues,
+} from "@/lib/schemas/rapid-qualification"
 
-interface QualificationData {
-  phoneVerified: boolean
-  dentistType: string
-  practiceType: string
-  timeline: string
-  budgetRange: string
-  routeSelection: string
-}
+const DENTIST_TYPES = [
+  "General Dentist", "Orthodontist", "Periodontist", "Endodontist",
+  "Oral Surgeon", "Pediatric Dentist", "Prosthodontist",
+] as const
+
+const PRACTICE_TYPES = [
+  "Solo Practice", "Group Practice", "Hospital/Clinic Chain",
+  "Dental College", "Corporate Dental", "Mobile Dental Unit",
+] as const
+
+const TIMELINE_OPTIONS = [
+  { value: "immediate", label: "Immediate",  desc: "< 1 week"    },
+  { value: "short",     label: "Short Term", desc: "1-4 weeks"   },
+  { value: "medium",    label: "Medium Term", desc: "1-3 months"  },
+  { value: "long",      label: "Long Term",  desc: "3-6 months"  },
+  { value: "future",    label: "Future",     desc: "6+ months"   },
+] as const
+
+const BUDGET_RANGES = [
+  "Under ₹50,000", "₹50K - ₹1L", "₹1L - ₹2.5L",
+  "₹2.5L - ₹5L", "₹5L - ₹10L", "Above ₹10L",
+] as const
+
+const ROUTE_OPTIONS = [
+  { id: "online-meeting",   label: "Online Meeting",   desc: "Schedule video demo",  icon: Video,  color: "text-primary", bgColor: "bg-primary/10", borderColor: "border-primary" },
+  { id: "physical-meeting", label: "Physical Meeting", desc: "In-person clinic demo", icon: MapPin, color: "text-success", bgColor: "bg-success/10", borderColor: "border-success" },
+  { id: "drip",             label: "Add to Drip",      desc: "Nurture over time",     icon: Droplets, color: "text-chart-3", bgColor: "bg-chart-3/10", borderColor: "border-chart-3" },
+] as const
 
 interface LeadInfo {
   name: string
@@ -46,96 +60,21 @@ interface RapidQualificationFormProps {
 }
 
 export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
-  const [formData, setFormData] = useState<QualificationData>({
-    phoneVerified: false,
-    dentistType: "",
-    practiceType: "",
-    timeline: "",
-    budgetRange: "",
-    routeSelection: "",
-  })
-
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [lastRoute, setLastRoute] = useState<string>("")
 
-  const dentistTypes = [
-    "General Dentist",
-    "Orthodontist",
-    "Periodontist",
-    "Endodontist",
-    "Oral Surgeon",
-    "Pediatric Dentist",
-    "Prosthodontist",
-  ]
+  const { control, handleSubmit, reset, formState } = useForm<RapidQualificationValues>({
+    resolver: zodResolver(rapidQualificationSchema),
+    defaultValues: rapidQualificationDefaults,
+    mode: "onChange",
+  })
+  const { isValid, isSubmitting } = formState
 
-  const practiceTypes = [
-    "Solo Practice",
-    "Group Practice",
-    "Hospital/Clinic Chain",
-    "Dental College",
-    "Corporate Dental",
-    "Mobile Dental Unit",
-  ]
-
-  const timelineOptions = [
-    { value: "immediate", label: "Immediate", desc: "< 1 week" },
-    { value: "short", label: "Short Term", desc: "1-4 weeks" },
-    { value: "medium", label: "Medium Term", desc: "1-3 months" },
-    { value: "long", label: "Long Term", desc: "3-6 months" },
-    { value: "future", label: "Future", desc: "6+ months" },
-  ]
-
-  const budgetRanges = [
-    "Under ₹50,000",
-    "₹50K - ₹1L",
-    "₹1L - ₹2.5L",
-    "₹2.5L - ₹5L",
-    "₹5L - ₹10L",
-    "Above ₹10L",
-  ]
-
-  const routeOptions = [
-    { 
-      id: "online-meeting", 
-      label: "Online Meeting", 
-      desc: "Schedule video demo",
-      icon: Video,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-      borderColor: "border-primary"
-    },
-    { 
-      id: "physical-meeting", 
-      label: "Physical Meeting", 
-      desc: "In-person clinic demo",
-      icon: MapPin,
-      color: "text-success",
-      bgColor: "bg-success/10",
-      borderColor: "border-success"
-    },
-    { 
-      id: "drip", 
-      label: "Add to Drip", 
-      desc: "Nurture over time",
-      icon: Droplets,
-      color: "text-chart-3",
-      bgColor: "bg-chart-3/10",
-      borderColor: "border-chart-3"
-    },
-  ]
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+  const onSubmit = async (values: RapidQualificationValues) => {
+    await new Promise((r) => setTimeout(r, 1000))
+    setLastRoute(values.routeSelection)
     setSubmitSuccess(true)
-    setIsSubmitting(false)
   }
-
-  const isFormComplete = formData.dentistType && formData.practiceType && 
-    formData.timeline && formData.budgetRange && formData.routeSelection
 
   if (submitSuccess) {
     return (
@@ -146,24 +85,16 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-1">Lead Qualified!</h3>
           <p className="text-sm text-muted-foreground text-center">
-            {formData.routeSelection === "drip" 
+            {lastRoute === "drip"
               ? "Lead has been added to the drip queue."
-              : `${formData.routeSelection === "online-meeting" ? "Online" : "Physical"} meeting to be scheduled.`
-            }
+              : `${lastRoute === "online-meeting" ? "Online" : "Physical"} meeting to be scheduled.`}
           </p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-4"
             onClick={() => {
               setSubmitSuccess(false)
-              setFormData({
-                phoneVerified: false,
-                dentistType: "",
-                practiceType: "",
-                timeline: "",
-                budgetRange: "",
-                routeSelection: "",
-              })
+              reset(rapidQualificationDefaults)
             }}
           >
             Qualify Another Lead
@@ -189,169 +120,163 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
         </div>
       </CardHeader>
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Phone Verified Toggle */}
-          <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-full bg-background">
-                <Phone className="size-4 text-muted-foreground" />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+          {/* Phone verified switch */}
+          <Controller
+            control={control}
+            name="phoneVerified"
+            render={({ field }) => (
+              <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-background">
+                    <Phone className="size-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <Label htmlFor="phoneVerified" className="text-sm font-medium text-foreground cursor-pointer">
+                      Phone Verified
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">Contact successfully reached</p>
+                  </div>
+                </div>
+                <Switch id="phoneVerified" checked={field.value} onCheckedChange={field.onChange} />
               </div>
-              <div>
-                <Label htmlFor="phoneVerified" className="text-sm font-medium text-foreground cursor-pointer">
-                  Phone Verified
-                </Label>
-                <p className="text-[11px] text-muted-foreground">Contact successfully reached</p>
-              </div>
-            </div>
-            <Switch
-              id="phoneVerified"
-              checked={formData.phoneVerified}
-              onCheckedChange={(checked) => setFormData({ ...formData, phoneVerified: checked })}
-            />
-          </div>
+            )}
+          />
 
-          {/* Two Column Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Dentist Type */}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
                 <User className="size-3 text-muted-foreground" />
                 Dentist Type
               </Label>
-              <Select
-                value={formData.dentistType}
-                onValueChange={(value) => setFormData({ ...formData, dentistType: value })}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dentistTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-sm">
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="dentistType"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {DENTIST_TYPES.map((t) => <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
 
-            {/* Practice Type */}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
                 <Building2 className="size-3 text-muted-foreground" />
                 Practice Type
               </Label>
-              <Select
-                value={formData.practiceType}
-                onValueChange={(value) => setFormData({ ...formData, practiceType: value })}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select practice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {practiceTypes.map((type) => (
-                    <SelectItem key={type} value={type} className="text-sm">
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="practiceType"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select practice" /></SelectTrigger>
+                    <SelectContent>
+                      {PRACTICE_TYPES.map((t) => <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 
-          {/* Timeline */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
               <Clock className="size-3 text-muted-foreground" />
               Purchase Timeline
             </Label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-              {timelineOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, timeline: option.value })}
-                  className={cn(
-                    "flex flex-col items-center rounded-lg border px-2 py-2.5 text-center transition-colors",
-                    formData.timeline === option.value
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border bg-background hover:bg-muted/50 text-foreground"
-                  )}
-                >
-                  <span className="text-[11px] font-medium">{option.label}</span>
-                  <span className="text-[9px] text-muted-foreground">{option.desc}</span>
-                </button>
-              ))}
-            </div>
+            <Controller
+              control={control}
+              name="timeline"
+              render={({ field }) => (
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {TIMELINE_OPTIONS.map((opt) => {
+                    const active = field.value === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => field.onChange(opt.value)}
+                        className={cn(
+                          "flex flex-col items-center rounded-lg border px-2 py-2.5 text-center transition-colors",
+                          active
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-border bg-background hover:bg-muted/50 text-foreground",
+                        )}
+                      >
+                        <span className="text-[11px] font-medium">{opt.label}</span>
+                        <span className="text-[9px] text-muted-foreground">{opt.desc}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            />
           </div>
 
-          {/* Budget Range */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
               <IndianRupee className="size-3 text-muted-foreground" />
               Budget Range
             </Label>
-            <Select
-              value={formData.budgetRange}
-              onValueChange={(value) => setFormData({ ...formData, budgetRange: value })}
-            >
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select budget range" />
-              </SelectTrigger>
-              <SelectContent>
-                {budgetRanges.map((range) => (
-                  <SelectItem key={range} value={range} className="text-sm">
-                    {range}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="budgetRange"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select budget range" /></SelectTrigger>
+                  <SelectContent>
+                    {BUDGET_RANGES.map((r) => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
-          {/* Route Selector */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">Next Step Route</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {routeOptions.map((route) => (
-                <button
-                  key={route.id}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, routeSelection: route.id })}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
-                    formData.routeSelection === route.id
-                      ? `${route.borderColor} ${route.bgColor}`
-                      : "border-border bg-background hover:bg-muted/50"
-                  )}
-                >
-                  <div className={cn(
-                    "flex size-10 items-center justify-center rounded-full",
-                    formData.routeSelection === route.id ? route.bgColor : "bg-muted"
-                  )}>
-                    <route.icon className={cn(
-                      "size-5",
-                      formData.routeSelection === route.id ? route.color : "text-muted-foreground"
-                    )} />
-                  </div>
-                  <div className="text-center">
-                    <p className={cn(
-                      "text-xs font-medium",
-                      formData.routeSelection === route.id ? route.color : "text-foreground"
-                    )}>
-                      {route.label}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">{route.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <Controller
+              control={control}
+              name="routeSelection"
+              render={({ field }) => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {ROUTE_OPTIONS.map((route) => {
+                    const active = field.value === route.id
+                    const Icon = route.icon
+                    return (
+                      <button
+                        key={route.id}
+                        type="button"
+                        onClick={() => field.onChange(route.id)}
+                        className={cn(
+                          "flex flex-col items-center gap-2 rounded-lg border p-4 transition-all",
+                          active ? `${route.borderColor} ${route.bgColor}` : "border-border bg-background hover:bg-muted/50",
+                        )}
+                      >
+                        <div className={cn(
+                          "flex size-10 items-center justify-center rounded-full",
+                          active ? route.bgColor : "bg-muted",
+                        )}>
+                          <Icon className={cn("size-5", active ? route.color : "text-muted-foreground")} />
+                        </div>
+                        <div className="text-center">
+                          <p className={cn("text-xs font-medium", active ? route.color : "text-foreground")}>
+                            {route.label}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">{route.desc}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            />
           </div>
 
-          <Button
-            type="submit"
-            className="w-full h-10"
-            disabled={!isFormComplete || isSubmitting}
-          >
+          <Button type="submit" className="w-full h-10" disabled={!isValid || isSubmitting}>
             {isSubmitting ? "Processing..." : "Complete Qualification"}
           </Button>
         </form>

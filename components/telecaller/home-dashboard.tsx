@@ -38,6 +38,7 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { HomeHeroBanner } from "./home-hero-banner"
 
 // Mock data for charts
 const callsData = [
@@ -78,7 +79,11 @@ const topLeads = [
   { id: 3, name: "Dr. Rajesh Kumar", city: "Delhi", interest: "Autoclave", value: "₹1.2L", score: 85 },
 ]
 
-export function HomeDashboard() {
+interface HomeDashboardProps {
+  onNavigate?: (view: string) => void
+}
+
+export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   // Live clock — updates every minute. Initialised to null to avoid SSR/CSR
   // hydration mismatch (server-rendered time won't match the client's first paint).
   const [now, setNow] = useState<Date | null>(null)
@@ -130,13 +135,15 @@ export function HomeDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{greeting}, Pappu</h2>
-          <p className="text-muted-foreground">Here&apos;s your performance overview for today</p>
+      {/* Welcome Header — flex-wrap so badges drop below greeting on
+          tight screens instead of overflowing. min-w-0 + truncate keeps
+          long names/subtitles from pushing badges off-screen. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-xl font-bold text-foreground sm:text-2xl">{greeting}, Pappu</h2>
+          <p className="truncate text-sm text-muted-foreground">Here&apos;s your performance overview for today</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Badge variant="outline" className="gap-1 py-1.5 px-3">
             <Clock className="size-3.5" />
             <span className="font-medium">{timeLabel}</span>
@@ -147,6 +154,9 @@ export function HomeDashboard() {
           </Badge>
         </div>
       </div>
+
+      {/* Rotating hero banner — auto-advances every 5s, pause on hover */}
+      <HomeHeroBanner onNavigate={onNavigate} />
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

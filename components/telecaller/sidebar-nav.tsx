@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -58,145 +59,43 @@ interface SidebarNavProps {
   }
 }
 
+// Hoisted: identity-stable across renders, doesn't depend on props.
+const HOME_OPTION = {
+  id: "home",
+  title: "Dashboard",
+  subtitle: "Analytics & Overview",
+  icon: LayoutDashboard,
+  color: "bg-primary",
+  textColor: "text-primary",
+  borderColor: "border-primary",
+} as const
+
+const OUTCOMES = [
+  { id: "converted",        title: "Converted", icon: CheckCircle2, color: "text-emerald-500", count: 12 },
+  { id: "meeting-scheduled", title: "Meetings",  icon: Calendar,     color: "text-blue-500",    count: 5  },
+  { id: "demo-booked",      title: "Demos",     icon: Video,        color: "text-violet-500",  count: 3  },
+] as const
+
 export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNavProps) {
-  // Home/Dashboard option
-  const homeOption = {
-    id: "home",
-    title: "Dashboard",
-    subtitle: "Analytics & Overview",
-    icon: LayoutDashboard,
-    color: "bg-primary",
-    textColor: "text-primary",
-    borderColor: "border-primary",
-  }
+  const homeOption = HOME_OPTION
+  const outcomes = OUTCOMES
 
-  // Lifecycle stages in order
-  const lifecycleStages = [
-    {
-      id: "new-lead",
-      title: "New Lead",
-      subtitle: "Intake Form",
-      icon: UserPlus,
-      color: "bg-emerald-500",
-      textColor: "text-emerald-500",
-      borderColor: "border-emerald-500",
-      count: null,
-      isAction: true,
-    },
-    {
-      id: "pipeline",
-      title: "Pipeline",
-      subtitle: "Active Leads",
-      icon: Inbox,
-      color: "bg-blue-500",
-      textColor: "text-blue-500",
-      borderColor: "border-blue-500",
-      count: queueCounts.pipeline,
-      isAction: false,
-    },
-    {
-      id: "qualification",
-      title: "Qualification",
-      subtitle: "Rapid Qualify",
-      icon: PhoneCall,
-      color: "bg-violet-500",
-      textColor: "text-violet-500",
-      borderColor: "border-violet-500",
-      count: null,
-      isAction: true,
-    },
-    {
-      id: "no-response",
-      title: "No Response",
-      subtitle: "4+ Failed Calls",
-      icon: PhoneOff,
-      color: "bg-red-500",
-      textColor: "text-red-500",
-      borderColor: "border-red-500",
-      count: queueCounts.noResponse,
-      isAction: false,
-    },
-    {
-      id: "drip",
-      title: "Drip Queue",
-      subtitle: "Nurture Campaign",
-      icon: Timer,
-      color: "bg-amber-500",
-      textColor: "text-amber-500",
-      borderColor: "border-amber-500",
-      count: queueCounts.drip,
-      isAction: false,
-    },
-    {
-      id: "idle",
-      title: "Idle Queue",
-      subtitle: "No Activity 7d",
-      icon: Moon,
-      color: "bg-slate-400",
-      textColor: "text-slate-400",
-      borderColor: "border-slate-400",
-      count: queueCounts.idle,
-      isAction: false,
-    },
-    {
-      id: "dormant",
-      title: "Dormant",
-      subtitle: "No Activity 30d+",
-      icon: Archive,
-      color: "bg-slate-600",
-      textColor: "text-slate-600",
-      borderColor: "border-slate-600",
-      count: queueCounts.dormant,
-      isAction: false,
-    },
-    {
-      id: "reactivation",
-      title: "Reactivation",
-      subtitle: "Returned from Sales",
-      icon: RotateCcw,
-      color: "bg-primary",
-      textColor: "text-primary",
-      borderColor: "border-primary",
-      count: queueCounts.reactivation,
-      isAction: false,
-    },
-    {
-      id: "six-month",
-      title: "6+ Month Funnel",
-      subtitle: "Long-Cycle Nurture",
-      icon: CalendarClock,
-      color: "bg-violet-500",
-      textColor: "text-violet-500",
-      borderColor: "border-violet-500",
-      count: queueCounts.sixMonth,
-      isAction: false,
-    },
-  ]
-
-  // Outcomes (exits from lifecycle)
-  const outcomes = [
-    {
-      id: "converted",
-      title: "Converted",
-      icon: CheckCircle2,
-      color: "text-emerald-500",
-      count: 12,
-    },
-    {
-      id: "meeting-scheduled",
-      title: "Meetings",
-      icon: Calendar,
-      color: "text-blue-500",
-      count: 5,
-    },
-    {
-      id: "demo-booked",
-      title: "Demos",
-      icon: Video,
-      color: "text-violet-500",
-      count: 3,
-    },
-  ]
+  // Lifecycle stages depend on queueCounts — memoize so SidebarMenuItem children
+  // don't see a fresh array on every parent re-render.
+  const lifecycleStages = useMemo(
+    () => [
+      { id: "new-lead",     title: "New Lead",       subtitle: "Intake Form",         icon: UserPlus,     color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                       isAction: true  },
+      { id: "pipeline",     title: "Pipeline",       subtitle: "Active Leads",        icon: Inbox,        color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.pipeline,       isAction: false },
+      { id: "qualification", title: "Qualification", subtitle: "Rapid Qualify",       icon: PhoneCall,    color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: null,                       isAction: true  },
+      { id: "no-response",  title: "No Response",    subtitle: "4+ Failed Calls",     icon: PhoneOff,     color: "bg-red-500",     textColor: "text-red-500",     borderColor: "border-red-500",     count: queueCounts.noResponse,     isAction: false },
+      { id: "drip",         title: "Drip Queue",     subtitle: "Nurture Campaign",    icon: Timer,        color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: queueCounts.drip,           isAction: false },
+      { id: "idle",         title: "Idle Queue",     subtitle: "No Activity 7d",      icon: Moon,         color: "bg-slate-400",   textColor: "text-slate-400",   borderColor: "border-slate-400",   count: queueCounts.idle,           isAction: false },
+      { id: "dormant",      title: "Dormant",        subtitle: "No Activity 30d+",    icon: Archive,      color: "bg-slate-600",   textColor: "text-slate-600",   borderColor: "border-slate-600",   count: queueCounts.dormant,        isAction: false },
+      { id: "reactivation", title: "Reactivation",   subtitle: "Returned from Sales", icon: RotateCcw,    color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: queueCounts.reactivation,   isAction: false },
+      { id: "six-month",    title: "6+ Month Funnel", subtitle: "Long-Cycle Nurture", icon: CalendarClock, color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: queueCounts.sixMonth,       isAction: false },
+    ],
+    [queueCounts],
+  )
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">

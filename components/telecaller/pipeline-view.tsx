@@ -1,164 +1,39 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Phone,
-  MoreHorizontal,
-  Filter,
-  ArrowUpDown,
-  TrendingUp,
-  Users,
-  CheckCircle2,
-  Clock,
-  ChevronRight,
-  Calendar,
-  MessageSquare,
+import {
+  Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
+  ChevronRight, Calendar, MessageSquare,
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
-
-interface PipelineLead {
-  id: string
-  name: string
-  phone: string
-  equipment: string
-  source: string
-  city: string
-  status: "new" | "contacted" | "qualified" | "meeting-scheduled"
-  failedAttempts: number
-  createdAt: Date
-  lastAttemptTime?: Date
-  value?: string
-}
-
-const mockPipelineLeads: PipelineLead[] = [
-  {
-    id: "1",
-    name: "Dr. Amit Verma",
-    phone: "9876543211",
-    equipment: "Dental Chair",
-    source: "Website",
-    city: "Delhi",
-    status: "new",
-    failedAttempts: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    value: "₹2.5L"
-  },
-  {
-    id: "2",
-    name: "Dr. Neha Gupta",
-    phone: "9123456780",
-    equipment: "X-Ray Unit",
-    source: "Trade Show",
-    city: "Mumbai",
-    status: "contacted",
-    failedAttempts: 5,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    lastAttemptTime: new Date(Date.now() - 1000 * 60 * 30),
-    value: "₹4.2L"
-  },
-  {
-    id: "3",
-    name: "Dr. Vikram Singh",
-    phone: "9567891235",
-    equipment: "Autoclave",
-    source: "Referral",
-    city: "Bangalore",
-    status: "qualified",
-    failedAttempts: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    value: "₹85K"
-  },
-  {
-    id: "4",
-    name: "Dr. Sunita Reddy",
-    phone: "9432198766",
-    equipment: "Imaging System",
-    source: "Google Ads",
-    city: "Hyderabad",
-    status: "meeting-scheduled",
-    failedAttempts: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-    value: "₹8.5L"
-  },
-  {
-    id: "5",
-    name: "Dr. Manoj Tiwari",
-    phone: "9876123451",
-    equipment: "Compressor",
-    source: "Cold Call",
-    city: "Chennai",
-    status: "new",
-    failedAttempts: 2,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4),
-    value: "₹45K"
-  },
-  {
-    id: "6",
-    name: "Dr. Priya Kapoor",
-    phone: "9988776655",
-    equipment: "Light Cure",
-    source: "Website",
-    city: "Pune",
-    status: "contacted",
-    failedAttempts: 1,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    value: "₹32K"
-  },
-  {
-    id: "7",
-    name: "Dr. Rohit Sharma",
-    phone: "9112233445",
-    equipment: "Handpiece",
-    source: "Referral",
-    city: "Jaipur",
-    status: "new",
-    failedAttempts: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-    value: "₹18K"
-  },
-]
+import { usePipelineLeads } from "@/hooks/use-leads"
+import type { PipelineLead } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
   switch (status) {
-    case "new":
-      return { label: "New", className: "bg-primary/10 text-primary border-primary/20" }
-    case "contacted":
-      return { label: "Contacted", className: "bg-chart-3/10 text-chart-3 border-chart-3/20" }
-    case "qualified":
-      return { label: "Qualified", className: "bg-chart-2/10 text-chart-2 border-chart-2/20" }
-    case "meeting-scheduled":
-      return { label: "Meeting Set", className: "bg-success/10 text-success border-success/20" }
+    case "new":               return { label: "New",         className: "bg-primary/10 text-primary border-primary/20" }
+    case "contacted":         return { label: "Contacted",   className: "bg-chart-3/10 text-chart-3 border-chart-3/20" }
+    case "qualified":         return { label: "Qualified",   className: "bg-chart-2/10 text-chart-2 border-chart-2/20" }
+    case "meeting-scheduled": return { label: "Meeting Set", className: "bg-success/10 text-success border-success/20" }
   }
 }
 
 function formatTime(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  const diffMs = Date.now() - date.getTime()
   const diffMins = Math.floor(diffMs / (1000 * 60))
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   return `${diffDays}d ago`
@@ -169,54 +44,43 @@ interface PipelineViewProps {
 }
 
 export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
-  const [leads] = useState<PipelineLead[]>(mockPipelineLeads)
+  const { data: leads = [], isLoading } = usePipelineLeads()
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
-
-  // Brief simulated loading so the skeleton has a moment to render. Replace
-  // the setTimeout with a real fetch loading flag if/when this hits an API.
-  const [isLoading, setIsLoading] = useState(true)
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 700)
-    return () => clearTimeout(t)
-  }, [])
 
   if (isLoading) return <PipelineViewSkeleton />
 
   const leadWithNoResponse = leads.find(
-    (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id)
+    (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
-
-  const filteredLeads = activeTab === "all" 
-    ? leads 
-    : leads.filter(l => l.status === activeTab)
+  const filteredLeads = activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab)
 
   const stats = [
     { label: "Total Pipeline", value: leads.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "New Today", value: leads.filter(l => l.status === "new").length, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
-    { label: "Qualified", value: leads.filter(l => l.status === "qualified" || l.status === "meeting-scheduled").length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
-    { label: "Conversion", value: `${Math.round((leads.filter(l => l.status === "meeting-scheduled").length / leads.length) * 100)}%`, icon: TrendingUp, color: "text-chart-2", bg: "bg-chart-2/10" },
+    { label: "New Today", value: leads.filter((l) => l.status === "new").length, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
+    { label: "Qualified", value: leads.filter((l) => l.status === "qualified" || l.status === "meeting-scheduled").length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+    {
+      label: "Conversion",
+      value: leads.length ? `${Math.round((leads.filter((l) => l.status === "meeting-scheduled").length / leads.length) * 100)}%` : "0%",
+      icon: TrendingUp,
+      color: "text-chart-2",
+      bg: "bg-chart-2/10",
+    },
   ]
 
   return (
     <div className="space-y-4">
-      {/* No Response Banner */}
       {leadWithNoResponse && leadWithNoResponse.lastAttemptTime && (
         <NoResponseBanner
           leadName={leadWithNoResponse.name}
           leadPhone={leadWithNoResponse.phone}
           failedAttempts={leadWithNoResponse.failedAttempts}
           lastAttemptTime={leadWithNoResponse.lastAttemptTime}
-          onSendWhatsApp={() => {
-            console.log("Sending WhatsApp to:", leadWithNoResponse.phone)
-          }}
-          onDismiss={() => {
-            setDismissedBanners(prev => new Set([...prev, leadWithNoResponse.id]))
-          }}
+          onSendWhatsApp={() => console.log("Sending WhatsApp to:", leadWithNoResponse.phone)}
+          onDismiss={() => setDismissedBanners((prev) => new Set([...prev, leadWithNoResponse.id]))}
         />
       )}
 
-      {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label} className="border shadow-sm">
@@ -235,7 +99,6 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         ))}
       </div>
 
-      {/* Pipeline Table */}
       <Card className="shadow-sm">
         <CardHeader className="pb-3 border-b">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -250,106 +113,84 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 </TabsList>
               </Tabs>
               <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <Filter className="size-3.5" />
-                Filter
+                <Filter className="size-3.5" />Filter
               </Button>
               <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <ArrowUpDown className="size-3.5" />
-                Sort
+                <ArrowUpDown className="size-3.5" />Sort
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="text-xs font-semibold text-muted-foreground w-[250px]">Lead</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground">Equipment</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground">Source</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground">Value</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground">Status</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground">Added</TableHead>
-                <TableHead className="text-xs font-semibold text-muted-foreground text-right w-[140px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLeads.map((lead) => {
-                const statusConfig = getStatusConfig(lead.status)
-                return (
-                  <TableRow key={lead.id} className="group hover:bg-muted/50">
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
-                          {lead.name.split(" ").slice(1).map(n => n[0]).join("")}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{lead.name}</p>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>{lead.phone}</span>
-                            <span>•</span>
-                            <span>{lead.city}</span>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="text-xs font-semibold text-muted-foreground w-[250px]">Lead</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground">Equipment</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground">Source</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground">Value</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground">Added</TableHead>
+                  <TableHead className="text-xs font-semibold text-muted-foreground text-right w-[140px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map((lead) => {
+                  const statusConfig = getStatusConfig(lead.status)
+                  return (
+                    <TableRow key={lead.id} className="group hover:bg-muted/50">
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
+                            {lead.name.split(" ").slice(1).map((n) => n[0]).join("")}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span>{lead.phone}</span>
+                              <span>•</span>
+                              <span>{lead.city}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-foreground">{lead.equipment}</TableCell>
-                    <TableCell>
-                      <span className="text-xs text-muted-foreground">{lead.source}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-foreground">{lead.value}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] font-medium ${statusConfig.className}`}>
-                        {statusConfig.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs text-muted-foreground">{formatTime(lead.createdAt)}</span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          className="h-9 md:h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
-                        >
-                          <Phone className="size-3" />
-                          Call
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem className="text-xs">
-                              <MessageSquare className="mr-2 size-3.5" />
-                              WhatsApp
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-xs">
-                              <Calendar className="mr-2 size-3.5" />
-                              Schedule
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-xs"
-                              onClick={() => onOpenLead?.(lead.id)}
-                            >
-                              <ChevronRight className="mr-2 size-3.5" />
-                              View Details
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground">{lead.equipment}</TableCell>
+                      <TableCell><span className="text-xs text-muted-foreground">{lead.source}</span></TableCell>
+                      <TableCell><span className="text-sm font-medium text-foreground">{lead.value}</span></TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-[10px] font-medium ${statusConfig.className}`}>
+                          {statusConfig.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell><span className="text-xs text-muted-foreground">{formatTime(lead.createdAt)}</span></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" className="h-9 md:h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                            <Phone className="size-3" />Call
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem className="text-xs"><MessageSquare className="mr-2 size-3.5" />WhatsApp</DropdownMenuItem>
+                              <DropdownMenuItem className="text-xs"><Calendar className="mr-2 size-3.5" />Schedule</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-xs" onClick={() => onOpenLead?.(lead.id)}>
+                                <ChevronRight className="mr-2 size-3.5" />View Details
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -357,11 +198,9 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   )
 }
 
-// ─── Skeleton placeholder ───────────────────────────────────────────────
 function PipelineViewSkeleton() {
   return (
     <div className="space-y-4">
-      {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
@@ -375,8 +214,6 @@ function PipelineViewSkeleton() {
           </Card>
         ))}
       </div>
-
-      {/* Tabs/filter bar */}
       <div className="flex items-center justify-between gap-2">
         <Skeleton className="h-9 w-72" />
         <div className="flex items-center gap-2">
@@ -384,14 +221,10 @@ function PipelineViewSkeleton() {
           <Skeleton className="h-9 w-20" />
         </div>
       </div>
-
-      {/* Leads table */}
       <Card>
         <CardContent className="p-0">
           <div className="border-b p-3 grid grid-cols-6 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-3.5 w-3/4" />
-            ))}
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-3.5 w-3/4" />)}
           </div>
           {Array.from({ length: 8 }).map((_, row) => (
             <div key={row} className="border-b p-3 grid grid-cols-6 gap-2 items-center">
