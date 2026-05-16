@@ -164,7 +164,11 @@ function formatTime(date: Date): string {
   return `${diffDays}d ago`
 }
 
-export function PipelineView() {
+interface PipelineViewProps {
+  onOpenLead?: (leadId: string) => void
+}
+
+export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [leads] = useState<PipelineLead[]>(mockPipelineLeads)
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
@@ -330,7 +334,10 @@ export function PipelineView() {
                               Schedule
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-xs">
+                            <DropdownMenuItem
+                              className="text-xs"
+                              onClick={() => onOpenLead?.(lead.id)}
+                            >
                               <ChevronRight className="mr-2 size-3.5" />
                               View Details
                             </DropdownMenuItem>

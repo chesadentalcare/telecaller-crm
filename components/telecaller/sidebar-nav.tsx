@@ -32,6 +32,8 @@ import {
   Calendar,
   Video,
   LayoutDashboard,
+  RotateCcw,
+  CalendarClock,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -51,6 +53,8 @@ interface SidebarNavProps {
     drip: number
     idle: number
     dormant: number
+    reactivation: number
+    sixMonth: number
   }
 }
 
@@ -143,6 +147,28 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
       textColor: "text-slate-600",
       borderColor: "border-slate-600",
       count: queueCounts.dormant,
+      isAction: false,
+    },
+    {
+      id: "reactivation",
+      title: "Reactivation",
+      subtitle: "Returned from Sales",
+      icon: RotateCcw,
+      color: "bg-primary",
+      textColor: "text-primary",
+      borderColor: "border-primary",
+      count: queueCounts.reactivation,
+      isAction: false,
+    },
+    {
+      id: "six-month",
+      title: "6+ Month Funnel",
+      subtitle: "Long-Cycle Nurture",
+      icon: CalendarClock,
+      color: "bg-violet-500",
+      textColor: "text-violet-500",
+      borderColor: "border-violet-500",
+      count: queueCounts.sixMonth,
       isAction: false,
     },
   ]
