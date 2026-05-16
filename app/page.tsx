@@ -96,9 +96,9 @@ export default function TelecallerDashboard() {
           <div className="flex items-center gap-3">
             <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
             <Separator orientation="vertical" className="h-5" />
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">{pageInfo.title}</h1>
-              <p className="text-[11px] text-muted-foreground">{pageInfo.subtitle}</p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-foreground truncate">{pageInfo.title}</h1>
+              <p className="hidden sm:block text-[11px] text-muted-foreground truncate">{pageInfo.subtitle}</p>
             </div>
           </div>
 
@@ -152,7 +152,7 @@ function NoResponseView() {
     <div className="space-y-4">
       {/* Recovery Actions */}
       <Card className="border-warning/30 bg-warning/5">
-        <CardContent className="flex items-center justify-between py-4">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-full bg-warning/20">
               <PhoneOff className="size-5 text-warning" />
@@ -186,7 +186,7 @@ function NoResponseView() {
         <CardContent className="p-0">
           <div className="divide-y">
             {leads.map((lead) => (
-              <div key={lead.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+              <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive font-medium text-sm">
                     {lead.name.split(" ").map(n => n[0]).join("")}
@@ -238,7 +238,7 @@ function IdleQueueView() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="size-4 text-warning" />
@@ -255,7 +255,7 @@ function IdleQueueView() {
       <CardContent className="p-0">
         <div className="divide-y">
           {leads.map((lead) => (
-            <div key={lead.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+            <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="flex size-10 items-center justify-center rounded-full bg-warning/10 text-warning font-medium text-sm">
                   {lead.name.split(" ").map(n => n[0]).join("")}
@@ -296,7 +296,7 @@ function DormantQueueView() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <Archive className="size-4 text-muted-foreground" />
@@ -312,7 +312,7 @@ function DormantQueueView() {
       <CardContent className="p-0">
         <div className="divide-y">
           {leads.map((lead) => (
-            <div key={lead.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+            <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground font-medium text-sm">
                   {lead.name.split(" ").map(n => n[0]).join("")}

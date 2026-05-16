@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -179,6 +180,13 @@ export function DripQueueView() {
   const [activeTab, setActiveTab] = useState("all")
   const [, setTick] = useState(0)
 
+  // Brief simulated loading — swap for real fetch loading flag when wired to API.
+  const [isLoading, setIsLoading] = useState(true)
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
+
   useEffect(() => {
     const interval = setInterval(() => {
       setLeads(prev => prev.map(lead => ({
@@ -190,6 +198,9 @@ export function DripQueueView() {
 
     return () => clearInterval(interval)
   }, [])
+
+  // All hooks declared above — safe to bail out now.
+  if (isLoading) return <DripQueueViewSkeleton />
 
   const filteredLeads = activeTab === "all" 
     ? leads 
@@ -206,7 +217,7 @@ export function DripQueueView() {
   return (
     <div className="space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -280,6 +291,7 @@ export function DripQueueView() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -346,18 +358,18 @@ export function DripQueueView() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2.5 gap-1.5"
+                          className="h-9 md:h-7 px-2.5 gap-1.5"
                         >
                           <Send className="size-3" />
                           Send Now
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
                               <MoreHorizontal className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -382,6 +394,55 @@ export function DripQueueView() {
               })}
             </TableBody>
           </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Skeleton placeholder ───────────────────────────────────────────────
+function DripQueueViewSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Header / stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-md" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-12" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex items-center justify-between gap-2">
+        <Skeleton className="h-9 w-60" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+
+      {/* Leads list */}
+      <Card>
+        <CardContent className="p-0">
+          {Array.from({ length: 6 }).map((_, row) => (
+            <div key={row} className="border-b p-4 flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <div className="hidden md:flex flex-col items-end gap-1.5">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-2 w-32" />
+              </div>
+              <Skeleton className="h-8 w-20" />
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

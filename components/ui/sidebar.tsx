@@ -40,6 +40,11 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  // Jira-style: pin keeps sidebar always expanded; unpinned = collapsed with hover flyout.
+  isPinned: boolean
+  togglePin: () => void
+  handleMouseEnter: () => void
+  handleMouseLeave: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -69,29 +74,70 @@ function SidebarProvider({
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
 
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  // Pin state — persisted to localStorage. Pinned = sidebar always expanded.
+  const [isPinned, setIsPinned] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return defaultOpen
+    const saved = window.localStorage.getItem('sidebarPinned')
+    if (saved === null) return defaultOpen
+    return saved === 'true'
+  })
+
+  // Transient hover state — only meaningful when not pinned.
+  const [isHoverOpen, setIsHoverOpen] = React.useState(false)
+
+  // Effective desktop open = pinned OR currently hovered. Controlled prop overrides.
+  const open = openProp ?? (isPinned || isHoverOpen)
+
+  // setOpen is treated as "set pinned" — the explicit/manual override. Used by
+  // SidebarTrigger via toggleSidebar below, and by any external controller.
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === 'function' ? value(open) : value
       if (setOpenProp) {
         setOpenProp(openState)
       } else {
-        _setOpen(openState)
+        setIsPinned(openState)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('sidebarPinned', String(openState))
+        }
+        if (!openState) setIsHoverOpen(false)
       }
 
-      // This sets the cookie to keep the sidebar state.
+      // Keep the legacy cookie for backward compat with any server-side reads.
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
     [setOpenProp, open],
   )
 
-  // Helper to toggle the sidebar.
+  const togglePin = React.useCallback(() => {
+    setIsPinned((prev) => {
+      const next = !prev
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('sidebarPinned', String(next))
+      }
+      if (next) setIsHoverOpen(false) // close flyout when pinning
+      return next
+    })
+  }, [])
+
+  // Hover handlers — no-op when pinned (sidebar is already open by pin).
+  const handleMouseEnter = React.useCallback(() => {
+    if (!isPinned) setIsHoverOpen(true)
+  }, [isPinned])
+
+  const handleMouseLeave = React.useCallback(() => {
+    if (!isPinned) setIsHoverOpen(false)
+  }, [isPinned])
+
+  // toggleSidebar is what SidebarTrigger calls. On desktop this is pin/unpin;
+  // on mobile it keeps the original sheet open/close behavior.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    if (isMobile) {
+      setOpenMobile((o) => !o)
+    } else {
+      togglePin()
+    }
+  }, [isMobile, togglePin])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -122,8 +168,24 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      isPinned,
+      togglePin,
+      handleMouseEnter,
+      handleMouseLeave,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      isPinned,
+      togglePin,
+      handleMouseEnter,
+      handleMouseLeave,
+    ],
   )
 
   return (
@@ -163,7 +225,7 @@ function Sidebar({
   variant?: 'sidebar' | 'floating' | 'inset'
   collapsible?: 'offcanvas' | 'icon' | 'none'
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, handleMouseEnter, handleMouseLeave } = useSidebar()
 
   if (collapsible === 'none') {
     return (
@@ -228,6 +290,8 @@ function Sidebar({
       />
       <div
         data-slot="sidebar-container"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={cn(
           'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
           side === 'left'

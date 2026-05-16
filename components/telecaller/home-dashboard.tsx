@@ -1,6 +1,8 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -77,6 +79,40 @@ const topLeads = [
 ]
 
 export function HomeDashboard() {
+  // Live clock — updates every minute. Initialised to null to avoid SSR/CSR
+  // hydration mismatch (server-rendered time won't match the client's first paint).
+  const [now, setNow] = useState<Date | null>(null)
+
+  // Brief simulated loading — gives the skeleton a chance to render. Swap the
+  // setTimeout for a real data-fetch loading flag if/when this view hits an API.
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setNow(new Date())
+    const interval = setInterval(() => setNow(new Date()), 60_000)
+    const t = setTimeout(() => setIsLoading(false), 700)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(t)
+    }
+  }, [])
+
+  if (isLoading) return <HomeDashboardSkeleton />
+
+
+  const hour = now?.getHours() ?? 0
+  const greeting =
+    now === null
+      ? "Hello"
+      : hour < 12
+        ? "Good Morning"
+        : hour < 17
+          ? "Good Afternoon"
+          : "Good Evening"
+
+  const timeLabel =
+    now?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) ?? "--:--"
+
   const todayStats = {
     totalCalls: 47,
     connected: 32,
@@ -97,13 +133,13 @@ export function HomeDashboard() {
       {/* Welcome Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Good Morning, Pappu</h2>
+          <h2 className="text-2xl font-bold text-foreground">{greeting}, Pappu</h2>
           <p className="text-muted-foreground">Here&apos;s your performance overview for today</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1 py-1.5 px-3">
             <Clock className="size-3.5" />
-            <span className="font-medium">09:45 AM</span>
+            <span className="font-medium">{timeLabel}</span>
           </Badge>
           <Badge className="gap-1 py-1.5 px-3 bg-success text-success-foreground">
             <Zap className="size-3.5" />
@@ -444,7 +480,7 @@ export function HomeDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-foreground">{lead.value}</p>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-success">
+                    <Button variant="ghost" size="sm" className="h-7 md:h-6 px-2 text-[10px] md:opacity-0 md:group-hover:opacity-100 transition-opacity text-success">
                       <Phone className="size-3 mr-1" />
                       Call
                     </Button>
@@ -460,7 +496,7 @@ export function HomeDashboard() {
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="py-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div className="flex items-center gap-2">
                 <Timer className="size-4 text-primary" />
                 <div>
@@ -468,7 +504,7 @@ export function HomeDashboard() {
                   <p className="text-sm font-semibold">{todayStats.avgCallDuration}</p>
                 </div>
               </div>
-              <div className="w-px h-8 bg-border" />
+              <div className="hidden sm:block w-px h-8 bg-border" />
               <div className="flex items-center gap-2">
                 <Users className="size-4 text-primary" />
                 <div>
@@ -476,7 +512,7 @@ export function HomeDashboard() {
                   <p className="text-sm font-semibold">38 leads</p>
                 </div>
               </div>
-              <div className="w-px h-8 bg-border" />
+              <div className="hidden sm:block w-px h-8 bg-border" />
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-4 text-success" />
                 <div>
@@ -490,6 +526,104 @@ export function HomeDashboard() {
               Start Calling
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Skeleton placeholder ───────────────────────────────────────────────
+// Mirrors HomeDashboard's layout so the page doesn't jump when content arrives.
+function HomeDashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-7 w-20" />
+        </div>
+      </div>
+
+      {/* KPI cards row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="overflow-hidden">
+            <CardContent className="p-4 space-y-3">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-3 w-28" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Two charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-56 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Lists row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-44" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-6 w-14" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-2">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom action bar */}
+      <Card>
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-6">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-px" />
+            <Skeleton className="h-8 w-28" />
+          </div>
+          <Skeleton className="h-9 w-28" />
         </CardContent>
       </Card>
     </div>

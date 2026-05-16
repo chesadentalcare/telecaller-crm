@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -168,6 +169,16 @@ export function PipelineView() {
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
 
+  // Brief simulated loading so the skeleton has a moment to render. Replace
+  // the setTimeout with a real fetch loading flag if/when this hits an API.
+  const [isLoading, setIsLoading] = useState(true)
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 700)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (isLoading) return <PipelineViewSkeleton />
+
   const leadWithNoResponse = leads.find(
     (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id)
   )
@@ -246,6 +257,7 @@ export function PipelineView() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -294,17 +306,17 @@ export function PipelineView() {
                       <span className="text-xs text-muted-foreground">{formatTime(lead.createdAt)}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Button
                           size="sm"
-                          className="h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+                          className="h-9 md:h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
                         >
                           <Phone className="size-3" />
                           Call
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
                               <MoreHorizontal className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -331,6 +343,62 @@ export function PipelineView() {
               })}
             </TableBody>
           </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Skeleton placeholder ───────────────────────────────────────────────
+function PipelineViewSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-md" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-12" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Tabs/filter bar */}
+      <div className="flex items-center justify-between gap-2">
+        <Skeleton className="h-9 w-72" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+      </div>
+
+      {/* Leads table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="border-b p-3 grid grid-cols-6 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-3.5 w-3/4" />
+            ))}
+          </div>
+          {Array.from({ length: 8 }).map((_, row) => (
+            <div key={row} className="border-b p-3 grid grid-cols-6 gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-7 w-7 rounded-md ml-auto" />
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

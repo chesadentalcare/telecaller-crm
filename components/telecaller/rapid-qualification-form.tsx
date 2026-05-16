@@ -211,7 +211,7 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
           </div>
 
           {/* Two Column Grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Dentist Type */}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
@@ -265,7 +265,7 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
               <Clock className="size-3 text-muted-foreground" />
               Purchase Timeline
             </Label>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
               {timelineOptions.map((option) => (
                 <button
                   key={option.value}
@@ -311,7 +311,7 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
           {/* Route Selector */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-foreground">Next Step Route</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {routeOptions.map((route) => (
                 <button
                   key={route.id}
