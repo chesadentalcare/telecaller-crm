@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check src/app.js)",
+      "Bash(node --check src/middleware/mysqlMiddleware.js)",
+      "Bash(node --check src/middleware/CheckSession.js)",
+      "Bash(node --check src/utils/SapLogin.js)",
+      "Bash(node --check src/utils/whatsappClient.js)",
+      "Bash(node --check scripts/cleanup.js)",
+      "Bash(node --check scripts/seedTestUser.js)",
+      "Bash(node --check src/apis/telecaller/controllers/leads.js)",
+      "Bash(npx tsc *)",
+      "Bash(node --check src/apis/telecaller/controllers/queues.js)",
+      "Bash(node --check src/apis/telecaller/controllers/leadDetail.js)",
+      "Bash(node --check src/apis/telecaller/routes/index.js)"
+    ]
+  }
+}

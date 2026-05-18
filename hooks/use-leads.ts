@@ -12,6 +12,7 @@ import {
   fetchQueueCounts,
   fetchLeadById,
 } from "@/lib/repositories/leads"
+import { leadsApi } from "@/lib/api/leads"
 
 // Single source of truth for query keys. Group prefix `leads` lets us
 // invalidate everything with `queryClient.invalidateQueries({ queryKey: ['leads'] })`.
@@ -26,6 +27,7 @@ export const leadKeys = {
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
+  fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
   queueCounts: () => [...leadKeys.all, "queue-counts"] as const,
 }
 
@@ -57,6 +59,16 @@ export function useLeadById(id: string | undefined) {
     enabled: Boolean(id),
   })
 }
+/** Full lead view — extension + attempts + drip + meetings + whatsapp logs. */
+export function useLeadFullDetail(id: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.fullDetail(String(id ?? "__noop__")),
+    queryFn: () => leadsApi.detail(id!),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+  })
+}
+
 export function useQueueCountsQuery() {
   return useQuery({
     queryKey: leadKeys.queueCounts(),

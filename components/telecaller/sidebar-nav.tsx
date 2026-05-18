@@ -1,6 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/AuthContext"
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +23,7 @@ import {
   Phone,
   Settings,
   HelpCircle,
+  LogOut,
   ChevronDown,
   ChevronRight,
   Inbox,
@@ -79,6 +82,25 @@ const OUTCOMES = [
 export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNavProps) {
   const homeOption = HOME_OPTION
   const outcomes = OUTCOMES
+
+  const router = useRouter()
+  const { user, logout } = useAuth()
+  const displayName = user?.fullName || user?.username || "—"
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : "Member"
+  const initials =
+    (user?.fullName || user?.username || "")
+      .split(/\s+/)
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?"
+
+  const handleLogout = () => {
+    logout()
+    router.replace("/login")
+  }
 
   // Lifecycle stages depend on queueCounts — memoize so SidebarMenuItem children
   // don't see a fresh array on every parent re-render.
@@ -289,12 +311,12 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
             <Button variant="ghost" className="w-full justify-start gap-2 px-2 h-auto py-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground">
               <Avatar className="size-8">
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-medium">
-                  PY
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-medium">Pappu Yadav</span>
-                <span className="text-[10px] text-sidebar-foreground/60">Telecaller</span>
+                <span className="text-sm font-medium">{displayName}</span>
+                <span className="text-[10px] text-sidebar-foreground/60">{roleLabel}</span>
               </div>
               <ChevronDown className="ml-auto size-4 opacity-50 group-data-[collapsible=icon]:hidden" />
             </Button>
@@ -312,6 +334,14 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
             <DropdownMenuItem>
               <HelpCircle className="mr-2 size-4" />
               Help & Support
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="mr-2 size-4" />
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -84,6 +85,12 @@ interface HomeDashboardProps {
 }
 
 export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
+  const { user } = useAuth()
+  // First name only — keeps the greeting punchy. Falls back to username, then
+  // a generic "there" so the layout never collapses if user info is missing.
+  const firstName =
+    (user?.fullName?.split(/\s+/)[0]) || user?.username || "there"
+
   // Live clock — updates every minute. Initialised to null to avoid SSR/CSR
   // hydration mismatch (server-rendered time won't match the client's first paint).
   const [now, setNow] = useState<Date | null>(null)
@@ -140,7 +147,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
           long names/subtitles from pushing badges off-screen. */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl font-bold text-foreground sm:text-2xl">{greeting}, Pappu</h2>
+          <h2 className="truncate text-xl font-bold text-foreground sm:text-2xl">{greeting}, {firstName}</h2>
           <p className="truncate text-sm text-muted-foreground">Here&apos;s your performance overview for today</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

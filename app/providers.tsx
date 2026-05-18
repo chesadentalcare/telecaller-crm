@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { AuthProvider } from "@/lib/auth/AuthContext"
 
 // All client-side providers live here so app/layout.tsx stays a Server
 // Component. Add new global providers (theme, auth) into this tree, not at the
@@ -27,5 +28,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   )
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  )
 }

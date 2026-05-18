@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
 import {
   ClipboardList, Phone, Video, MapPin, Droplets, CheckCircle2,
   User, Building2, Clock, IndianRupee,
@@ -19,6 +20,8 @@ import {
   rapidQualificationDefaults,
   type RapidQualificationValues,
 } from "@/lib/schemas/rapid-qualification"
+import { useRapidQualify, useEnterDrip } from "@/hooks/use-lead-mutations"
+import { ApiError } from "@/lib/api/client"
 
 const DENTIST_TYPES = [
   "General Dentist", "Orthodontist", "Periodontist", "Endodontist",
@@ -57,11 +60,22 @@ interface LeadInfo {
 
 interface RapidQualificationFormProps {
   lead?: LeadInfo
+  leadId?: string | number
 }
 
-export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
+// Maps the form's frontend-friendly route ids onto the backend's enum.
+const ROUTE_TO_BACKEND: Record<string, "online_meeting" | "physical_meeting" | "drip_info"> = {
+  "online-meeting": "online_meeting",
+  "physical-meeting": "physical_meeting",
+  drip: "drip_info",
+}
+
+export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormProps) {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [lastRoute, setLastRoute] = useState<string>("")
+
+  const { mutateAsync: rapidQualify } = useRapidQualify(leadId ?? "")
+  const { mutateAsync: enterDrip } = useEnterDrip(leadId ?? "")
 
   const { control, handleSubmit, reset, formState } = useForm<RapidQualificationValues>({
     resolver: zodResolver(rapidQualificationSchema),
@@ -71,9 +85,30 @@ export function RapidQualificationForm({ lead }: RapidQualificationFormProps) {
   const { isValid, isSubmitting } = formState
 
   const onSubmit = async (values: RapidQualificationValues) => {
-    await new Promise((r) => setTimeout(r, 1000))
-    setLastRoute(values.routeSelection)
-    setSubmitSuccess(true)
+    if (!leadId) {
+      toast.error("Open this form from a lead's detail view")
+      return
+    }
+    try {
+      await rapidQualify({
+        ...values,
+        routeSelection: ROUTE_TO_BACKEND[values.routeSelection] || values.routeSelection,
+      })
+      // If telecaller picked drip, also enter the drip track immediately so
+      // the no-extra-clicks UX matches the SOP.
+      if (values.routeSelection === "drip") {
+        try {
+          await enterDrip({ timelineBucket: values.timeline })
+        } catch (err) {
+          // Non-fatal: rapid-qualify succeeded; drip entry can be retried.
+          toast.warning("Qualification saved, but drip entry failed — retry from the Drip tab")
+        }
+      }
+      setLastRoute(values.routeSelection)
+      setSubmitSuccess(true)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save qualification")
+    }
   }
 
   if (submitSuccess) {

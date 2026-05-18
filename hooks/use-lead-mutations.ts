@@ -1,0 +1,123 @@
+"use client"
+
+// One file with all telecaller mutations. Each hook follows the same shape:
+//   - calls the API via leadsApi
+//   - invalidates the right query keys on success so list views + counts
+//     refresh without manual refetch wiring at call sites
+//
+// Call sites just do:
+//   const { mutateAsync: createLead, isPending } = useCreateLead()
+//   await createLead(values)
+
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+
+import { leadsApi } from "@/lib/api/leads"
+import { leadKeys } from "@/hooks/use-leads"
+import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
+import type { RapidQualificationValues } from "@/lib/schemas/rapid-qualification"
+import type { FullQualificationValues } from "@/lib/schemas/full-qualification"
+import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
+import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
+import type { CallOutcome } from "@/lib/schemas/call-attempt"
+
+// Invalidate everything queue-y. Used after any write that could change
+// what a list/badge displays — broad invalidation is fine here because the
+// queries are cheap and we have a small set of them.
+const invalidateAllLeads = (qc: ReturnType<typeof useQueryClient>) =>
+  qc.invalidateQueries({ queryKey: leadKeys.all })
+
+export function useCreateLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: LeadIntakeValues) => leadsApi.create(values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useLeadDetail(id: string | number | undefined) {
+  // Detail uses useQuery, not useMutation — wrapper for symmetry; consumers
+  // import everything from one file.
+  const qc = useQueryClient()
+  return {
+    invalidate: () => qc.invalidateQueries({ queryKey: leadKeys.detail(String(id ?? "")) }),
+  }
+}
+
+export function useLogAttempt(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { outcome: CallOutcome; notes?: string; attempt_type?: "call" | "retry_call" }) =>
+      leadsApi.logAttempt(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+  })
+}
+
+export function useRapidQualify(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: RapidQualificationValues) => leadsApi.rapidQualify(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useFullQualify(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: FullQualificationValues) => leadsApi.fullQualify(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useZoomMeeting(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: ZoomMeetingValues) => leadsApi.zoomMeeting(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function usePhysicalMeeting(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: PhysicalMeetingValues) => leadsApi.physicalMeeting(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useRecoveryWhatsapp(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      phone: string; dentistName?: string; telecallerName?: string; equipmentInterest?: string
+    }) => leadsApi.recoveryWhatsapp(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useEnterDrip(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { timelineBucket?: string; track?: "1_month" | "3_month" | "6_plus_month" }) =>
+      leadsApi.enterDrip(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useExitDrip(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { reason: string; status?: string }) => leadsApi.exitDrip(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useUpdateTimeline(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { stage: string }) => leadsApi.updateTimeline(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}

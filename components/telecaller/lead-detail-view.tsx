@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   ArrowLeft,
   Phone,
@@ -79,6 +79,17 @@ import {
   physicalMeetingDefaults,
   type PhysicalMeetingValues,
 } from "@/lib/schemas/physical-meeting"
+import { useLeadFullDetail } from "@/hooks/use-leads"
+import {
+  useLogAttempt,
+  useFullQualify,
+  useZoomMeeting,
+  usePhysicalMeeting,
+  useExitDrip,
+  useRecoveryWhatsapp,
+} from "@/hooks/use-lead-mutations"
+import { ApiError } from "@/lib/api/client"
+import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
 
 // ─── Mock data — replace with real fetch when backend lands ─────────────
 type CallAttempt = {
@@ -132,6 +143,69 @@ type LeadDetail = {
   attempts: CallAttempt[]
 }
 
+// ─── Backend → UI mapper ────────────────────────────────────────────────
+// The view's LeadDetail type is the rich, UI-friendly shape. The backend
+// only stores opportunity_doc_entry + extension fields — customer name,
+// phone, email come from SAP and aren't enriched yet. Until then we show
+// placeholders so the layout stays correct.
+function mapDetail(d: ApiLeadDetail): LeadDetail {
+  const ext = d.extension
+  const id = String(ext.opportunity_doc_entry)
+  const lastActivity =
+    d.attempts[0]?.attempted_at || d.meetings[0]?.meeting_at || ext.updated_at
+  const idleDays = Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86_400_000)
+
+  return {
+    id,
+    name: `Lead #${id}`,
+    phone: "—",
+    whatsappNumber: undefined,
+    email: undefined,
+    city: "—",
+    equipment: ext.equipment_interest ?? "—",
+    source: "—",
+    stage: ext.stage,
+    status: (
+      ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
+        ? "meeting-scheduled"
+        : ext.stage === "full_qualified" || ext.stage === "rapid_qualified"
+          ? "qualified"
+          : ext.dormant_since
+            ? "dormant"
+            : ext.stage === "new"
+              ? "new"
+              : "contacted"
+    ) as LeadDetail["status"],
+    createdAt: new Date(ext.created_at),
+    lastActivityAt: new Date(lastActivity),
+    idleDays,
+    rapidQualified: !!(ext.dentist_type && ext.practice_type),
+    phoneVerified: !!ext.phone_verified,
+    dentistType: ext.dentist_type ?? undefined,
+    practiceType: ext.practice_type ?? undefined,
+    timelineBucket: undefined,
+    budgetRange: ext.budget_range ?? undefined,
+    firstCallRoute: ext.first_call_route,
+    decisionMaker: ext.decision_maker ?? undefined,
+    competitors: undefined,
+    fundingMethod: ext.funding_method ?? undefined,
+    inDrip: !!(d.drip && d.drip.status === "active"),
+    dripTrack: d.drip?.track,
+    dripMessageIndex: d.drip?.current_message_index,
+    dripTotalMessages:
+      d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
+    dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
+    attempts: d.attempts.map((a) => ({
+      id: String(a.id),
+      attemptedAt: new Date(a.attempted_at),
+      attemptNumber: a.attempt_number,
+      outcome: a.outcome,
+      notes: a.notes ?? undefined,
+      attemptedBy: a.attempted_by,
+    })),
+  }
+}
+
 const mockLead: LeadDetail = {
   id: "L-2026-0142",
   name: "Dr. Suresh Verma",
@@ -183,8 +257,44 @@ interface LeadDetailViewProps {
 }
 
 export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
-  // In a real app, fetch lead by leadId. For now, always show the mock.
-  const lead = mockLead
+  const { data: detail, isLoading, error } = useLeadFullDetail(leadId)
+  // Map backend payload → rich UI shape. useMemo so child tabs see stable
+  // identity and don't re-render when sibling state changes.
+  const lead: LeadDetail | null = useMemo(
+    () => (detail ? mapDetail(detail) : null),
+    [detail],
+  )
+
+  // Recovery WhatsApp mutation lives at the top-level so the banner button
+  // can fire it before any tab is mounted. id-scoped hooks need an id, so we
+  // pass leadId (falls back to "" — banner only renders once lead is loaded).
+  const { mutateAsync: sendRecovery } = useRecoveryWhatsapp(leadId ?? "")
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+      </div>
+    )
+  }
+
+  if (error || !lead) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-sm text-muted-foreground">
+          {error instanceof ApiError && error.status === 404
+            ? "Lead not found."
+            : "Could not load this lead. Try again."}
+          <div className="mt-3">
+            <Button variant="outline" size="sm" onClick={onBack}>
+              <ArrowLeft className="size-4" />
+              Back
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   // Count failed call attempts (no_response only) — drives the recovery banner.
   const noResponseCount = lead.attempts.filter((a) => a.outcome === "no_response").length
@@ -216,7 +326,22 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
           leadPhone={lead.phone}
           failedAttempts={noResponseCount}
           lastAttemptTime={lastAttemptTime}
-          onSendWhatsApp={() => toast.success("Recovery WhatsApp sent — 60-day dormant clock started")}
+          onSendWhatsApp={async () => {
+            try {
+              const res = await sendRecovery({
+                phone: lead.phone,
+                dentistName: lead.name,
+                equipmentInterest: lead.equipment,
+              })
+              toast.success(
+                res.dryRun
+                  ? "Recovery WhatsApp queued (dry-run — see backend logs)"
+                  : "Recovery WhatsApp sent — 60-day dormant clock started",
+              )
+            } catch (err) {
+              toast.error(err instanceof ApiError ? err.message : "Failed to send recovery WhatsApp")
+            }
+          }}
           onDismiss={() => toast.info("Recovery banner dismissed")}
         />
       )}
@@ -381,6 +506,8 @@ const OUTCOME_CONFIG: Record<CallOutcome, { label: string; color: string; icon: 
 
 // ─── Calls Tab — Gap #2: Call Attempt Logger ───────────────────────────
 function CallsTab({ lead }: { lead: LeadDetail }) {
+  const { mutateAsync: logAttempt } = useLogAttempt(lead.id)
+
   const { control, handleSubmit, reset, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
     // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
@@ -390,10 +517,17 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
   })
   const { errors, isSubmitting } = formState
 
-  const onSubmit = async (_values: CallAttemptValues) => {
-    // Real impl: POST to /api/telecaller/leads/:id/attempt via a mutation.
-    toast.success("Call attempt logged")
-    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
+  const onSubmit = async (values: CallAttemptValues) => {
+    try {
+      const res = await logAttempt({ outcome: values.outcome, notes: values.notes })
+      toast.success(`Attempt #${res.attemptNumber} logged`)
+      if (res.triggerRecovery) {
+        toast.info("4th no-response — recovery WhatsApp ready to send", { duration: 6000 })
+      }
+      reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to log attempt")
+    }
   }
 
   return (
@@ -629,13 +763,17 @@ function FullQualificationDialog({
   })
   const { errors, isSubmitting } = formState
 
-  const onSubmit = async (_values: FullQualificationValues) => {
-    // Real save will mutate via TanStack Query — for now just acknowledge.
-    toast.success("Full qualification saved — physical meeting gate unlocked")
-    onOpenChange(false)
-    // Reset back to fresh defaults so reopening the dialog doesn't show
-    // stale values after a server round-trip.
-    reset()
+  const { mutateAsync: fullQualify } = useFullQualify(lead.id)
+
+  const onSubmit = async (values: FullQualificationValues) => {
+    try {
+      await fullQualify(values)
+      toast.success("Full qualification saved — physical meeting gate unlocked")
+      onOpenChange(false)
+      reset()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save qualification")
+    }
   }
 
   return (
@@ -825,15 +963,21 @@ function FullQualRow({ label, value }: { label: string; value?: string }) {
 function DripTab({ lead }: { lead: LeadDetail }) {
   const [exitOpen, setExitOpen] = useState(false)
   const [exitReason, setExitReason] = useState("")
+  const { mutateAsync: exitDrip, isPending: exiting } = useExitDrip(lead.id)
 
-  const handleExit = () => {
+  const handleExit = async () => {
     if (!exitReason) {
       toast.error("Please select a reason")
       return
     }
-    toast.success("Lead exited from drip")
-    setExitOpen(false)
-    setExitReason("")
+    try {
+      await exitDrip({ reason: exitReason })
+      toast.success("Lead exited from drip")
+      setExitOpen(false)
+      setExitReason("")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to exit drip")
+    }
   }
 
   if (!lead.inDrip) {
@@ -928,7 +1072,9 @@ function DripTab({ lead }: { lead: LeadDetail }) {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setExitOpen(false)}>Cancel</Button>
-                  <Button onClick={handleExit}>Confirm Exit</Button>
+                  <Button onClick={handleExit} disabled={exiting}>
+                    {exiting ? "Exiting…" : "Confirm Exit"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -952,8 +1098,9 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
 // ── Gap #4: Zoom Meeting Form ──────────────────────────────────────────
 // `open` is UI state (dialog open/closed), not form state — kept as useState.
 // Everything that is form state goes through useForm + zod.
-function ZoomMeetingCard({ lead: _lead }: { lead: LeadDetail }) {
+function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
   const [open, setOpen] = useState(false)
+  const { mutateAsync: saveZoom } = useZoomMeeting(lead.id)
 
   const { control, handleSubmit, reset, watch, formState } = useForm<ZoomMeetingValues>({
     resolver: zodResolver(zoomMeetingSchema),
@@ -963,10 +1110,15 @@ function ZoomMeetingCard({ lead: _lead }: { lead: LeadDetail }) {
   const { errors, isSubmitting } = formState
   const designFeeStatus = watch("designFeeStatus")
 
-  const onSubmit = async (_values: ZoomMeetingValues) => {
-    toast.success("Zoom meeting saved")
-    setOpen(false)
-    reset(zoomMeetingDefaults)
+  const onSubmit = async (values: ZoomMeetingValues) => {
+    try {
+      await saveZoom(values)
+      toast.success("Zoom meeting saved")
+      setOpen(false)
+      reset(zoomMeetingDefaults)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save Zoom meeting")
+    }
   }
 
   return (
@@ -1122,13 +1274,23 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
   const fullQualFields = [lead.decisionMaker, lead.timelineBucket, lead.budgetRange, lead.competitors, lead.fundingMethod, lead.dentistType && lead.practiceType]
   const isFullyQualified = fullQualFields.every((v) => !!v)
 
-  const onSubmit = async (_values: PhysicalMeetingValues) => {
-    // Mock round-robin assignment — real impl is round-robin/territory.
-    // Backend will fire lead.handoff_to_sales event here.
-    const picked = MOCK_SALESPEOPLE[Math.floor(Math.random() * MOCK_SALESPEOPLE.length)]
-    setAssignedSalesperson(picked)
-    setScheduleOpen(false)
-    setHandoffOpen(true)
+  const { mutateAsync: schedulePhysical } = usePhysicalMeeting(lead.id)
+
+  const onSubmit = async (values: PhysicalMeetingValues) => {
+    try {
+      const res = await schedulePhysical(values)
+      // Backend's round-robin / territory picker decides the salesperson and
+      // fires the lead.handoff_to_sales event — we just show what it picked.
+      setAssignedSalesperson(res.assignedSalesperson)
+      setScheduleOpen(false)
+      setHandoffOpen(true)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        toast.error(err.message || "Full qualification incomplete — finish it first")
+      } else {
+        toast.error(err instanceof ApiError ? err.message : "Failed to schedule physical meeting")
+      }
+    }
   }
 
   // Read meetingAt/location for the handoff confirmation card after submit.

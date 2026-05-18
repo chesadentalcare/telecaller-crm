@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { apiUrl, endpoints } from "@/lib/api-config"
+import { sharedApiUrl, endpoints } from "@/lib/api-config"
 
 export interface Product {
   id: number
@@ -16,7 +16,9 @@ interface UseProductsResult {
 }
 
 async function fetchProducts(): Promise<Product[]> {
-  const res = await fetch(apiUrl(endpoints.products), { method: "GET" })
+  // Products live in the deployed chesa_api_gateway, not the local telecaller
+  // backend. See sharedApiUrl in lib/api-config.ts.
+  const res = await fetch(sharedApiUrl(endpoints.products), { method: "GET" })
   if (!res.ok) {
     throw new Error(`Products fetch failed: ${res.status} ${res.statusText}`)
   }

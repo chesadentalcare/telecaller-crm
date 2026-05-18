@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Bell, Phone } from "lucide-react"
+import { AuthGate } from "@/components/auth/auth-gate"
+import { UserMenu } from "@/components/auth/user-menu"
 
 // ─── Lazy-loaded views ──────────────────────────────────────────────────
 // Each view is split into its own chunk so the initial bundle only contains
@@ -111,8 +113,10 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   qualification: {
     title: "Rapid Qualification",
     subtitle: "Qualify lead for next steps",
-    render: () => (
-      <div className="max-w-xl mx-auto"><RapidQualificationForm /></div>
+    render: ({ selectedLeadId }) => (
+      <div className="max-w-xl mx-auto">
+        <RapidQualificationForm leadId={selectedLeadId ?? undefined} />
+      </div>
     ),
   },
   drip: {
@@ -153,9 +157,11 @@ const FALLBACK_VIEW = VIEW_REGISTRY.home
 // useSearchParams — otherwise the build fails for statically-rendered pages.
 export default function TelecallerDashboard() {
   return (
-    <Suspense fallback={<ShellSkeleton />}>
-      <TelecallerDashboardInner />
-    </Suspense>
+    <AuthGate>
+      <Suspense fallback={<ShellSkeleton />}>
+        <TelecallerDashboardInner />
+      </Suspense>
+    </AuthGate>
   )
 }
 
@@ -242,6 +248,8 @@ function TelecallerDashboardInner() {
                 3
               </span>
             </Button>
+
+            <UserMenu />
           </div>
         </header>
 

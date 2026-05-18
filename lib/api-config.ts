@@ -41,6 +41,18 @@ export const APP_ENV: Environment =
 export const API_BASE_URL: string =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? API_BASE_URLS[APP_ENV]
 
+// ─────────────────────────────────────────────────────────────────────────
+// Shared (chesa_api_gateway) base URL
+// ─────────────────────────────────────────────────────────────────────────
+// Reference endpoints — /crmpro (products), /get_technicians, /sales_employees —
+// live in the deployed chesa_api_gateway, not the standalone telecaller
+// backend. We always hit the prod gateway for them, even during local dev,
+// unless overridden. After the gateways merge, set
+// NEXT_PUBLIC_SHARED_API_BASE_URL=<same as main> and these calls collapse
+// back onto a single host.
+export const SHARED_API_BASE_URL: string =
+  process.env.NEXT_PUBLIC_SHARED_API_BASE_URL ?? "https://api.chesadentalcare.com"
+
 /**
  * Endpoint catalog. Every API path the frontend hits lives here. To switch
  * a single call site to a different environment, only the base URL changes
@@ -54,6 +66,7 @@ export const endpoints = {
 
   // Lead lifecycle (Track 1 — see Track1_Telecaller_Dashboard_7Day_Plan.docx §4.2)
   leads: "/api/telecaller/leads",
+  leadDetail: (id: string) => `/api/telecaller/leads/${id}`,
   leadAttempt: (id: string) => `/api/telecaller/leads/${id}/attempt`,
   leadRapidQualify: (id: string) => `/api/telecaller/leads/${id}/rapid-qualify`,
   leadFullQualify: (id: string) => `/api/telecaller/leads/${id}/full-qualify`,
@@ -63,16 +76,24 @@ export const endpoints = {
   leadTimeline: (id: string) => `/api/telecaller/leads/${id}/timeline`,
   dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
+  sapEmployees: "/api/telecaller/sap/employees",
+  queuePipeline: "/api/telecaller/queue/pipeline",
+  queueNoResponse: "/api/telecaller/queue/no-response",
+  queueDrip: "/api/telecaller/queue/drip",
+  queueIdle: "/api/telecaller/queue/idle",
+  queueDormant: "/api/telecaller/queue/dormant",
+  queueCounts: "/api/telecaller/queue/counts",
 } as const
 
 /**
  * Builds a fully-qualified URL from a registered path (string) or path-builder
  * (function). Use this instead of string-concatenation at call sites.
  *
- *   apiUrl(endpoints.products)               → "<base>/crmpro"
- *   apiUrl(endpoints.leadAttempt("L-001"))   → "<base>/api/telecaller/leads/L-001/attempt"
+ *   apiUrl(endpoints.leadAttempt("L-001"))   → "<telecaller-base>/api/telecaller/leads/L-001/attempt"
+ *   sharedApiUrl(endpoints.products)         → "<chesa-prod>/crmpro"
  */
 export const apiUrl = (path: string): string => `${API_BASE_URL}${path}`
+export const sharedApiUrl = (path: string): string => `${SHARED_API_BASE_URL}${path}`
 
 // ─────────────────────────────────────────────────────────────────────────
 // On state management

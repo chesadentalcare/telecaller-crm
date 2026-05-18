@@ -19,6 +19,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useProducts } from "@/hooks/use-products"
+import { useSapEmployees } from "@/hooks/use-sap-employees"
+import { useCreateLead } from "@/hooks/use-lead-mutations"
+import { ApiError } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 import {
   leadIntakeSchema,
@@ -65,12 +68,9 @@ const BUDGET_OPTIONS = [
   { value: "25L+",   label: "₹25L+",       tier: "Premium / Multi-chair"   },
 ] as const
 
-const EMPLOYEE_OPTIONS = [
-  { id: "73", name: "Vivek Chahvan" },
-  { id: "74", name: "Ravi Kumar" },
-  { id: "75", name: "Anita Verma" },
-  { id: "76", name: "Jagjit Singh" },
-] as const
+// Sales employees are now fetched live from SAP Ashva via useSapEmployees().
+// The hardcoded 73-76 list is gone — those IDs were inactive in Ashva, which
+// is why the previous lead creation flow hit "-5002 Inactive employee".
 
 // ─── Step config ──────────────────────────────────────────────────────
 const STEPS = [
@@ -86,7 +86,10 @@ type StepId = 1 | 2 | 3 | 4
 export function LeadIntakeForm() {
   const [currentStep, setCurrentStep] = useState<StepId>(1)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [createdDocEntry, setCreatedDocEntry] = useState<number | null>(null)
   const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
+  const { data: salesEmployees, isLoading: employeesLoading } = useSapEmployees()
+  const { mutateAsync: createLead } = useCreateLead()
 
   const form = useForm<LeadIntakeValues>({
     resolver: zodResolver(leadIntakeSchema),
@@ -113,14 +116,22 @@ export function LeadIntakeForm() {
   }
 
   const onSubmit = async (values: LeadIntakeValues) => {
-    // Stand-in for real submit; swap with a mutation once the API lands.
-    await new Promise((r) => setTimeout(r, 800))
-    setSubmitSuccess(true)
-    setTimeout(() => {
-      reset(leadIntakeDefaults)
-      setCurrentStep(1)
-      setSubmitSuccess(false)
-    }, 2200)
+    try {
+      const res = await createLead(values)
+      setCreatedDocEntry(res.opportunityDocEntry)
+      setSubmitSuccess(true)
+      toast.success(`Lead created — Opp #${res.opportunityDocEntry}`)
+      setTimeout(() => {
+        reset(leadIntakeDefaults)
+        setCurrentStep(1)
+        setSubmitSuccess(false)
+        setCreatedDocEntry(null)
+      }, 2800)
+    } catch (err) {
+      const msg =
+        err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Failed to create lead"
+      toast.error(msg)
+    }
   }
 
   // Success card
@@ -137,6 +148,11 @@ export function LeadIntakeForm() {
           <p className="text-sm text-muted-foreground mt-1">
             {name ? `${name} ` : "The lead "}has been logged and is ready for the first call.
           </p>
+          {createdDocEntry !== null && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              SAP Opportunity #<span className="font-mono">{createdDocEntry}</span> · MySQL row written.
+            </p>
+          )}
         </CardContent>
       </Card>
     )
@@ -213,9 +229,18 @@ export function LeadIntakeForm() {
               products={products}
               productsLoading={productsLoading}
               productsError={productsError}
+              employees={salesEmployees ?? []}
+              employeesLoading={employeesLoading}
             />
           )}
-          {currentStep === 4 && <Step4Review control={control} products={products} jumpTo={jumpTo} />}
+          {currentStep === 4 && (
+            <Step4Review
+              control={control}
+              products={products}
+              employees={salesEmployees ?? []}
+              jumpTo={jumpTo}
+            />
+          )}
         </CardContent>
 
         <CardFooter className="flex justify-between gap-2 border-t bg-muted/30">
@@ -479,9 +504,14 @@ interface Step3Props extends StepProps {
   products: { id: number; pname: string }[]
   productsLoading: boolean
   productsError: string | null
+  employees: { employeeId: number; name: string; jobTitle: string | null }[]
+  employeesLoading: boolean
 }
 
-function Step3Interest({ control, errors, products, productsLoading, productsError }: Step3Props) {
+function Step3Interest({
+  control, errors, products, productsLoading, productsError,
+  employees: salesEmployees, employeesLoading,
+}: Step3Props) {
   // Watch product1 so product2's options exclude it. Hook is at the top of
   // this component, not behind a conditional in the parent — rules-of-hooks.
   const currentProduct1Id = useWatch({ control, name: "product1Id" })
@@ -687,12 +717,20 @@ function Step3Interest({ control, errors, products, productsLoading, productsErr
             control={control}
             name="ourEmployee"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value} onValueChange={field.onChange} disabled={employeesLoading}>
                 <SelectTrigger className={cn("h-9", errors.ourEmployee && "border-destructive")}>
-                  <SelectValue placeholder="-- Select Employee --" />
+                  <SelectValue placeholder={employeesLoading ? "Loading employees…" : "-- Select Employee --"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {EMPLOYEE_OPTIONS.map((e) => <SelectItem key={e.id} value={e.id} className="text-sm">{e.name}</SelectItem>)}
+                  {(salesEmployees ?? []).map((e) => (
+                    <SelectItem key={e.employeeId} value={String(e.employeeId)} className="text-sm">
+                      {e.name}
+                      {e.jobTitle ? ` · ${e.jobTitle}` : ""}
+                    </SelectItem>
+                  ))}
+                  {!employeesLoading && salesEmployees?.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No active sales employees found</div>
+                  )}
                 </SelectContent>
               </Select>
             )}
@@ -724,10 +762,11 @@ function Step3Interest({ control, errors, products, productsLoading, productsErr
 
 // ─── Step 4: Review ────────────────────────────────────────────────────
 function Step4Review({
-  control, products, jumpTo,
+  control, products, employees, jumpTo,
 }: {
   control: Control<LeadIntakeValues>
   products: { id: number; pname: string }[]
+  employees: { employeeId: number; name: string }[]
   jumpTo: (s: StepId) => void
 }) {
   // Watch all fields — Review is read-only so re-renders here cost nothing.
@@ -735,7 +774,7 @@ function Step4Review({
 
   const p1 = products.find((p) => String(p.id) === v.product1Id)?.pname ?? "—"
   const p2 = products.find((p) => String(p.id) === v.product2Id)?.pname
-  const emp = EMPLOYEE_OPTIONS.find((e) => e.id === v.ourEmployee)?.name ?? "—"
+  const emp = employees.find((e) => String(e.employeeId) === v.ourEmployee)?.name ?? "—"
   const lvl = INTEREST_LEVELS.find((l) => l.value === v.interestLevel)
   const bud = BUDGET_OPTIONS.find((b) => b.value === v.budget)
 

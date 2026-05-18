@@ -1,15 +1,12 @@
-// Repository layer — the only place that knows where lead data comes from.
+// Repository layer — translates raw backend rows into the shapes the views
+// already expect (lib/types/lead.ts). The view code doesn't change when a
+// backend field is renamed; only this file changes.
 //
-// Today: returns the mock fixtures with a small artificial latency so the UI
-// experiences a real loading state.
-//
-// Tomorrow: each function swaps to `fetch(apiUrl(endpoints.X))`. Call sites
-// (the useLeads hooks) never know about the change.
-//
-// Why this layer exists at all when hooks could just call fetch directly:
-//   - Isolates URL/transport concerns from React (testable in isolation).
-//   - Same function is reusable from server components, scripts, tests.
-//   - Stops 7 components from each owning a different lead shape.
+// What's missing: the backend currently only stores opportunity_doc_entry +
+// telecaller-owned fields. Customer name / phone / source live in SAP. Until
+// the backend enriches its responses (or we add a /lookup endpoint that
+// pulls from SAP cache), we show "Lead #<docEntry>" as a placeholder name.
+// The pipeline can be replaced as soon as the backend enriches.
 
 import type {
   PipelineLead,
@@ -20,51 +17,175 @@ import type {
   ReactivationLead,
   SixMonthLead,
   QueueCounts,
+  LeadStatus,
+  DripTrack,
 } from "@/lib/types/lead"
-import {
-  getMockPipelineLeads,
-  getMockDripLeads,
-  MOCK_NO_RESPONSE_LEADS,
-  MOCK_IDLE_LEADS,
-  MOCK_DORMANT_LEADS,
-  MOCK_REACTIVATION_LEADS,
-  MOCK_SIX_MONTH_LEADS,
-  MOCK_QUEUE_COUNTS,
-} from "@/lib/mocks/leads"
+import { leadsApi } from "@/lib/api/leads"
+import type {
+  PipelineRow,
+  DripQueueRow,
+  NoResponseRow,
+  IdleRow,
+  DormantRow,
+} from "@/lib/api/leads"
 
-// Simulated network delay so skeletons get a moment to render. Keep this
-// short (250–500ms). When real fetches go in, delete the wrapper entirely.
-const FAKE_LATENCY_MS = 350
-const delay = <T,>(value: T): Promise<T> =>
-  new Promise((resolve) => setTimeout(() => resolve(value), FAKE_LATENCY_MS))
+// ─── helpers ────────────────────────────────────────────────────────────
+const placeholderName = (id: number | string) => `Lead #${id}`
+const placeholderPhone = "—"
 
-export const fetchPipelineLeads = (): Promise<PipelineLead[]> =>
-  delay(getMockPipelineLeads())
+const parseDate = (s: string | null | undefined): Date | undefined =>
+  s ? new Date(s) : undefined
 
-export const fetchDripLeads = (): Promise<DripLead[]> =>
-  delay(getMockDripLeads())
+const stageToStatus = (stage: string): LeadStatus => {
+  if (stage === "physical_meeting_scheduled" || stage === "zoom_meeting_done")
+    return "meeting-scheduled"
+  if (stage === "full_qualified" || stage === "rapid_qualified") return "qualified"
+  if (stage === "new") return "new"
+  return "contacted"
+}
 
-export const fetchNoResponseLeads = (): Promise<NoResponseLead[]> =>
-  delay(MOCK_NO_RESPONSE_LEADS)
+const trackBackToFront = (t: string): DripTrack => {
+  if (t === "1_month") return "1-month"
+  if (t === "3_month") return "3-month"
+  return "6-month"
+}
 
-export const fetchIdleLeads = (): Promise<IdleLead[]> =>
-  delay(MOCK_IDLE_LEADS)
+// ─── mappers ────────────────────────────────────────────────────────────
+const toPipeline = (r: PipelineRow): PipelineLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  equipment: r.equipment ?? "—",
+  source: "—",
+  city: "—",
+  status: stageToStatus(r.stage),
+  failedAttempts: Number(r.failed_attempts) || 0,
+  createdAt: new Date(r.created_at),
+  lastAttemptTime: parseDate(r.last_attempt_time),
+})
 
-export const fetchDormantLeads = (): Promise<DormantLead[]> =>
-  delay(MOCK_DORMANT_LEADS)
+const toDrip = (r: DripQueueRow): DripLead => {
+  const next = r.next_message_at ? new Date(r.next_message_at).getTime() : null
+  const nextMessageIn = next ? Math.max(0, Math.floor((next - Date.now()) / 1000)) : 0
+  return {
+    id: String(r.id),
+    name: placeholderName(r.id),
+    phone: placeholderPhone,
+    track: trackBackToFront(r.track),
+    nextMessageIn,
+    lastEngagement: r.last_engagement ? new Date(r.last_engagement) : new Date(0),
+    messagesSent: r.messages_sent,
+    totalMessages: r.track === "1_month" ? 9 : r.track === "3_month" ? 19 : 13,
+    equipment: r.equipment ?? "—",
+  }
+}
 
-export const fetchReactivationLeads = (): Promise<ReactivationLead[]> =>
-  delay(MOCK_REACTIVATION_LEADS)
+const toNoResponse = (r: NoResponseRow): NoResponseLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  attempts: r.attempts,
+  lastAttempt: humanAgo(r.last_attempt),
+  equipment: r.equipment ?? "—",
+})
 
-export const fetchSixMonthLeads = (): Promise<SixMonthLead[]> =>
-  delay(MOCK_SIX_MONTH_LEADS)
+const toIdle = (r: IdleRow): IdleLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  idleDays: r.idle_days,
+  lastActivity: humanAgo(r.last_activity),
+  equipment: r.equipment ?? "—",
+})
 
-export const fetchQueueCounts = (): Promise<QueueCounts> =>
-  delay(MOCK_QUEUE_COUNTS)
+const toDormant = (r: DormantRow): DormantLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  dormantDays: r.dormant_days,
+  reason: r.reason ?? "no response",
+})
 
-// Looks up a single lead by id across all mock buckets. Real impl will be a
-// dedicated /api/leads/:id endpoint with proper auth scoping.
+// Tiny relative-time helper. The mock data already used strings like
+// "30 min ago", so views format these directly. Keeps the type shape stable.
+function humanAgo(iso: string): string {
+  if (!iso) return "—"
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.round(diff / 60_000)
+  if (m < 1)   return "just now"
+  if (m < 60)  return `${m} min ago`
+  const h = Math.round(m / 60)
+  if (h < 24)  return `${h} hour${h === 1 ? "" : "s"} ago`
+  const d = Math.round(h / 24)
+  return `${d} day${d === 1 ? "" : "s"} ago`
+}
+
+// ─── public fetchers ────────────────────────────────────────────────────
+export const fetchPipelineLeads = async (): Promise<PipelineLead[]> => {
+  const rows = await leadsApi.queues.pipeline()
+  return rows.map(toPipeline)
+}
+
+export const fetchDripLeads = async (): Promise<DripLead[]> => {
+  const rows = await leadsApi.queues.drip()
+  return rows.map(toDrip)
+}
+
+export const fetchNoResponseLeads = async (): Promise<NoResponseLead[]> => {
+  const rows = await leadsApi.queues.noResponse()
+  return rows.map(toNoResponse)
+}
+
+export const fetchIdleLeads = async (): Promise<IdleLead[]> => {
+  const rows = await leadsApi.queues.idle()
+  return rows.map(toIdle)
+}
+
+export const fetchDormantLeads = async (): Promise<DormantLead[]> => {
+  const rows = await leadsApi.queues.dormant()
+  return rows.map(toDormant)
+}
+
+// Reactivation + sixMonth aren't wired in the backend yet (waiting on Track 2
+// for the handback event). Return empty so views render their empty states.
+export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => []
+export const fetchSixMonthLeads = async (): Promise<SixMonthLead[]> => []
+
+export const fetchQueueCounts = async (): Promise<QueueCounts> => {
+  const c = await leadsApi.queues.counts()
+  return {
+    pipeline: c.pipeline,
+    noResponse: c.noResponse,
+    drip: c.drip,
+    idle: c.idle,
+    dormant: c.dormant,
+    reactivation: c.reactivation,
+    sixMonth: c.sixMonth,
+  }
+}
+
+// Pipeline-level "find by id" used by lead-detail. The detail endpoint
+// returns much richer data — for the existing PipelineLead-shaped consumer
+// (hooks/use-leads.ts: useLeadById), we synthesize the shape from the
+// extension row.
 export async function fetchLeadById(id: string): Promise<PipelineLead | null> {
-  const all = await fetchPipelineLeads()
-  return all.find((l) => l.id === id) ?? null
+  try {
+    const detail = await leadsApi.detail(id)
+    return {
+      id: String(detail.extension.opportunity_doc_entry),
+      name: placeholderName(detail.extension.opportunity_doc_entry),
+      phone: placeholderPhone,
+      equipment: detail.extension.equipment_interest ?? "—",
+      source: "—",
+      city: "—",
+      status: stageToStatus(detail.extension.stage),
+      failedAttempts: detail.attempts.filter(
+        (a) => a.attempt_type === "call" && a.outcome === "no_response",
+      ).length,
+      createdAt: new Date(detail.extension.created_at),
+      lastAttemptTime: detail.attempts[0] ? new Date(detail.attempts[0].attempted_at) : undefined,
+    }
+  } catch {
+    return null
+  }
 }
