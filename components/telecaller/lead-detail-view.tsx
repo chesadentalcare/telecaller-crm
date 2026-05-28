@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Inbox,
   History,
+  Lock,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -146,6 +147,9 @@ type LeadDetail = {
   dripMessageIndex?: number
   dripTotalMessages?: number
   dripNextMessageAt?: Date
+  // CRM lock (SOP §4B — quote SLA breach)
+  crmLocked: boolean
+  crmLockedReason?: string
   // Meetings (Phase 4 — for meeting linkage)
   latestPhysicalMeetingId?: number
   // Attempts
@@ -201,7 +205,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     budgetRange: ext.budget_range ?? undefined,
     firstCallRoute: ext.first_call_route,
     decisionMaker: ext.decision_maker ?? undefined,
-    competitors: undefined,
+    competitors: ext.competitor_evaluated ?? undefined,
     fundingMethod: ext.funding_method ?? undefined,
     inDrip: !!(d.drip && d.drip.status === "active"),
     dripTrack: d.drip?.track,
@@ -209,6 +213,8 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTotalMessages:
       d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
+    crmLocked: !!ext.crm_locked,
+    crmLockedReason: ext.crm_locked_reason ?? undefined,
     latestPhysicalMeetingId: latestPhysicalMeeting?.id,
     attempts: d.attempts.map((a) => ({
       id: String(a.id),
@@ -245,6 +251,7 @@ const mockLead: LeadDetail = {
   decisionMaker: "Self",
   competitors: "Carestream, Vatech",
   fundingMethod: "loan",
+  crmLocked: false,
   inDrip: false,
   attempts: [
     {
@@ -321,6 +328,17 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
     <div className="space-y-4">
       {/* Header */}
       <LeadDetailHeader lead={lead} onBack={onBack} />
+
+      {/* CRM Lock banner — SOP §4B: quote SLA breach locks all actions */}
+      {lead.crmLocked && (
+        <Alert className="border-destructive/50 bg-destructive/5">
+          <Lock className="size-4 text-destructive" />
+          <AlertTitle className="text-sm text-destructive font-semibold">CRM Actions Locked</AlertTitle>
+          <AlertDescription className="text-xs text-destructive/80">
+            {lead.crmLockedReason || "Quotation SLA breached — all CRM actions are disabled until the overdue quotation is submitted."}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Idle warning — Gap #9 */}
       {lead.idleDays >= 14 && (
@@ -597,9 +615,9 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
               )}
             />
             <div className="flex justify-end gap-2">
-              <Button type="submit" size="sm" disabled={isSubmitting} className="gap-1.5">
-                <Send className="size-3.5" />
-                Log Attempt
+              <Button type="submit" size="sm" disabled={isSubmitting || lead.crmLocked} className="gap-1.5">
+                {lead.crmLocked ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
+                {lead.crmLocked ? "CRM Locked" : "Log Attempt"}
               </Button>
             </div>
           </form>
@@ -717,10 +735,15 @@ function QualificationTab({ lead }: { lead: LeadDetail }) {
                 </p>
               </div>
             </div>
-            <Button size="sm" className="gap-1.5">
-              {lead.firstCallRoute === "online_meeting" && (<><Video className="size-3.5" /> Schedule Zoom</>)}
-              {lead.firstCallRoute === "physical_meeting" && (<><MapPinned className="size-3.5" /> Schedule Physical</>)}
-              {lead.firstCallRoute === "drip_info" && (<><Timer className="size-3.5" /> Enter Drip</>)}
+            <Button size="sm" className="gap-1.5" disabled={lead.crmLocked}>
+              {lead.crmLocked
+                ? (<><Lock className="size-3.5" /> CRM Locked</>)
+                : (<>
+                    {lead.firstCallRoute === "online_meeting" && (<><Video className="size-3.5" /> Schedule Zoom</>)}
+                    {lead.firstCallRoute === "physical_meeting" && (<><MapPinned className="size-3.5" /> Schedule Physical</>)}
+                    {lead.firstCallRoute === "drip_info" && (<><Timer className="size-3.5" /> Enter Drip</>)}
+                  </>)
+              }
             </Button>
           </CardContent>
         </Card>
@@ -1190,9 +1213,9 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
       <CardContent>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="w-full gap-1.5">
-              <Video className="size-3.5" />
-              Schedule Zoom Meeting
+            <Button size="sm" className="w-full gap-1.5" disabled={lead.crmLocked}>
+              {lead.crmLocked ? <Lock className="size-3.5" /> : <Video className="size-3.5" />}
+              {lead.crmLocked ? "CRM Locked" : "Schedule Zoom Meeting"}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -1379,10 +1402,10 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
               size="sm"
               className="w-full gap-1.5"
               variant="outline"
-              disabled={!isFullyQualified}
+              disabled={!isFullyQualified || lead.crmLocked}
             >
-              <MapPinned className="size-3.5" />
-              Schedule Physical Meeting
+              {lead.crmLocked ? <Lock className="size-3.5" /> : <MapPinned className="size-3.5" />}
+              {lead.crmLocked ? "CRM Locked" : "Schedule Physical Meeting"}
             </Button>
           </DialogTrigger>
           <DialogContent>

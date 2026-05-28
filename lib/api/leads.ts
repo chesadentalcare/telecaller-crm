@@ -46,11 +46,14 @@ export interface LeadExtensionRow {
   practice_type: string | null
   budget_range: string | null
   funding_method: string | null
+  competitor_evaluated: string | null
   assigned_to: string
   stage: string
   handed_off_at: string | null
   handoff_from: string | null
   first_call_route: "online_meeting" | "physical_meeting" | "drip_info" | "pending"
+  crm_locked: 0 | 1
+  crm_locked_reason: string | null
   dormant_since: string | null
   archive_reason: string | null
   created_at: string
