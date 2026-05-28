@@ -1179,6 +1179,7 @@ function QuotesTab({ lead }: { lead: LeadDetail }) {
 function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
   const [open, setOpen] = useState(false)
   const { mutateAsync: saveZoom } = useZoomMeeting(lead.id)
+  const { isTelecaller } = useRole()
 
   const { control, handleSubmit, reset, watch, formState } = useForm<ZoomMeetingValues>({
     resolver: zodResolver(zoomMeetingSchema),
@@ -1268,10 +1269,15 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
                         <SelectContent>
                           <SelectItem value="discussed">Discussed — pending decision</SelectItem>
                           <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="declined">Declined</SelectItem>
+                          <SelectItem value="declined" disabled={!isTelecaller}>
+                            Declined{!isTelecaller ? " (telecaller only)" : ""}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       {errors.designFeeStatus && <p className="text-[11px] text-destructive">{errors.designFeeStatus.message}</p>}
+                      {designFeeStatus === "declined" && !isTelecaller && (
+                        <p className="text-[11px] text-destructive">Only telecallers can move declined leads to the timeline funnel</p>
+                      )}
                     </div>
                   )}
                 />
