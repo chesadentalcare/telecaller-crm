@@ -12,7 +12,7 @@ export type Environment = "dev" | "staging" | "prod"
 
 /** Per-environment base URLs. Edit here to change where each env points. */
 export const API_BASE_URLS: Record<Environment, string> = {
-  dev:     "http://localhost:4000",
+  dev:     "http://localhost:4002",
   staging: "https://staging-api.chesadentalcare.com",
   prod:    "https://api.chesadentalcare.com",
 }
