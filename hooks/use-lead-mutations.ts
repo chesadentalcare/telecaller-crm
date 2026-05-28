@@ -174,6 +174,24 @@ export function useUpdateQuotation(id: string | number) {
   })
 }
 
+export function useSendQuotationWhatsapp(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { phone: string; customerName?: string }) =>
+      leadsApi.sendQuotationWhatsapp(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useCompleteFollowUp(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { objectionType: string; nextActionDate: string; notes?: string }) =>
+      leadsApi.completeFollowUp(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
 export function useSyncQuotationToSap(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

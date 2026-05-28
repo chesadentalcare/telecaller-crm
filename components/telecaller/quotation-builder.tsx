@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Plus, Trash2, FileText, Upload, History, Package, IndianRupee,
-  ChevronDown, Search,
+  ChevronDown, Search, Send, CheckCircle2, Eye,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -27,7 +27,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api/client"
 import { useSapItems, useLeadQuotations, useQuotationVersions } from "@/hooks/use-leads"
-import { useCreateQuotation, useSyncQuotationToSap } from "@/hooks/use-lead-mutations"
+import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp } from "@/hooks/use-lead-mutations"
 import {
   quotationSchema, quotationDefaults, emptyLineItem,
   type QuotationValues,
@@ -458,10 +458,11 @@ interface QuotationListProps {
   opportunityDocEntry: number
   customerCardCode: string
   customerName?: string
+  customerPhone?: string
   meetingId?: number
 }
 
-export function QuotationListCard({ opportunityDocEntry, customerCardCode, customerName, meetingId }: QuotationListProps) {
+export function QuotationListCard({ opportunityDocEntry, customerCardCode, customerName, customerPhone, meetingId }: QuotationListProps) {
   const { data: quotations, isLoading } = useLeadQuotations(opportunityDocEntry)
 
   return (
@@ -487,7 +488,14 @@ export function QuotationListCard({ opportunityDocEntry, customerCardCode, custo
           <p className="text-xs text-muted-foreground">No quotations yet. Create one to continue.</p>
         ) : (
           <div className="space-y-2">
-            {quotations.map((q) => <QuotationCard key={q.id} quotation={q} />)}
+            {quotations.map((q) => (
+              <QuotationCard
+                key={q.id}
+                quotation={q}
+                customerName={customerName}
+                customerPhone={customerPhone}
+              />
+            ))}
           </div>
         )}
       </CardContent>
@@ -495,10 +503,20 @@ export function QuotationListCard({ opportunityDocEntry, customerCardCode, custo
   )
 }
 
-function QuotationCard({ quotation: q }: { quotation: QuotationRow }) {
+function QuotationCard({
+  quotation: q,
+  customerName,
+  customerPhone,
+}: {
+  quotation: QuotationRow
+  customerName?: string
+  customerPhone?: string
+}) {
   const [showVersions, setShowVersions] = useState(false)
+  const [phoneInput, setPhoneInput] = useState(customerPhone || "")
   const { data: versions } = useQuotationVersions(showVersions ? q.id : undefined)
   const { mutateAsync: syncSap, isPending: syncing } = useSyncQuotationToSap(q.id)
+  const { mutateAsync: sendWa, isPending: sending } = useSendQuotationWhatsapp(q.id)
 
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
@@ -508,6 +526,19 @@ function QuotationCard({ quotation: q }: { quotation: QuotationRow }) {
     accepted: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     expired: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  }
+
+  const handleSendWhatsApp = async () => {
+    if (!phoneInput.trim()) {
+      toast.error("Enter a phone number to send")
+      return
+    }
+    try {
+      const r = await sendWa({ phone: phoneInput.trim(), customerName })
+      toast.success(r.dryRun ? "Quotation sent (dry-run)" : "Quotation sent via WhatsApp")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to send quotation")
+    }
   }
 
   return (
@@ -520,11 +551,55 @@ function QuotationCard({ quotation: q }: { quotation: QuotationRow }) {
         </div>
         <span className="text-sm font-bold tabular-nums shrink-0">₹{Number(q.grand_total).toLocaleString("en-IN")}</span>
       </div>
+
+      {/* Delivery tracking timestamps */}
+      {q.status !== "draft" && (
+        <div className="flex items-center gap-3 text-[11px]">
+          {q.sent_at && (
+            <span className="flex items-center gap-1 text-blue-600">
+              <Send className="size-3" /> Sent {new Date(q.sent_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+            </span>
+          )}
+          {q.delivered_at && (
+            <span className="flex items-center gap-1 text-emerald-600">
+              <CheckCircle2 className="size-3" /> Delivered {new Date(q.delivered_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+            </span>
+          )}
+          {q.read_at && (
+            <span className="flex items-center gap-1 text-amber-600">
+              <Eye className="size-3" /> Read {new Date(q.read_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span>Valid: {new Date(q.validity_date).toLocaleDateString("en-IN")}</span>
         <span>Terms: {q.payment_terms}</span>
         {q.sap_doc_entry && <span className="text-green-600">SAP #{q.sap_doc_entry}</span>}
+        {q.pdf_url && <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDF</a>}
       </div>
+
+      {/* WhatsApp send — only for draft quotes */}
+      {q.status === "draft" && (
+        <div className="flex items-center gap-2 pt-1">
+          <Input
+            type="tel"
+            placeholder="Phone (e.g. 919876543210)"
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(e.target.value)}
+            className="text-xs h-7 flex-1 max-w-48"
+          />
+          <Button
+            size="sm" className="text-xs h-7 gap-1 bg-green-600 hover:bg-green-700"
+            onClick={handleSendWhatsApp}
+            disabled={sending}
+          >
+            <Send className="size-3" /> {sending ? "Sending..." : "Send via WhatsApp"}
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 pt-1">
         {!q.sap_doc_entry && (
           <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={async () => {

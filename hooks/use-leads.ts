@@ -32,6 +32,8 @@ export const leadKeys = {
   quotation: (id: string) => [...leadKeys.all, "quotation", id] as const,
   leadQuotations: (id: string) => [...leadKeys.all, "lead-quotations", id] as const,
   quotationVersions: (id: string) => [...leadKeys.all, "quotation-versions", id] as const,
+  leadFollowUps: (id: string) => [...leadKeys.all, "lead-follow-ups", id] as const,
+  pendingFollowUps: () => [...leadKeys.all, "pending-follow-ups"] as const,
 }
 
 export function usePipelineLeads() {
@@ -117,6 +119,25 @@ export function useQuotationVersions(id: string | number | undefined) {
     queryKey: leadKeys.quotationVersions(String(id ?? "__noop__")),
     queryFn: () => leadsApi.getQuotationVersions(id!),
     enabled: Boolean(id),
+  })
+}
+
+/** Follow-up tasks for a specific lead. */
+export function useLeadFollowUps(leadId: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.leadFollowUps(String(leadId ?? "__noop__")),
+    queryFn: () => leadsApi.getLeadFollowUps(leadId!),
+    enabled: Boolean(leadId),
+    staleTime: 30_000,
+  })
+}
+
+/** All pending/overdue follow-ups for the current user. */
+export function usePendingFollowUps() {
+  return useQuery({
+    queryKey: leadKeys.pendingFollowUps(),
+    queryFn: () => leadsApi.getPendingFollowUps(),
+    staleTime: 60_000,
   })
 }
 

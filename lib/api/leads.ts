@@ -170,6 +170,27 @@ export interface SapItemRow {
   stock: number
 }
 
+export interface FollowUpTaskRow {
+  id: number
+  opportunity_doc_entry: number
+  quotation_id: number | null
+  task_number: number
+  due_at: string
+  status: "pending" | "completed" | "overdue" | "cancelled"
+  objection_type: string | null
+  next_action_date: string | null
+  notes: string | null
+  assigned_to: string
+  completed_at: string | null
+  completed_by: string | null
+  created_at: string
+  // joined fields
+  quote_number?: string
+  grand_total?: string
+  customer_name?: string
+  equipment_interest?: string
+}
+
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
@@ -421,6 +442,33 @@ export const leadsApi = {
     ),
 
   // ─── SAP Items ──────────────────────────────────────────────────────
+  // ─── Quotation Delivery (Phase 5) ───────────────────────────────
+  sendQuotationWhatsapp: (id: number | string, body: { phone: string; customerName?: string }) =>
+    unwrap(
+      api.post<Envelope<{
+        quotationId: number; messageId: string | null; dryRun: boolean;
+        pdfUrl: string; followUpsCreated: number
+      }>>(endpoints.quotationSendWhatsapp(String(id)), body),
+    ),
+
+  // ─── Follow-Ups (Phase 5) ─────────────────────────────────────
+  getLeadFollowUps: (leadId: number | string) =>
+    unwrap(api.get<Envelope<FollowUpTaskRow[]>>(endpoints.leadFollowUps(String(leadId)))),
+
+  getPendingFollowUps: () =>
+    unwrap(api.get<Envelope<FollowUpTaskRow[]>>(endpoints.pendingFollowUps)),
+
+  completeFollowUp: (id: number | string, body: {
+    objectionType: string; nextActionDate: string; notes?: string
+  }) =>
+    unwrap(
+      api.put<Envelope<{ taskId: number; objectionType: string; nextActionDate: string }>>(
+        endpoints.completeFollowUp(String(id)),
+        body,
+      ),
+    ),
+
+  // ─── SAP Items ──────────────────────────────────────────────────
   getSapItems: (q?: string) =>
     unwrap(
       api.get<Envelope<SapItemRow[]>>(

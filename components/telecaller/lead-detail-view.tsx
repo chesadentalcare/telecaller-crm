@@ -55,6 +55,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { QuotationListCard } from "./quotation-builder"
+import { FollowUpListCard } from "./follow-up-list"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useForm, Controller } from "react-hook-form"
@@ -1131,15 +1132,19 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
   )
 }
 
-// ── Quotes Tab (Phase 4) ─────────────────────────────────────────────
+// ── Quotes Tab (Phase 4 + Phase 5) ──────────────────────────────────
 function QuotesTab({ lead }: { lead: LeadDetail }) {
   return (
-    <QuotationListCard
-      opportunityDocEntry={Number(lead.id)}
-      customerCardCode={lead.customerCardCode || ""}
-      customerName={lead.customerName || lead.name}
-      meetingId={lead.latestPhysicalMeetingId}
-    />
+    <div className="space-y-4">
+      <QuotationListCard
+        opportunityDocEntry={Number(lead.id)}
+        customerCardCode={lead.customerCardCode || ""}
+        customerName={lead.customerName || lead.name}
+        customerPhone={lead.phone !== "—" ? lead.phone : undefined}
+        meetingId={lead.latestPhysicalMeetingId}
+      />
+      <FollowUpListCard opportunityDocEntry={Number(lead.id)} />
+    </div>
   )
 }
 
