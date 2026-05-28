@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/auth/AuthContext"
+import { useRole } from "@/hooks/use-role"
 import { useDashboardAnalytics } from "@/hooks/use-leads"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -20,6 +21,8 @@ import {
   BarChart3,
   Activity,
   Zap,
+  Trophy,
+  Crown,
 } from "lucide-react"
 import {
   AreaChart,
@@ -90,6 +93,7 @@ interface HomeDashboardProps {
 
 export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const { user } = useAuth()
+  const { isManagerOrAbove } = useRole()
   const { data: analytics, isLoading } = useDashboardAnalytics()
 
   const firstName =
@@ -166,7 +170,9 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-xl font-bold text-foreground sm:text-2xl">{greeting}, {firstName}</h2>
-          <p className="truncate text-sm text-muted-foreground">Here&apos;s your performance overview for today</p>
+          <p className="truncate text-sm text-muted-foreground">
+            {isManagerOrAbove ? "Team performance overview" : "Here\u0027s your performance overview for today"}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Badge variant="outline" className="gap-1 py-1.5 px-3">
@@ -438,7 +444,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                   <Activity className="size-4 text-primary" />
                   Recent Activity
                 </CardTitle>
-                <CardDescription>Your latest actions</CardDescription>
+                <CardDescription>{isManagerOrAbove ? "Team\u0027s latest actions" : "Your latest actions"}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -501,6 +507,60 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Team Leaderboard — manager/admin only */}
+      {isManagerOrAbove && analytics?.teamBreakdown && analytics.teamBreakdown.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Crown className="size-4 text-amber-500" />
+              Team Leaderboard
+            </CardTitle>
+            <CardDescription>Today&apos;s telecaller performance at a glance</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">#</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Telecaller</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Leads</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Calls Today</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Connected</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Meetings</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Won</th>
+                    <th className="px-4 py-2 text-center font-medium text-muted-foreground">Lost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {analytics.teamBreakdown.map((t, i) => (
+                    <tr key={t.username} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-2.5 font-medium">
+                        {i === 0 ? <Trophy className="size-3.5 text-amber-500 inline" /> : i + 1}
+                      </td>
+                      <td className="px-4 py-2.5 font-medium">{t.username}</td>
+                      <td className="px-4 py-2.5 text-center">{t.totalLeads}</td>
+                      <td className="px-4 py-2.5 text-center font-semibold">{t.callsToday}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="text-success font-semibold">{t.connectedToday}</span>
+                        {t.callsToday > 0 && (
+                          <span className="text-muted-foreground ml-1">
+                            ({Math.round((t.connectedToday / t.callsToday) * 100)}%)
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-center">{t.meetingsWeek}</td>
+                      <td className="px-4 py-2.5 text-center text-success font-semibold">{t.won}</td>
+                      <td className="px-4 py-2.5 text-center text-destructive">{t.lost}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats Footer */}
       <Card className="bg-primary/5 border-primary/20">

@@ -252,7 +252,17 @@ export interface DashboardAnalytics {
   closures: { won: number; lost: number }
   sla: { summaryBreaches: number; quoteBreaches: number }
   recentActivity: Array<{
-    type: string; result: string; leadName: string; leadId: number; time: string
+    type: string; result: string; leadName: string; leadId: number; time: string; actor?: string
+  }>
+  /** Present only for manager / admin roles */
+  teamBreakdown?: Array<{
+    username: string
+    totalLeads: number
+    callsToday: number
+    connectedToday: number
+    meetingsWeek: number
+    won: number
+    lost: number
   }>
 }
 
