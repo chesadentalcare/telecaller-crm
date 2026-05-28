@@ -20,6 +20,7 @@ export interface PipelineLead extends LeadBase {
   source: string
   city: string
   status: LeadStatus
+  phoneVerified: boolean
   failedAttempts: number
   createdAt: Date
   lastAttemptTime?: Date

@@ -298,6 +298,8 @@ export interface PipelineRow {
   stage: string
   first_call_route: string
   assigned_to: string
+  phone_verified: 0 | 1
+  customer_name: string | null
   created_at: string
   updated_at: string
   failed_attempts: number

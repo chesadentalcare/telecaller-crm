@@ -14,7 +14,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
-  ChevronRight, Calendar, MessageSquare,
+  ChevronRight, Calendar, MessageSquare, ShieldCheck, ShieldAlert,
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
@@ -142,11 +142,23 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     <TableRow key={lead.id} className="group hover:bg-muted/50">
                       <TableCell className="py-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
+                          <div className="relative flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
                             {lead.name.split(" ").slice(1).map((n) => n[0]).join("")}
+                            {lead.phoneVerified ? (
+                              <ShieldCheck className="absolute -bottom-0.5 -right-0.5 size-3.5 text-success bg-background rounded-full" />
+                            ) : (
+                              <ShieldAlert className="absolute -bottom-0.5 -right-0.5 size-3.5 text-destructive bg-background rounded-full" />
+                            )}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                              {!lead.phoneVerified && (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-destructive/40 text-destructive">
+                                  Unverified
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span>{lead.phone}</span>
                               <span>•</span>

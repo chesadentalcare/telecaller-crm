@@ -53,12 +53,13 @@ const trackBackToFront = (t: string): DripTrack => {
 // ─── mappers ────────────────────────────────────────────────────────────
 const toPipeline = (r: PipelineRow): PipelineLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
+  name: r.customer_name || placeholderName(r.id),
   phone: placeholderPhone,
   equipment: r.equipment ?? "—",
   source: "—",
   city: "—",
   status: stageToStatus(r.stage),
+  phoneVerified: !!r.phone_verified,
   failedAttempts: Number(r.failed_attempts) || 0,
   createdAt: new Date(r.created_at),
   lastAttemptTime: parseDate(r.last_attempt_time),
@@ -173,12 +174,13 @@ export async function fetchLeadById(id: string): Promise<PipelineLead | null> {
     const detail = await leadsApi.detail(id)
     return {
       id: String(detail.extension.opportunity_doc_entry),
-      name: placeholderName(detail.extension.opportunity_doc_entry),
+      name: detail.extension.customer_name || placeholderName(detail.extension.opportunity_doc_entry),
       phone: placeholderPhone,
       equipment: detail.extension.equipment_interest ?? "—",
       source: "—",
       city: "—",
       status: stageToStatus(detail.extension.stage),
+      phoneVerified: !!detail.extension.phone_verified,
       failedAttempts: detail.attempts.filter(
         (a) => a.attempt_type === "call" && a.outcome === "no_response",
       ).length,
