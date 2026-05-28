@@ -12,7 +12,8 @@ import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Bell, Phone } from "lucide-react"
+import { Search, Phone } from "lucide-react"
+import { NotificationBell } from "@/components/telecaller/notification-bell"
 import { AuthGate } from "@/components/auth/auth-gate"
 import { UserMenu } from "@/components/auth/user-menu"
 
@@ -242,12 +243,7 @@ function TelecallerDashboardInner() {
               <span className="hidden sm:inline">Quick Dial</span>
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="size-4" />
-              <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                3
-              </span>
-            </Button>
+            <NotificationBell />
 
             <UserMenu />
           </div>

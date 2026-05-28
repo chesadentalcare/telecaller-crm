@@ -38,6 +38,9 @@ export const leadKeys = {
   pendingApprovals: () => [...leadKeys.all, "pending-approvals"] as const,
   closureRecord: (id: string) => [...leadKeys.all, "closure", id] as const,
   discountLimit: () => [...leadKeys.all, "discount-limit"] as const,
+  dashboardAnalytics: () => [...leadKeys.all, "dashboard-analytics"] as const,
+  notifications: () => [...leadKeys.all, "notifications"] as const,
+  notificationCount: () => [...leadKeys.all, "notification-count"] as const,
 }
 
 export function usePipelineLeads() {
@@ -179,6 +182,34 @@ export function useDiscountLimit() {
     queryKey: leadKeys.discountLimit(),
     queryFn: () => leadsApi.getDiscountLimit(),
     staleTime: 5 * 60_000,
+  })
+}
+
+/** Dashboard analytics — aggregated KPIs, charts, activity. */
+export function useDashboardAnalytics() {
+  return useQuery({
+    queryKey: leadKeys.dashboardAnalytics(),
+    queryFn: () => leadsApi.getDashboardAnalytics(),
+    staleTime: 60_000,
+  })
+}
+
+/** Notifications list. */
+export function useNotifications(limit = 20) {
+  return useQuery({
+    queryKey: leadKeys.notifications(),
+    queryFn: () => leadsApi.getNotifications(limit),
+    staleTime: 30_000,
+  })
+}
+
+/** Unread notification count for the bell badge. */
+export function useUnreadNotificationCount() {
+  return useQuery({
+    queryKey: leadKeys.notificationCount(),
+    queryFn: () => leadsApi.getUnreadNotificationCount(),
+    staleTime: 30_000,
+    refetchInterval: 60_000, // poll every minute for live badge
   })
 }
 

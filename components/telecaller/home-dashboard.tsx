@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/auth/AuthContext"
+import { useDashboardAnalytics } from "@/hooks/use-leads"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -10,17 +11,12 @@ import { Progress } from "@/components/ui/progress"
 import {
   Phone,
   PhoneCall,
-  PhoneOff,
   Users,
   TrendingUp,
-  TrendingDown,
   Calendar,
   Clock,
   CheckCircle2,
   Target,
-  Timer,
-  ArrowUpRight,
-  ArrowDownRight,
   BarChart3,
   Activity,
   Zap,
@@ -41,44 +37,52 @@ import {
 } from "recharts"
 import { HomeHeroBanner } from "./home-hero-banner"
 
-// Mock data for charts
-const callsData = [
-  { day: "Mon", calls: 45, connected: 32 },
-  { day: "Tue", calls: 52, connected: 38 },
-  { day: "Wed", calls: 48, connected: 35 },
-  { day: "Thu", calls: 61, connected: 44 },
-  { day: "Fri", calls: 55, connected: 40 },
-  { day: "Sat", calls: 30, connected: 22 },
-  { day: "Sun", calls: 15, connected: 10 },
-]
+// ─── Stage label / color mappings for charts ────────────────────────
+const STAGE_COLORS: Record<string, string> = {
+  new_lead: "#3b82f6",
+  qualified: "#8b5cf6",
+  rapid_qualified: "#6366f1",
+  full_qualified: "#a855f7",
+  meeting_scheduled: "#f59e0b",
+  meeting_done: "#f97316",
+  quotation_sent: "#06b6d4",
+  follow_up: "#10b981",
+  drip: "#64748b",
+  no_response: "#ef4444",
+  idle: "#9ca3af",
+  dormant: "#6b7280",
+  six_month_funnel: "#14b8a6",
+  closed_won: "#22c55e",
+  closed_lost: "#ef4444",
+}
 
-const conversionData = [
-  { stage: "New Leads", value: 45, fill: "hsl(var(--chart-1))" },
-  { stage: "Qualified", value: 28, fill: "hsl(var(--chart-2))" },
-  { stage: "Meeting Set", value: 15, fill: "hsl(var(--chart-3))" },
-  { stage: "Demo Done", value: 8, fill: "hsl(var(--chart-4))" },
-  { stage: "Converted", value: 5, fill: "hsl(var(--chart-5))" },
-]
+const STAGE_LABELS: Record<string, string> = {
+  new_lead: "New Lead",
+  qualified: "Qualified",
+  rapid_qualified: "Rapid Qualified",
+  full_qualified: "Full Qualified",
+  meeting_scheduled: "Meeting Set",
+  meeting_done: "Meeting Done",
+  quotation_sent: "Quote Sent",
+  follow_up: "Follow Up",
+  drip: "Drip",
+  no_response: "No Response",
+  idle: "Idle",
+  dormant: "Dormant",
+  six_month_funnel: "6+ Month",
+  closed_won: "Won",
+  closed_lost: "Lost",
+}
 
-const pipelineDistribution = [
-  { name: "Hot", value: 12, color: "#ef4444" },
-  { name: "Warm", value: 18, color: "#f59e0b" },
-  { name: "Cold", value: 8, color: "#6b7280" },
-]
-
-const recentActivity = [
-  { id: 1, action: "Called", lead: "Dr. Neha Gupta", result: "Meeting Scheduled", time: "5 min ago", status: "success" },
-  { id: 2, action: "WhatsApp sent", lead: "Dr. Rahul Mehta", result: "Message delivered", time: "12 min ago", status: "success" },
-  { id: 3, action: "Called", lead: "Dr. Priya Sharma", result: "No answer", time: "18 min ago", status: "failed" },
-  { id: 4, action: "Qualified", lead: "Dr. Amit Patel", result: "Added to drip", time: "25 min ago", status: "success" },
-  { id: 5, action: "Called", lead: "Dr. Kavita Singh", result: "Call back later", time: "32 min ago", status: "pending" },
-]
-
-const topLeads = [
-  { id: 1, name: "Dr. Suresh Verma", city: "Mumbai", interest: "X-Ray Unit", value: "₹4.5L", score: 92 },
-  { id: 2, name: "Dr. Meena Reddy", city: "Bangalore", interest: "Dental Chair", value: "₹2.8L", score: 88 },
-  { id: 3, name: "Dr. Rajesh Kumar", city: "Delhi", interest: "Autoclave", value: "₹1.2L", score: 85 },
-]
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
 
 interface HomeDashboardProps {
   onNavigate?: (view: string) => void
@@ -86,31 +90,46 @@ interface HomeDashboardProps {
 
 export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const { user } = useAuth()
-  // First name only — keeps the greeting punchy. Falls back to username, then
-  // a generic "there" so the layout never collapses if user info is missing.
+  const { data: analytics, isLoading } = useDashboardAnalytics()
+
   const firstName =
     (user?.fullName?.split(/\s+/)[0]) || user?.username || "there"
 
-  // Live clock — updates every minute. Initialised to null to avoid SSR/CSR
-  // hydration mismatch (server-rendered time won't match the client's first paint).
   const [now, setNow] = useState<Date | null>(null)
-
-  // Brief simulated loading — gives the skeleton a chance to render. Swap the
-  // setTimeout for a real data-fetch loading flag if/when this view hits an API.
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     setNow(new Date())
     const interval = setInterval(() => setNow(new Date()), 60_000)
-    const t = setTimeout(() => setIsLoading(false), 700)
-    return () => {
-      clearInterval(interval)
-      clearTimeout(t)
-    }
+    return () => clearInterval(interval)
   }, [])
 
-  if (isLoading) return <HomeDashboardSkeleton />
+  // Derive chart data from analytics response
+  const callsData = analytics?.weekly ?? []
 
+  const pipelineDistribution = useMemo(() => {
+    if (!analytics?.pipeline?.stages) return []
+    return Object.entries(analytics.pipeline.stages).map(([stage, count]) => ({
+      name: STAGE_LABELS[stage] || stage,
+      value: count,
+      color: STAGE_COLORS[stage] || "#6b7280",
+    }))
+  }, [analytics?.pipeline?.stages])
+
+  const conversionData = useMemo(() => {
+    if (!analytics?.pipeline?.stages) return []
+    const funnelOrder = ["new_lead", "qualified", "meeting_scheduled", "meeting_done", "quotation_sent", "closed_won"]
+    return funnelOrder
+      .filter(s => (analytics.pipeline.stages[s] ?? 0) > 0)
+      .map((stage, i) => ({
+        stage: STAGE_LABELS[stage] || stage,
+        value: analytics.pipeline.stages[stage] ?? 0,
+        fill: `hsl(var(--chart-${(i % 5) + 1}))`,
+      }))
+  }, [analytics?.pipeline?.stages])
+
+  const recentActivity = analytics?.recentActivity ?? []
+
+  if (isLoading) return <HomeDashboardSkeleton />
 
   const hour = now?.getHours() ?? 0
   const greeting =
@@ -125,20 +144,19 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const timeLabel =
     now?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) ?? "--:--"
 
+  const today = analytics?.today ?? { totalCalls: 0, connected: 0, noAnswer: 0, meetings: 0, conversions: 0 }
+  const targetCalls = 60
   const todayStats = {
-    totalCalls: 47,
-    connected: 32,
-    meetings: 5,
-    conversions: 2,
-    avgCallDuration: "4:32",
-    targetCalls: 60,
+    totalCalls: today.totalCalls,
+    connected: today.connected,
+    meetings: today.meetings,
+    conversions: today.conversions,
+    targetCalls,
   }
 
-  const weeklyChange = {
-    calls: 12,
-    conversions: 25,
-    meetings: -8,
-  }
+  const closures = analytics?.closures ?? { won: 0, lost: 0 }
+  const quotations = analytics?.quotations ?? { total: 0, sent: 0, read: 0, pipelineValue: 0 }
+  const pipelineTotal = analytics?.pipeline?.total ?? 0
 
   return (
     <div className="space-y-6">
@@ -174,17 +192,13 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Phone className="size-5 text-primary" />
               </div>
-              <Badge variant="secondary" className={`gap-1 text-xs ${weeklyChange.calls >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {weeklyChange.calls >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
-                {Math.abs(weeklyChange.calls)}%
-              </Badge>
             </div>
             <div className="mt-3">
               <p className="text-2xl font-bold">{todayStats.totalCalls}</p>
               <p className="text-xs text-muted-foreground">Total Calls Today</p>
             </div>
-            <Progress value={(todayStats.totalCalls / todayStats.targetCalls) * 100} className="mt-3 h-1.5" />
-            <p className="text-[10px] text-muted-foreground mt-1">{todayStats.targetCalls - todayStats.totalCalls} more to reach target</p>
+            <Progress value={todayStats.targetCalls > 0 ? (todayStats.totalCalls / todayStats.targetCalls) * 100 : 0} className="mt-3 h-1.5" />
+            <p className="text-[10px] text-muted-foreground mt-1">{Math.max(0, todayStats.targetCalls - todayStats.totalCalls)} more to reach target</p>
           </CardContent>
         </Card>
 
@@ -196,7 +210,9 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                 <PhoneCall className="size-5 text-success" />
               </div>
               <div className="text-right">
-                <span className="text-lg font-bold text-success">{Math.round((todayStats.connected / todayStats.totalCalls) * 100)}%</span>
+                <span className="text-lg font-bold text-success">
+                  {todayStats.totalCalls > 0 ? Math.round((todayStats.connected / todayStats.totalCalls) * 100) : 0}%
+                </span>
               </div>
             </div>
             <div className="mt-3">
@@ -205,28 +221,24 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
             </div>
             <div className="mt-3 flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-success rounded-full" style={{ width: `${(todayStats.connected / todayStats.totalCalls) * 100}%` }} />
+                <div className="h-full bg-success rounded-full" style={{ width: `${todayStats.totalCalls > 0 ? (todayStats.connected / todayStats.totalCalls) * 100 : 0}%` }} />
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">{todayStats.totalCalls - todayStats.connected} missed/no answer</p>
           </CardContent>
         </Card>
 
-        {/* Meetings Scheduled */}
+        {/* Meetings This Week */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex size-10 items-center justify-center rounded-lg bg-chart-3/10">
                 <Calendar className="size-5 text-chart-3" />
               </div>
-              <Badge variant="secondary" className={`gap-1 text-xs ${weeklyChange.meetings >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {weeklyChange.meetings >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
-                {Math.abs(weeklyChange.meetings)}%
-              </Badge>
             </div>
             <div className="mt-3">
               <p className="text-2xl font-bold">{todayStats.meetings}</p>
-              <p className="text-xs text-muted-foreground">Meetings Scheduled</p>
+              <p className="text-xs text-muted-foreground">Meetings This Week</p>
             </div>
             <div className="mt-3 flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -236,7 +248,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                 />
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">Target: 5 meetings/day</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Target: 5 meetings/week</p>
           </CardContent>
         </Card>
 
@@ -247,20 +259,18 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
               <div className="flex size-10 items-center justify-center rounded-lg bg-chart-5/10">
                 <CheckCircle2 className="size-5 text-chart-5" />
               </div>
-              <Badge variant="secondary" className={`gap-1 text-xs ${weeklyChange.conversions >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {weeklyChange.conversions >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
-                {Math.abs(weeklyChange.conversions)}%
-              </Badge>
             </div>
             <div className="mt-3">
               <p className="text-2xl font-bold">{todayStats.conversions}</p>
-              <p className="text-xs text-muted-foreground">Conversions Today</p>
+              <p className="text-xs text-muted-foreground">Conversions (Won)</p>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Target className="size-3.5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Monthly: 12/20</span>
+              <span className="text-[10px] text-muted-foreground">Monthly: {closures.won} won / {closures.lost} lost</span>
             </div>
-            <p className="text-[10px] text-success mt-1">Great progress this month!</p>
+            {quotations.pipelineValue > 0 && (
+              <p className="text-[10px] text-success mt-1">Pipeline: ₹{(quotations.pipelineValue / 100000).toFixed(1)}L</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -430,80 +440,63 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                 </CardTitle>
                 <CardDescription>Your latest actions</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                View All
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y max-h-[220px] overflow-auto">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
-                  <div className={`size-8 rounded-full flex items-center justify-center ${
-                    activity.status === 'success' ? 'bg-success/10 text-success' :
-                    activity.status === 'failed' ? 'bg-destructive/10 text-destructive' :
-                    'bg-warning/10 text-warning'
-                  }`}>
-                    {activity.action === 'Called' && <Phone className="size-3.5" />}
-                    {activity.action === 'WhatsApp sent' && (
-                      <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                      </svg>
-                    )}
-                    {activity.action === 'Qualified' && <CheckCircle2 className="size-3.5" />}
+              {recentActivity.length === 0 ? (
+                <p className="px-4 py-6 text-center text-xs text-muted-foreground">No recent activity</p>
+              ) : (
+                recentActivity.map((a, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors">
+                    <div className={`size-8 rounded-full flex items-center justify-center ${
+                      a.type === 'call' && (a.result === 'no_answer' || a.result === 'phone_off')
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-success/10 text-success'
+                    }`}>
+                      {a.type === 'call' ? <Phone className="size-3.5" /> : <Calendar className="size-3.5" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{a.leadName}</p>
+                      <p className="text-[11px] text-muted-foreground">{a.type === 'call' ? 'Called' : 'Meeting'} — {a.result?.replace(/_/g, ' ')}</p>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{timeAgo(a.time)}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{activity.lead}</p>
-                    <p className="text-[11px] text-muted-foreground">{activity.action} - {activity.result}</p>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Hot Leads */}
+        {/* Quotation & SLA Stats */}
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="size-4 text-destructive" />
-                  Hot Leads
-                </CardTitle>
-                <CardDescription>High-priority leads to call</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-                View All
-              </Button>
-            </div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="size-4 text-primary" />
+              Quotation & SLA
+            </CardTitle>
+            <CardDescription>This month&apos;s quotation performance</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {topLeads.map((lead) => (
-                <div key={lead.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors group">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-destructive/10 text-destructive font-medium text-xs">
-                    {lead.name.split(" ").slice(1).map(n => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground truncate">{lead.name}</p>
-                      <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-destructive/10 text-destructive border-0">
-                        {lead.score}%
-                      </Badge>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">{lead.city} - {lead.interest}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-foreground">{lead.value}</p>
-                    <Button variant="ghost" size="sm" className="h-7 md:h-6 px-2 text-[10px] md:opacity-0 md:group-hover:opacity-100 transition-opacity text-success">
-                      <Phone className="size-3 mr-1" />
-                      Call
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-[11px] text-muted-foreground">Quotes Sent</p>
+                <p className="text-xl font-bold">{quotations.sent}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[11px] text-muted-foreground">Quotes Read</p>
+                <p className="text-xl font-bold">{quotations.read}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[11px] text-muted-foreground">Total Quotes</p>
+                <p className="text-xl font-bold">{quotations.total}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-[11px] text-muted-foreground">SLA Breaches</p>
+                <p className="text-xl font-bold text-destructive">
+                  {(analytics?.sla?.summaryBreaches ?? 0) + (analytics?.sla?.quoteBreaches ?? 0)}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -515,30 +508,34 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div className="flex items-center gap-2">
-                <Timer className="size-4 text-primary" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Avg Call Duration</p>
-                  <p className="text-sm font-semibold">{todayStats.avgCallDuration}</p>
-                </div>
-              </div>
-              <div className="hidden sm:block w-px h-8 bg-border" />
-              <div className="flex items-center gap-2">
                 <Users className="size-4 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Total Pipeline</p>
-                  <p className="text-sm font-semibold">38 leads</p>
+                  <p className="text-sm font-semibold">{pipelineTotal} leads</p>
                 </div>
               </div>
               <div className="hidden sm:block w-px h-8 bg-border" />
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-4 text-success" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Conversion Rate</p>
-                  <p className="text-sm font-semibold">18.5%</p>
+                  <p className="text-xs text-muted-foreground">Closures This Month</p>
+                  <p className="text-sm font-semibold">{closures.won} won / {closures.lost} lost</p>
                 </div>
               </div>
+              {quotations.pipelineValue > 0 && (
+                <>
+                  <div className="hidden sm:block w-px h-8 bg-border" />
+                  <div className="flex items-center gap-2">
+                    <Target className="size-4 text-primary" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Pipeline Value</p>
+                      <p className="text-sm font-semibold">₹{(quotations.pipelineValue / 100000).toFixed(1)}L</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-            <Button size="sm" className="gap-2">
+            <Button size="sm" className="gap-2" onClick={() => onNavigate?.("pipeline")}>
               <Phone className="size-4" />
               Start Calling
             </Button>

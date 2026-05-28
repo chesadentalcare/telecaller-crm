@@ -100,6 +100,13 @@ export const endpoints = {
   // Closure (Phase 6)
   closeLead: (id: string) => `/api/telecaller/leads/${id}/close`,
   closureRecord: (id: string) => `/api/telecaller/leads/${id}/closure`,
+  // Analytics (Phase 7)
+  dashboardAnalytics: `/api/telecaller/analytics/dashboard`,
+  // Notifications (Phase 7)
+  notifications: `/api/telecaller/notifications`,
+  notificationCount: `/api/telecaller/notifications/count`,
+  markNotificationRead: (id: string) => `/api/telecaller/notifications/${id}/read`,
+  markAllNotificationsRead: `/api/telecaller/notifications/read-all`,
   dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
   sapEmployees: "/api/telecaller/sap/employees",

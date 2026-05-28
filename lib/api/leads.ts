@@ -235,6 +235,35 @@ export interface ClosureRecordRow {
   closed_at: string
 }
 
+export interface DashboardAnalytics {
+  today: {
+    totalCalls: number
+    connected: number
+    noAnswer: number
+    meetings: number
+    conversions: number
+  }
+  weekly: Array<{ day: string; calls: number; connected: number }>
+  pipeline: { stages: Record<string, number>; total: number }
+  quotations: { total: number; sent: number; read: number; pipelineValue: number }
+  closures: { won: number; lost: number }
+  sla: { summaryBreaches: number; quoteBreaches: number }
+  recentActivity: Array<{
+    type: string; result: string; leadName: string; leadId: number; time: string
+  }>
+}
+
+export interface NotificationRow {
+  id: number
+  recipient: string
+  type: string
+  title: string
+  body: string | null
+  link: string | null
+  is_read: 0 | 1
+  created_at: string
+}
+
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
@@ -564,6 +593,23 @@ export const leadsApi = {
         q ? `${endpoints.sapItems}?q=${encodeURIComponent(q)}` : endpoints.sapItems,
       ),
     ),
+
+  // ─── Analytics (Phase 7) ────────────────────────────────────────────
+  getDashboardAnalytics: () =>
+    unwrap(api.get<Envelope<DashboardAnalytics>>(endpoints.dashboardAnalytics)),
+
+  // ─── Notifications (Phase 7) ──────────────────────────────────────
+  getNotifications: (limit = 20, offset = 0) =>
+    unwrap(api.get<Envelope<NotificationRow[]>>(`${endpoints.notifications}?limit=${limit}&offset=${offset}`)),
+
+  getUnreadNotificationCount: () =>
+    unwrap(api.get<Envelope<{ count: number }>>(endpoints.notificationCount)),
+
+  markNotificationRead: (id: number | string) =>
+    unwrap(api.put<Envelope<unknown>>(endpoints.markNotificationRead(String(id)))),
+
+  markAllNotificationsRead: () =>
+    unwrap(api.put<Envelope<unknown>>(endpoints.markAllNotificationsRead)),
 
   // ─── Queues ───────────────────────────────────────────────────────────
   queues: {

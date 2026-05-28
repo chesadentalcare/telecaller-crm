@@ -224,6 +224,28 @@ export function useCloseLead(id: string | number) {
   })
 }
 
+export function useMarkNotificationRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => leadsApi.markNotificationRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.notifications() })
+      qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
+    },
+  })
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.markAllNotificationsRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.notifications() })
+      qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
+    },
+  })
+}
+
 export function useSyncQuotationToSap(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
