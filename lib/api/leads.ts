@@ -263,13 +263,30 @@ export const leadsApi = {
       ),
     ),
 
+  verifyPhone: (id: number | string) =>
+    unwrap(
+      api.put<Envelope<{ opportunityDocEntry: number }>>(
+        endpoints.leadVerifyPhone(String(id)),
+      ),
+    ),
+
+  handBack: (id: number | string, body: { reason: string }) =>
+    unwrap(
+      api.post<Envelope<{ opportunityDocEntry: number }>>(
+        endpoints.leadHandBack(String(id)),
+        body,
+      ),
+    ),
+
   // ─── Queues ───────────────────────────────────────────────────────────
   queues: {
-    pipeline:   () => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline)),
-    noResponse: () => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse)),
-    drip:       () => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip)),
-    idle:       () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
-    dormant:    () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
-    counts:     () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
+    pipeline:     () => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline)),
+    noResponse:   () => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse)),
+    drip:         () => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip)),
+    idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
+    dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
+    reactivation: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; handed_back_at: string; handed_back_by: string; reason: string }>>>(endpoints.queueReactivation)),
+    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; timeline: string; reactivate_by: string | null; reason: string | null }>>>(endpoints.queueSixMonth)),
+    counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }

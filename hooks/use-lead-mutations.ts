@@ -121,3 +121,22 @@ export function useUpdateTimeline(id: string | number) {
     onSuccess: () => invalidateAllLeads(qc),
   })
 }
+
+export function useVerifyPhone(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.verifyPhone(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+  })
+}
+
+export function useHandBackLead(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { reason: string }) => leadsApi.handBack(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}

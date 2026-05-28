@@ -6,6 +6,8 @@ export const rapidQualificationSchema = z.object({
   practiceType: z.string().min(1, "Required"),
   timeline: z.string().min(1, "Required"),
   budgetRange: z.string().min(1, "Required"),
+  competitorEvaluated: z.string().min(1, "Required — enter 'none' if no competitor"),
+  purchaseTypeClass: z.string().min(1, "Required"),
   routeSelection: z.string().min(1, "Pick a next-step route"),
 })
 
@@ -17,5 +19,7 @@ export const rapidQualificationDefaults: RapidQualificationValues = {
   practiceType: "",
   timeline: "",
   budgetRange: "",
+  competitorEvaluated: "",
+  purchaseTypeClass: "",
   routeSelection: "",
 }

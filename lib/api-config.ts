@@ -67,6 +67,7 @@ export const endpoints = {
   // Lead lifecycle (Track 1 — see Track1_Telecaller_Dashboard_7Day_Plan.docx §4.2)
   leads: "/api/telecaller/leads",
   leadDetail: (id: string) => `/api/telecaller/leads/${id}`,
+  leadVerifyPhone: (id: string) => `/api/telecaller/leads/${id}/verify-phone`,
   leadAttempt: (id: string) => `/api/telecaller/leads/${id}/attempt`,
   leadRapidQualify: (id: string) => `/api/telecaller/leads/${id}/rapid-qualify`,
   leadFullQualify: (id: string) => `/api/telecaller/leads/${id}/full-qualify`,
@@ -74,6 +75,7 @@ export const endpoints = {
   leadPhysicalMeeting: (id: string) => `/api/telecaller/leads/${id}/physical-meeting/schedule`,
   leadRecoveryWhatsapp: (id: string) => `/api/telecaller/leads/${id}/recovery-whatsapp`,
   leadTimeline: (id: string) => `/api/telecaller/leads/${id}/timeline`,
+  leadHandBack: (id: string) => `/api/telecaller/leads/${id}/hand-back`,
   dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
   sapEmployees: "/api/telecaller/sap/employees",
@@ -82,6 +84,8 @@ export const endpoints = {
   queueDrip: "/api/telecaller/queue/drip",
   queueIdle: "/api/telecaller/queue/idle",
   queueDormant: "/api/telecaller/queue/dormant",
+  queueReactivation: "/api/telecaller/queue/reactivation",
+  queueSixMonth: "/api/telecaller/queue/six-month",
   queueCounts: "/api/telecaller/queue/counts",
 } as const
 

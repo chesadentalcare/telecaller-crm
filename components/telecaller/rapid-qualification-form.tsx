@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import {
   ClipboardList, Phone, Video, MapPin, Droplets, CheckCircle2,
-  User, Building2, Clock, IndianRupee,
+  User, Building2, Clock, IndianRupee, Swords, ShoppingCart,
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -33,12 +33,11 @@ const PRACTICE_TYPES = [
   "Dental College", "Corporate Dental", "Mobile Dental Unit",
 ] as const
 
+// SOP §3: 3-tier timeline aligned to 1 Month / 3 Months / 6+ Months
 const TIMELINE_OPTIONS = [
-  { value: "immediate", label: "Immediate",  desc: "< 1 week"    },
-  { value: "short",     label: "Short Term", desc: "1-4 weeks"   },
-  { value: "medium",    label: "Medium Term", desc: "1-3 months"  },
-  { value: "long",      label: "Long Term",  desc: "3-6 months"  },
-  { value: "future",    label: "Future",     desc: "6+ months"   },
+  { value: "1_month",        label: "1 Month",   desc: "Buying soon"  },
+  { value: "3_months",       label: "3 Months",  desc: "Near term"    },
+  { value: "6_plus_months",  label: "6+ Months", desc: "Long cycle"   },
 ] as const
 
 const BUDGET_RANGES = [
@@ -269,6 +268,55 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
                 </Select>
               )}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <Swords className="size-3 text-muted-foreground" />
+                Competitor Evaluated
+              </Label>
+              <Controller
+                control={control}
+                name="competitorEvaluated"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select competitor" /></SelectTrigger>
+                    <SelectContent>
+                      {["None", "Planmeca", "Sirona / Dentsply", "A-dec", "KaVo", "Belmont", "Local / Unbranded", "Other"].map((c) => (
+                        <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <ShoppingCart className="size-3 text-muted-foreground" />
+                Purchase Type
+              </Label>
+              <Controller
+                control={control}
+                name="purchaseTypeClass"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: "new_setup", label: "New Setup" },
+                        { value: "upgrade", label: "Upgrade" },
+                        { value: "replacement", label: "Replacement" },
+                        { value: "expansion", label: "Expansion" },
+                      ].map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
