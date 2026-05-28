@@ -15,6 +15,7 @@ import type { FullQualificationValues } from "@/lib/schemas/full-qualification"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
+import type { QuotationValues } from "@/lib/schemas/quotation"
 
 // ─── Shared envelope ────────────────────────────────────────────────────
 interface Envelope<T> {
@@ -35,6 +36,8 @@ export interface CreateLeadResponse {
 export interface LeadExtensionRow {
   id: number
   opportunity_doc_entry: number
+  customer_card_code: string | null
+  customer_name: string | null
   purchase_type: string | null
   equipment_interest: string | null
   phone_verified: 0 | 1
@@ -101,6 +104,72 @@ export interface MeetingRow {
   sla_quote_breached: 0 | 1
 }
 
+export interface QuotationRow {
+  id: number
+  opportunity_doc_entry: number
+  quote_number: string
+  version: number
+  is_latest: 0 | 1
+  customer_card_code: string
+  customer_name: string | null
+  subtotal: string
+  discount_pct: string
+  discount_amount: string
+  tax_total: string
+  grand_total: string
+  validity_date: string
+  payment_terms: string
+  status: "draft" | "sent" | "delivered" | "read" | "accepted" | "rejected" | "expired"
+  wa_message_id: string | null
+  sent_at: string | null
+  delivered_at: string | null
+  read_at: string | null
+  pdf_url: string | null
+  sap_doc_entry: number | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface QuotationLineItemRow {
+  id: number
+  quotation_id: number
+  line_number: number
+  item_code: string
+  description: string | null
+  quantity: number
+  unit_price: string
+  tax_group: string | null
+  tax_amount: string
+  line_total: string
+}
+
+export interface QuotationDetailRow extends QuotationRow {
+  lineItems: QuotationLineItemRow[]
+}
+
+export interface QuotationVersionRow {
+  id: number
+  quote_number: string
+  version: number
+  is_latest: 0 | 1
+  subtotal: string
+  discount_pct: string
+  discount_amount: string
+  tax_total: string
+  grand_total: string
+  status: string
+  created_by: string
+  created_at: string
+}
+
+export interface SapItemRow {
+  itemCode: string
+  itemName: string
+  price: number
+  stock: number
+}
+
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
@@ -113,6 +182,7 @@ export interface LeadDetail {
     sent_at: string
     whatsapp_message_id: string | null
   }>
+  quotations: QuotationRow[]
 }
 
 export interface PipelineRow {
@@ -314,6 +384,47 @@ export const leadsApi = {
     unwrap(
       api.put<Envelope<{ meetingId: number }>>(
         endpoints.meetingConfirmTimeline(String(meetingId)),
+      ),
+    ),
+
+  // ─── Quotations ─────────────────────────────────────────────────────
+  createQuotation: (values: QuotationValues) =>
+    unwrap(
+      api.post<Envelope<{ quotationId: number; quoteNumber: string; version: number; grandTotal: number }>>(
+        endpoints.quotations,
+        values,
+      ),
+    ),
+
+  getQuotation: (id: number | string) =>
+    unwrap(api.get<Envelope<QuotationDetailRow>>(endpoints.quotationDetail(String(id)))),
+
+  updateQuotation: (id: number | string, values: Partial<QuotationValues>) =>
+    unwrap(
+      api.put<Envelope<{ quotationId: number; previousId: number; quoteNumber: string; version: number; grandTotal: number }>>(
+        endpoints.quotationDetail(String(id)),
+        values,
+      ),
+    ),
+
+  getLeadQuotations: (leadId: number | string) =>
+    unwrap(api.get<Envelope<QuotationRow[]>>(endpoints.leadQuotations(String(leadId)))),
+
+  getQuotationVersions: (id: number | string) =>
+    unwrap(api.get<Envelope<QuotationVersionRow[]>>(endpoints.quotationVersions(String(id)))),
+
+  syncQuotationToSap: (id: number | string) =>
+    unwrap(
+      api.post<Envelope<{ quotationId: number; sapDocEntry: number }>>(
+        endpoints.quotationSyncSap(String(id)),
+      ),
+    ),
+
+  // ─── SAP Items ──────────────────────────────────────────────────────
+  getSapItems: (q?: string) =>
+    unwrap(
+      api.get<Envelope<SapItemRow[]>>(
+        q ? `${endpoints.sapItems}?q=${encodeURIComponent(q)}` : endpoints.sapItems,
       ),
     ),
 

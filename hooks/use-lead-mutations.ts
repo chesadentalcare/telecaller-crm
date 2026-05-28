@@ -19,6 +19,7 @@ import type { FullQualificationValues } from "@/lib/schemas/full-qualification"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
+import type { QuotationValues } from "@/lib/schemas/quotation"
 
 // Invalidate everything queue-y. Used after any write that could change
 // what a list/badge displays — broad invalidation is fine here because the
@@ -153,6 +154,30 @@ export function useConfirmDecisionTimeline(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => leadsApi.confirmDecisionTimeline(meetingId),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useCreateQuotation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: QuotationValues) => leadsApi.createQuotation(values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useUpdateQuotation(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: Partial<QuotationValues>) => leadsApi.updateQuotation(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useSyncQuotationToSap(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.syncQuotationToSap(id),
     onSuccess: () => invalidateAllLeads(qc),
   })
 }

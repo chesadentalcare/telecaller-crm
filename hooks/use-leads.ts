@@ -29,6 +29,9 @@ export const leadKeys = {
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
   fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
   queueCounts: () => [...leadKeys.all, "queue-counts"] as const,
+  quotation: (id: string) => [...leadKeys.all, "quotation", id] as const,
+  leadQuotations: (id: string) => [...leadKeys.all, "lead-quotations", id] as const,
+  quotationVersions: (id: string) => [...leadKeys.all, "quotation-versions", id] as const,
 }
 
 export function usePipelineLeads() {
@@ -76,6 +79,44 @@ export function useMeetingSlaStatus(meetingId: string | number | undefined) {
     queryFn: () => leadsApi.getMeetingSlaStatus(meetingId!),
     enabled: Boolean(meetingId),
     refetchInterval: 60_000, // refresh every minute for live countdowns
+  })
+}
+
+/** Single quotation with line items. */
+export function useQuotation(id: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.quotation(String(id ?? "__noop__")),
+    queryFn: () => leadsApi.getQuotation(id!),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+  })
+}
+
+/** All latest quotations for a lead. */
+export function useLeadQuotations(leadId: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.leadQuotations(String(leadId ?? "__noop__")),
+    queryFn: () => leadsApi.getLeadQuotations(leadId!),
+    enabled: Boolean(leadId),
+    staleTime: 30_000,
+  })
+}
+
+/** SAP Items for quotation builder — fetched from Ashva inventory. */
+export function useSapItems() {
+  return useQuery({
+    queryKey: [...leadKeys.all, "sap-items"] as const,
+    queryFn: () => leadsApi.getSapItems(),
+    staleTime: 10 * 60 * 1000, // 10 min — same as backend cache
+  })
+}
+
+/** Version history for a quotation. */
+export function useQuotationVersions(id: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.quotationVersions(String(id ?? "__noop__")),
+    queryFn: () => leadsApi.getQuotationVersions(id!),
+    enabled: Boolean(id),
   })
 }
 

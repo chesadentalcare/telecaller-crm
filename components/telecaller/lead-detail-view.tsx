@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
+import { QuotationListCard } from "./quotation-builder"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useForm, Controller } from "react-hook-form"
@@ -122,6 +123,9 @@ type LeadDetail = {
   createdAt: Date
   lastActivityAt: Date
   idleDays: number
+  // Customer (Phase 4)
+  customerCardCode?: string
+  customerName?: string
   // Rapid qual
   rapidQualified: boolean
   phoneVerified: boolean
@@ -140,6 +144,8 @@ type LeadDetail = {
   dripMessageIndex?: number
   dripTotalMessages?: number
   dripNextMessageAt?: Date
+  // Meetings (Phase 4 — for meeting linkage)
+  latestPhysicalMeetingId?: number
   // Attempts
   attempts: CallAttempt[]
 }
@@ -156,9 +162,12 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     d.attempts[0]?.attempted_at || d.meetings[0]?.meeting_at || ext.updated_at
   const idleDays = Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86_400_000)
 
+  // Find the latest physical meeting for quotation linkage
+  const latestPhysicalMeeting = d.meetings.find((m) => m.meeting_type === "physical")
+
   return {
     id,
-    name: `Lead #${id}`,
+    name: ext.customer_name || `Lead #${id}`,
     phone: "—",
     whatsappNumber: undefined,
     email: undefined,
@@ -180,6 +189,8 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     createdAt: new Date(ext.created_at),
     lastActivityAt: new Date(lastActivity),
     idleDays,
+    customerCardCode: ext.customer_card_code ?? undefined,
+    customerName: ext.customer_name ?? undefined,
     rapidQualified: !!(ext.dentist_type && ext.practice_type),
     phoneVerified: !!ext.phone_verified,
     dentistType: ext.dentist_type ?? undefined,
@@ -196,6 +207,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTotalMessages:
       d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
+    latestPhysicalMeetingId: latestPhysicalMeeting?.id,
     attempts: d.attempts.map((a) => ({
       id: String(a.id),
       attemptedAt: new Date(a.attempted_at),
@@ -350,12 +362,13 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
       {/* Tabs — horizontally scrollable on mobile so all 5 stay readable
           instead of wrapping to an uneven 3+2 grid. Snap to grid on sm+. */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
           <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Calls</TabsTrigger>
           <TabsTrigger value="qualification" className="shrink-0 text-xs sm:text-sm">Qualification</TabsTrigger>
           <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
           <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
+          <TabsTrigger value="quotes"        className="shrink-0 text-xs sm:text-sm">Quotes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -376,6 +389,10 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
 
         <TabsContent value="meetings" className="mt-4">
           <MeetingsTab lead={lead} />
+        </TabsContent>
+
+        <TabsContent value="quotes" className="mt-4">
+          <QuotesTab lead={lead} />
         </TabsContent>
       </Tabs>
     </div>
@@ -1111,6 +1128,18 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
       <ZoomMeetingCard lead={lead} />
       <PhysicalMeetingCard lead={lead} />
     </div>
+  )
+}
+
+// ── Quotes Tab (Phase 4) ─────────────────────────────────────────────
+function QuotesTab({ lead }: { lead: LeadDetail }) {
+  return (
+    <QuotationListCard
+      opportunityDocEntry={Number(lead.id)}
+      customerCardCode={lead.customerCardCode || ""}
+      customerName={lead.customerName || lead.name}
+      meetingId={lead.latestPhysicalMeetingId}
+    />
   )
 }
 
