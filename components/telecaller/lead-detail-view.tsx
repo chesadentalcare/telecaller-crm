@@ -56,6 +56,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { QuotationListCard } from "./quotation-builder"
 import { FollowUpListCard } from "./follow-up-list"
+import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useForm, Controller } from "react-hook-form"
@@ -1132,7 +1133,7 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
   )
 }
 
-// ── Quotes Tab (Phase 4 + Phase 5) ──────────────────────────────────
+// ── Quotes Tab (Phase 4 + 5 + 6) ────────────────────────────────────
 function QuotesTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-4">
@@ -1144,6 +1145,7 @@ function QuotesTab({ lead }: { lead: LeadDetail }) {
         meetingId={lead.latestPhysicalMeetingId}
       />
       <FollowUpListCard opportunityDocEntry={Number(lead.id)} />
+      <ClosureCard opportunityDocEntry={Number(lead.id)} />
     </div>
   )
 }

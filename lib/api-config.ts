@@ -90,6 +90,16 @@ export const endpoints = {
   leadFollowUps: (id: string) => `/api/telecaller/leads/${id}/follow-ups`,
   pendingFollowUps: `/api/telecaller/follow-ups/pending`,
   completeFollowUp: (id: string) => `/api/telecaller/follow-ups/${id}/complete`,
+  // Discount approvals (Phase 6)
+  discountLimit: `/api/telecaller/config/discount-limit`,
+  approvalStatus: (id: string) => `/api/telecaller/quotations/${id}/approval-status`,
+  requestApproval: (id: string) => `/api/telecaller/quotations/${id}/request-approval`,
+  approveDiscount: (id: string) => `/api/telecaller/approvals/${id}/approve`,
+  rejectDiscount: (id: string) => `/api/telecaller/approvals/${id}/reject`,
+  pendingApprovals: `/api/telecaller/approvals/pending`,
+  // Closure (Phase 6)
+  closeLead: (id: string) => `/api/telecaller/leads/${id}/close`,
+  closureRecord: (id: string) => `/api/telecaller/leads/${id}/closure`,
   dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
   sapEmployees: "/api/telecaller/sap/employees",

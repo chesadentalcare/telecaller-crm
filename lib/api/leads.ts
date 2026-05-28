@@ -191,6 +191,50 @@ export interface FollowUpTaskRow {
   equipment_interest?: string
 }
 
+export interface DiscountApprovalRow {
+  id: number
+  quotation_id: number
+  discount_pct: string
+  threshold_pct: string
+  status: "pending" | "approved" | "rejected"
+  requested_by: string
+  requested_at: string
+  reviewed_by: string | null
+  reviewed_at: string | null
+  review_notes: string | null
+  // joined fields
+  quote_number?: string
+  grand_total?: string
+  customer_name?: string
+  opportunity_doc_entry?: number
+}
+
+export interface ApprovalStatusResponse {
+  quotationId: number
+  discountPct: number
+  thresholdPct: number
+  needsApproval: boolean
+  approval: DiscountApprovalRow | null
+  canSend: boolean
+}
+
+export interface ClosureRecordRow {
+  id: number
+  opportunity_doc_entry: number
+  outcome: "won" | "lost"
+  signed_quote_url: string | null
+  advance_payment_proof_url: string | null
+  dispatch_date: string | null
+  installation_date: string | null
+  lost_reason: string | null
+  competitor_name: string | null
+  price_gap_range: string | null
+  reactivation_flag: 0 | 1
+  sap_order_doc_entry: number | null
+  closed_by: string
+  closed_at: string
+}
+
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
@@ -467,6 +511,51 @@ export const leadsApi = {
         body,
       ),
     ),
+
+  // ─── Discount Approvals (Phase 6) ───────────────────────────────
+  getDiscountLimit: () =>
+    unwrap(api.get<Envelope<{ thresholdPct: number }>>(endpoints.discountLimit)),
+
+  getApprovalStatus: (id: number | string) =>
+    unwrap(api.get<Envelope<ApprovalStatusResponse>>(endpoints.approvalStatus(String(id)))),
+
+  requestApproval: (id: number | string) =>
+    unwrap(
+      api.post<Envelope<{ approvalId: number; discountPct: number; thresholdPct: number }>>(
+        endpoints.requestApproval(String(id)),
+      ),
+    ),
+
+  approveDiscount: (id: number | string, body?: { notes?: string }) =>
+    unwrap(
+      api.put<Envelope<{ approvalId: number; quotationId: number }>>(
+        endpoints.approveDiscount(String(id)),
+        body,
+      ),
+    ),
+
+  rejectDiscount: (id: number | string, body?: { notes?: string }) =>
+    unwrap(
+      api.put<Envelope<{ approvalId: number; quotationId: number }>>(
+        endpoints.rejectDiscount(String(id)),
+        body,
+      ),
+    ),
+
+  getPendingApprovals: () =>
+    unwrap(api.get<Envelope<DiscountApprovalRow[]>>(endpoints.pendingApprovals)),
+
+  // ─── Closure (Phase 6) ────────────────────────────────────────
+  closeLead: (id: number | string, formData: FormData) =>
+    unwrap(
+      api.put<Envelope<{
+        opportunityDocEntry: number; outcome: string;
+        sapOrderDocEntry?: number; stage?: string; reactivationFlag?: boolean
+      }>>(endpoints.closeLead(String(id)), formData),
+    ),
+
+  getClosureRecord: (id: number | string) =>
+    unwrap(api.get<Envelope<ClosureRecordRow | null>>(endpoints.closureRecord(String(id)))),
 
   // ─── SAP Items ──────────────────────────────────────────────────
   getSapItems: (q?: string) =>

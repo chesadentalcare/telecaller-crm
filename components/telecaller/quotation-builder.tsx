@@ -26,8 +26,8 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api/client"
-import { useSapItems, useLeadQuotations, useQuotationVersions } from "@/hooks/use-leads"
-import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp } from "@/hooks/use-lead-mutations"
+import { useSapItems, useLeadQuotations, useQuotationVersions, useApprovalStatus } from "@/hooks/use-leads"
+import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRequestApproval } from "@/hooks/use-lead-mutations"
 import {
   quotationSchema, quotationDefaults, emptyLineItem,
   type QuotationValues,
@@ -515,8 +515,10 @@ function QuotationCard({
   const [showVersions, setShowVersions] = useState(false)
   const [phoneInput, setPhoneInput] = useState(customerPhone || "")
   const { data: versions } = useQuotationVersions(showVersions ? q.id : undefined)
+  const { data: approvalData } = useApprovalStatus(q.status === "draft" ? q.id : undefined)
   const { mutateAsync: syncSap, isPending: syncing } = useSyncQuotationToSap(q.id)
   const { mutateAsync: sendWa, isPending: sending } = useSendQuotationWhatsapp(q.id)
+  const { mutateAsync: reqApproval, isPending: requesting } = useRequestApproval(q.id)
 
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
@@ -580,8 +582,36 @@ function QuotationCard({
         {q.pdf_url && <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDF</a>}
       </div>
 
-      {/* WhatsApp send — only for draft quotes */}
-      {q.status === "draft" && (
+      {/* Discount approval gate + WhatsApp send — only for draft quotes */}
+      {q.status === "draft" && approvalData && approvalData.needsApproval && !approvalData.canSend && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-2.5 space-y-1.5">
+          <p className="text-[11px] font-medium text-amber-800 dark:text-amber-200">
+            Discount {approvalData.discountPct}% exceeds {approvalData.thresholdPct}% threshold — manager approval required
+          </p>
+          {approvalData.approval?.status === "pending" ? (
+            <Badge className="bg-amber-100 text-amber-800 text-[10px]">Approval Pending</Badge>
+          ) : approvalData.approval?.status === "rejected" ? (
+            <Badge variant="destructive" className="text-[10px]">Approval Rejected{approvalData.approval.review_notes ? `: ${approvalData.approval.review_notes}` : ""}</Badge>
+          ) : (
+            <Button
+              size="sm" variant="outline" className="text-xs h-7 gap-1"
+              onClick={async () => {
+                try { await reqApproval(); toast.success("Approval requested") }
+                catch (err) { toast.error(err instanceof ApiError ? err.message : "Failed to request approval") }
+              }}
+              disabled={requesting}
+            >
+              {requesting ? "Requesting..." : "Request Manager Approval"}
+            </Button>
+          )}
+        </div>
+      )}
+      {approvalData?.canSend && approvalData.needsApproval && (
+        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px]">
+          Discount Approved by {approvalData.approval?.reviewed_by}
+        </Badge>
+      )}
+      {q.status === "draft" && (!approvalData?.needsApproval || approvalData?.canSend) && (
         <div className="flex items-center gap-2 pt-1">
           <Input
             type="tel"

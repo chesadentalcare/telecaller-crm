@@ -34,6 +34,10 @@ export const leadKeys = {
   quotationVersions: (id: string) => [...leadKeys.all, "quotation-versions", id] as const,
   leadFollowUps: (id: string) => [...leadKeys.all, "lead-follow-ups", id] as const,
   pendingFollowUps: () => [...leadKeys.all, "pending-follow-ups"] as const,
+  approvalStatus: (id: string) => [...leadKeys.all, "approval-status", id] as const,
+  pendingApprovals: () => [...leadKeys.all, "pending-approvals"] as const,
+  closureRecord: (id: string) => [...leadKeys.all, "closure", id] as const,
+  discountLimit: () => [...leadKeys.all, "discount-limit"] as const,
 }
 
 export function usePipelineLeads() {
@@ -138,6 +142,43 @@ export function usePendingFollowUps() {
     queryKey: leadKeys.pendingFollowUps(),
     queryFn: () => leadsApi.getPendingFollowUps(),
     staleTime: 60_000,
+  })
+}
+
+/** Approval status for a specific quotation. */
+export function useApprovalStatus(quotationId: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.approvalStatus(String(quotationId ?? "__noop__")),
+    queryFn: () => leadsApi.getApprovalStatus(quotationId!),
+    enabled: Boolean(quotationId),
+    staleTime: 15_000,
+  })
+}
+
+/** All pending discount approvals (manager view). */
+export function usePendingApprovals() {
+  return useQuery({
+    queryKey: leadKeys.pendingApprovals(),
+    queryFn: () => leadsApi.getPendingApprovals(),
+    staleTime: 30_000,
+  })
+}
+
+/** Closure record for a lead. */
+export function useClosureRecord(leadId: string | number | undefined) {
+  return useQuery({
+    queryKey: leadKeys.closureRecord(String(leadId ?? "__noop__")),
+    queryFn: () => leadsApi.getClosureRecord(leadId!),
+    enabled: Boolean(leadId),
+  })
+}
+
+/** Discount threshold config. */
+export function useDiscountLimit() {
+  return useQuery({
+    queryKey: leadKeys.discountLimit(),
+    queryFn: () => leadsApi.getDiscountLimit(),
+    staleTime: 5 * 60_000,
   })
 }
 

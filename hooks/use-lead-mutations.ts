@@ -192,6 +192,38 @@ export function useCompleteFollowUp(id: string | number) {
   })
 }
 
+export function useRequestApproval(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.requestApproval(id),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useApproveDiscount(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body?: { notes?: string }) => leadsApi.approveDiscount(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useRejectDiscount(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body?: { notes?: string }) => leadsApi.rejectDiscount(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useCloseLead(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (formData: FormData) => leadsApi.closeLead(id, formData),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
 export function useSyncQuotationToSap(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
