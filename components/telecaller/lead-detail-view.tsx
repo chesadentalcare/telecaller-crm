@@ -89,6 +89,7 @@ import {
   useRecoveryWhatsapp,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
+import { useRole } from "@/hooks/use-role"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
 
 // ─── Mock data — replace with real fetch when backend lands ─────────────
@@ -737,6 +738,14 @@ function QualificationTab({ lead }: { lead: LeadDetail }) {
   )
 }
 
+// SOP §3: 3-tier timeline options. Urgency rank is used to enforce the
+// "salespeople cannot downgrade" rule on the frontend (backend enforces too).
+const TIMELINE_OPTIONS = [
+  { value: "1_month",       label: "1 Month",   urgency: 3 },
+  { value: "3_months",      label: "3 Months",  urgency: 2 },
+  { value: "6_plus_months", label: "6+ Months", urgency: 1 },
+] as const
+
 // Full Qualification edit dialog — Gap B + Timeline editing (Gap C)
 function FullQualificationDialog({
   open,
@@ -747,6 +756,7 @@ function FullQualificationDialog({
   onOpenChange: (v: boolean) => void
   lead: LeadDetail
 }) {
+  const { isSalesperson } = useRole()
   const { control, handleSubmit, reset, formState } = useForm<FullQualificationValues>({
     resolver: zodResolver(fullQualificationSchema),
     defaultValues: {
@@ -782,7 +792,7 @@ function FullQualificationDialog({
         <DialogHeader>
           <DialogTitle>Full Qualification (Phase 2)</DialogTitle>
           <DialogDescription>
-            All 6 fields are required before scheduling a physical meeting. Telecaller can move the timeline in any direction.
+            All 6 fields are required before scheduling a physical meeting.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -802,25 +812,34 @@ function FullQualificationDialog({
             <Controller
               control={control}
               name="timelineBucket"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Timeline / Closing Date</Label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select timeline" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="immediate">Immediate (this month)</SelectItem>
-                      <SelectItem value="1-3 months">1-3 months</SelectItem>
-                      <SelectItem value="3-6 months">3-6 months</SelectItem>
-                      <SelectItem value="6_plus_month">6+ months</SelectItem>
-                      <SelectItem value="just_exploring">Just exploring</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[10px] text-muted-foreground">
-                    Writes to SAP <code>OOPR.ClosingDate</code>. Telecaller can move any direction.
-                  </p>
-                  {errors.timelineBucket && <p className="text-[11px] text-destructive">{errors.timelineBucket.message}</p>}
-                </div>
-              )}
+              render={({ field }) => {
+                // Salespeople can only escalate (higher urgency), never downgrade.
+                const currentUrgency = TIMELINE_OPTIONS.find((o) => o.value === lead.timelineBucket)?.urgency ?? 0
+                return (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Timeline / Closing Date</Label>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select timeline" /></SelectTrigger>
+                      <SelectContent>
+                        {TIMELINE_OPTIONS.map((opt) => {
+                          const blocked = isSalesperson && opt.urgency < currentUrgency
+                          return (
+                            <SelectItem key={opt.value} value={opt.value} disabled={blocked}>
+                              {opt.label}{blocked ? " (cannot downgrade)" : ""}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {isSalesperson
+                        ? "Sales can only escalate timeline urgency (shorter)."
+                        : "Telecaller/manager can move timeline in any direction."}
+                    </p>
+                    {errors.timelineBucket && <p className="text-[11px] text-destructive">{errors.timelineBucket.message}</p>}
+                  </div>
+                )
+              }}
             />
 
             <Controller

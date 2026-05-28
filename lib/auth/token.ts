@@ -5,10 +5,12 @@
 // SSR-safe: every accessor short-circuits when `window` isn't defined so
 // Next can render the login page on the server without crashing.
 
+export type UserRole = "telecaller" | "salesperson" | "manager" | "admin"
+
 export interface AuthUser {
   id: number
   username: string
-  role: "telecaller" | "manager" | "admin"
+  role: UserRole
   fullName?: string | null
 }
 
