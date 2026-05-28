@@ -92,6 +92,13 @@ export interface MeetingRow {
   assigned_salesperson: string | null
   notes: string | null
   created_at: string
+  // Phase 3 SLA fields
+  meeting_summary_url: string | null
+  meeting_summary_uploaded_at: string | null
+  quotation_id: number | null
+  decision_timeline_confirmed: 0 | 1
+  sla_summary_breached: 0 | 1
+  sla_quote_breached: 0 | 1
 }
 
 export interface LeadDetail {
@@ -275,6 +282,38 @@ export const leadsApi = {
       api.post<Envelope<{ opportunityDocEntry: number }>>(
         endpoints.leadHandBack(String(id)),
         body,
+      ),
+    ),
+
+  // ─── Meeting SLAs ────────────────────────────────────────────────────
+  uploadMeetingSummary: (meetingId: number | string, file: File) => {
+    const fd = new FormData()
+    fd.append("meetingSummary", file)
+    return unwrap(
+      api.put<Envelope<{ meetingId: number; summaryUrl: string; withinSla: boolean; hoursElapsed: number }>>(
+        endpoints.meetingSummaryUpload(String(meetingId)),
+        fd,
+      ),
+    )
+  },
+
+  getMeetingSlaStatus: (meetingId: number | string) =>
+    unwrap(
+      api.get<Envelope<{
+        meetingId: number
+        meetingType: string
+        meetingAt: string
+        hoursElapsed: number
+        summary: { uploaded: boolean; url: string | null; uploadedAt: string | null; deadline: string; breached: boolean; remainingMs: number }
+        quotation: { created: boolean; quotationId: number | null; deadline: string; breached: boolean; remainingMs: number }
+        decisionTimelineConfirmed: boolean
+      }>>(endpoints.meetingSlaStatus(String(meetingId))),
+    ),
+
+  confirmDecisionTimeline: (meetingId: number | string) =>
+    unwrap(
+      api.put<Envelope<{ meetingId: number }>>(
+        endpoints.meetingConfirmTimeline(String(meetingId)),
       ),
     ),
 

@@ -69,6 +69,16 @@ export function useLeadFullDetail(id: string | number | undefined) {
   })
 }
 
+/** SLA status for a physical meeting — countdown timers, breach flags. */
+export function useMeetingSlaStatus(meetingId: string | number | undefined) {
+  return useQuery({
+    queryKey: [...leadKeys.all, "meeting-sla", String(meetingId ?? "__noop__")] as const,
+    queryFn: () => leadsApi.getMeetingSlaStatus(meetingId!),
+    enabled: Boolean(meetingId),
+    refetchInterval: 60_000, // refresh every minute for live countdowns
+  })
+}
+
 export function useQueueCountsQuery() {
   return useQuery({
     queryKey: leadKeys.queueCounts(),

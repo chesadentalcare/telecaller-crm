@@ -76,6 +76,10 @@ export const endpoints = {
   leadRecoveryWhatsapp: (id: string) => `/api/telecaller/leads/${id}/recovery-whatsapp`,
   leadTimeline: (id: string) => `/api/telecaller/leads/${id}/timeline`,
   leadHandBack: (id: string) => `/api/telecaller/leads/${id}/hand-back`,
+  // Meeting SLAs (Phase 3)
+  meetingSummaryUpload: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/summary`,
+  meetingSlaStatus: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/sla`,
+  meetingConfirmTimeline: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/confirm-timeline`,
   dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
   sapEmployees: "/api/telecaller/sap/employees",

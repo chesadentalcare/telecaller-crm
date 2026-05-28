@@ -140,3 +140,19 @@ export function useHandBackLead(id: string | number) {
     onSuccess: () => invalidateAllLeads(qc),
   })
 }
+
+export function useUploadMeetingSummary(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => leadsApi.uploadMeetingSummary(meetingId, file),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useConfirmDecisionTimeline(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.confirmDecisionTimeline(meetingId),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
