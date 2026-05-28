@@ -270,8 +270,8 @@ function LostForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: numbe
     const fd = new FormData()
     fd.append("outcome", "lost")
     fd.append("lostReason", values.lostReason)
-    if (values.competitorName) fd.append("competitorName", values.competitorName)
-    if (values.priceGapRange) fd.append("priceGapRange", values.priceGapRange)
+    fd.append("competitorName", values.competitorName)
+    fd.append("priceGapRange", values.priceGapRange)
     fd.append("reactivationFlag", String(values.reactivationFlag))
 
     try {

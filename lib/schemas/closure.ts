@@ -31,8 +31,8 @@ export const closureLostSchema = z.object({
     ["price", "timing", "competitor", "features", "budget", "no_response", "went_local", "other"],
     { required_error: "Lost reason is required" },
   ),
-  competitorName: z.string().optional(),
-  priceGapRange: z.enum(["<5%", "5-10%", "10-20%", ">20%"]).optional(),
+  competitorName: z.string().min(1, "Competitor name is required"),
+  priceGapRange: z.enum(["<5%", "5-10%", "10-20%", ">20%"], { required_error: "Price gap range is required" }),
   reactivationFlag: z.boolean().default(false),
 })
 
