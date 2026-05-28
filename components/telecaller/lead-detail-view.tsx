@@ -684,37 +684,52 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
 function QualificationTab({ lead }: { lead: LeadDetail }) {
   const [editOpen, setEditOpen] = useState(false)
 
-  // Phase 2 (Full) field completeness
+  // Rapid Qualification checklist items (SOP §1–2)
+  const rapidFields = [
+    { label: "Phone Verified", filled: lead.phoneVerified },
+    { label: "Dentist Type", filled: !!lead.dentistType },
+    { label: "Practice Type", filled: !!lead.practiceType },
+    { label: "Timeline", filled: !!lead.timelineBucket },
+    { label: "Budget Range", filled: !!lead.budgetRange },
+    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending" },
+  ]
+  const rapidCompleted = rapidFields.filter((f) => f.filled).length
+
+  // Phase 2 (Full) field completeness — SOP §2 qualification gate (all 6 required)
   const fullQualFields = [
     { key: "decisionMaker", label: "Decision Maker", value: lead.decisionMaker },
     { key: "timelineBucket", label: "Timeline (ClosingDate)", value: lead.timelineBucket },
     { key: "budgetRange", label: "Budget Range", value: lead.budgetRange },
-    { key: "competitors", label: "Competitors Considering", value: lead.competitors },
+    { key: "competitors", label: "Competitor Evaluated", value: lead.competitors },
     { key: "fundingMethod", label: "Funding Method", value: lead.fundingMethod },
     { key: "dentistType", label: "Dentist + Practice Type", value: lead.dentistType && lead.practiceType ? `${lead.dentistType} · ${lead.practiceType}` : undefined },
   ]
   const completed = fullQualFields.filter((f) => !!f.value).length
   const isFullQualified = completed === fullQualFields.length
+  const progressPct = Math.round((completed / fullQualFields.length) * 100)
 
   return (
     <div className="space-y-4">
-      {/* Rapid Qualification summary (Phase 1) */}
+      {/* Rapid Qualification summary (Phase 1) — with checklist icons */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-sm">Rapid Qualification (Phase 1)</CardTitle>
             <Badge variant="outline" className={cn("text-[10px]", lead.rapidQualified ? "bg-success/10 text-success border-success/30" : "")}>
-              {lead.rapidQualified ? "Completed" : "Pending"}
+              {rapidCompleted} / {rapidFields.length} complete
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <RapidField label="Phone verified" value={lead.phoneVerified ? "Yes" : "No"} />
-          <RapidField label="Dentist type" value={lead.dentistType ?? "—"} />
-          <RapidField label="Practice type" value={lead.practiceType ?? "—"} />
-          <RapidField label="Timeline" value={lead.timelineBucket ?? "—"} />
-          <RapidField label="Budget" value={lead.budgetRange ?? "—"} />
-          <RapidField label="Route" value={lead.firstCallRoute?.replace("_", " ") ?? "—"} />
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {rapidFields.map((f) => (
+            <div key={f.label} className="flex items-center gap-2.5 rounded-md border bg-card px-3 py-2">
+              {f.filled
+                ? <CheckCircle2 className="size-4 text-success shrink-0" />
+                : <XCircle className="size-4 text-destructive/60 shrink-0" />
+              }
+              <span className={cn("text-xs", f.filled ? "font-medium" : "text-muted-foreground")}>{f.label}</span>
+            </div>
+          ))}
         </CardContent>
       </Card>
 
@@ -758,9 +773,29 @@ function QualificationTab({ lead }: { lead: LeadDetail }) {
               {completed} / {fullQualFields.length} fields
             </Badge>
           </div>
+          {/* Phone verified prerequisite */}
+          {!lead.phoneVerified && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5 mt-1">
+              <XCircle className="size-3.5 text-destructive shrink-0" />
+              <span className="text-[11px] text-destructive">Phone must be verified before qualification gate can pass</span>
+            </div>
+          )}
           <CardDescription className="text-xs">
             All 6 fields required before scheduling a physical meeting (qualification gate).
           </CardDescription>
+          {/* Progress bar */}
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  isFullQualified ? "bg-success" : "bg-primary",
+                )}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">{progressPct}%</span>
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {fullQualFields.map((f) => (
@@ -991,15 +1026,6 @@ function FullQualificationDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function RapidField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md border bg-card px-3 py-2">
-      <span className="text-xs text-muted-foreground truncate">{label}</span>
-      <span className="text-xs font-medium truncate">{value}</span>
-    </div>
   )
 }
 
