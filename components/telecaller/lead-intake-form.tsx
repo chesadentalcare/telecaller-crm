@@ -230,6 +230,8 @@ export function LeadIntakeForm() {
               productsError={productsError}
               employees={salesEmployees ?? []}
               employeesLoading={employeesLoading}
+              sapSources={sapSources ?? []}
+              sourcesLoading={sourcesLoading}
             />
           )}
           {currentStep === 4 && (
@@ -502,6 +504,8 @@ function Step2Location({ control, register, errors }: StepProps) {
 interface Step3Props extends StepProps {
   products: { id: number; pname: string }[]
   productsLoading: boolean
+  sapSources: { sequenceNo: number; description: string }[]
+  sourcesLoading: boolean
   productsError: string | null
   employees: { employeeId: number; name: string; jobTitle: string | null }[]
   employeesLoading: boolean
@@ -510,6 +514,7 @@ interface Step3Props extends StepProps {
 function Step3Interest({
   control, errors, products, productsLoading, productsError,
   employees: salesEmployees, employeesLoading,
+  sapSources, sourcesLoading,
 }: Step3Props) {
   // Watch product1 so product2's options exclude it. Hook is at the top of
   // this component, not behind a conditional in the parent — rules-of-hooks.

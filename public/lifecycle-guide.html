@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TeleCRM — Full Lead Lifecycle Testing Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; line-height: 1.6; background: #fff; }
+  .page { max-width: 900px; margin: 0 auto; padding: 32px 40px; }
+
+  h1 { font-size: 24px; font-weight: 700; color: #1e3a5f; border-bottom: 3px solid #2563eb; padding-bottom: 10px; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 12px; margin-bottom: 28px; }
+
+  h2 { font-size: 16px; font-weight: 700; color: #fff; background: #1e3a5f; padding: 8px 14px; border-radius: 6px 6px 0 0; margin-top: 28px; display: flex; align-items: center; gap: 8px; }
+  h2 .badge { background: #2563eb; border-radius: 12px; padding: 1px 9px; font-size: 11px; font-weight: 600; }
+
+  .section { border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px; margin-bottom: 4px; }
+  .section-body { padding: 16px 18px; }
+
+  h3 { font-size: 13px; font-weight: 700; color: #1e3a5f; margin: 14px 0 6px; }
+  h3:first-child { margin-top: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  th { background: #f1f5f9; color: #334155; font-weight: 600; padding: 7px 10px; text-align: left; border: 1px solid #e2e8f0; }
+  td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li { counter-increment: step; padding: 5px 0 5px 32px; position: relative; border-bottom: 1px dashed #e2e8f0; }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 5px; background: #2563eb; color: #fff; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+  .check-list { list-style: none; padding: 0; }
+  .check-list li { padding: 4px 0 4px 22px; position: relative; }
+  .check-list li::before { content: '☐'; position: absolute; left: 0; color: #2563eb; font-size: 14px; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-orange { background: #ffedd5; color: #9a3412; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .tag-purple { background: #f3e8ff; color: #6b21a8; }
+  .tag-gray { background: #f1f5f9; color: #475569; }
+
+  .note { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #78350f; margin: 8px 0; }
+  .error { background: #fef2f2; border-left: 3px solid #ef4444; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #991b1b; margin: 8px 0; }
+  .success { background: #f0fdf4; border-left: 3px solid #22c55e; padding: 8px 12px; border-radius: 0 4px 4px 0; font-size: 12px; color: #14532d; margin: 8px 0; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 8px 0; }
+  .flow-stage { background: #e0f2fe; color: #0369a1; border-radius: 4px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+  .flow-arrow { color: #94a3b8; font-weight: 700; font-size: 14px; }
+
+  .api-row { font-family: 'Courier New', monospace; font-size: 11px; background: #f8fafc; padding: 3px 8px; border-radius: 4px; color: #334155; }
+  .method-post { color: #059669; font-weight: 700; }
+  .method-get { color: #2563eb; font-weight: 700; }
+  .method-put { color: #d97706; font-weight: 700; }
+
+  .toc { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin-bottom: 28px; }
+  .toc h3 { color: #1e3a5f; margin-bottom: 10px; font-size: 14px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { padding: 2px 0; color: #2563eb; font-size: 12px; }
+
+  @media print {
+    body { font-size: 12px; }
+    .page { padding: 20px 28px; }
+    h2 { page-break-after: avoid; }
+    .section { page-break-inside: avoid; }
+    .two-col { display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>TeleCRM — Full Lead Lifecycle Testing Guide</h1>
+  <p class="subtitle">Dental Equipment Sales · Ashva SAP B1 · Version 1.0 · Generated 2026-05-29</p>
+
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li>Full Pipeline Stage Flow</li>
+      <li>Stage 1 — New Lead Creation</li>
+      <li>Stage 2 — Phone Verification</li>
+      <li>Stage 3 — Rapid Qualification</li>
+      <li>Stage 4 — Full Qualification</li>
+      <li>Stage 5A — Zoom Meeting (Online Route)</li>
+      <li>Stage 5B — Physical Meeting (Sales Handover)</li>
+      <li>Stage 6 — Quotation</li>
+      <li>Stage 7 — Closure (WON / LOST)</li>
+      <li>Special Flows: No-Response, Drip, 6-Month Funnel</li>
+      <li>Manager Features</li>
+      <li>SAP Sync Verification</li>
+      <li>Quick Error Reference</li>
+    </ol>
+  </div>
+
+  <!-- ─── 1. PIPELINE FLOW ──────────────────────────────────────── -->
+  <h2>1 · Full Pipeline Stage Flow</h2>
+  <div class="section"><div class="section-body">
+    <div class="flow">
+      <span class="flow-stage">new</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">rapid_qualified</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">full_qualified</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">zoom_meeting_done</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">sales_handover</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">physical_meeting_scheduled</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">quotation_sent</span><span class="flow-arrow">→</span>
+      <span class="flow-stage">closed_won</span>
+    </div>
+    <div class="flow" style="margin-top:4px">
+      <span class="flow-stage" style="background:#fee2e2;color:#991b1b">closed_lost</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-stage" style="background:#fef3c7;color:#92400e">six_month_funnel</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-stage" style="background:#f3e8ff;color:#6b21a8">drip_active</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-stage" style="background:#f1f5f9;color:#475569">handed_back</span>
+    </div>
+    <table style="margin-top:12px">
+      <tr><th>Stage</th><th>Who Acts</th><th>SAP Probability</th><th>Next Action</th></tr>
+      <tr><td>new</td><td>Telecaller</td><td>10%</td><td>Verify phone, log first call</td></tr>
+      <tr><td>rapid_qualified</td><td>Telecaller</td><td>20%</td><td>Complete 6-field rapid qual checklist</td></tr>
+      <tr><td>full_qualified</td><td>Telecaller</td><td>35%</td><td>Schedule zoom or physical meeting</td></tr>
+      <tr><td>zoom_meeting_done</td><td>Telecaller</td><td>50%</td><td>Log design fee decision</td></tr>
+      <tr><td>sales_handover</td><td>Sales</td><td>75%</td><td>Schedule physical meeting</td></tr>
+      <tr><td>physical_meeting_scheduled</td><td>Sales</td><td>65%</td><td>Upload meeting summary + quote</td></tr>
+      <tr><td>quotation_sent</td><td>Sales/Telecaller</td><td>85%</td><td>Follow up, collect decision</td></tr>
+      <tr><td>closed_won</td><td>Any</td><td>100%</td><td>Upload signed quote + payment proof</td></tr>
+      <tr><td>closed_lost</td><td>Any</td><td>0%</td><td>Log reason + competitor</td></tr>
+    </table>
+  </div></div>
+
+  <!-- ─── 2. NEW LEAD ───────────────────────────────────────────── -->
+  <h2>2 · Stage 1 — New Lead Creation <span class="badge">Stage: new</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>What to fill in</h3>
+        <table>
+          <tr><th>Field</th><th>Required</th><th>Example</th></tr>
+          <tr><td>Lead Name</td><td><span class="tag tag-red">Required</span></td><td>Dr. Rajesh Kumar</td></tr>
+          <tr><td>Phone</td><td><span class="tag tag-red">Required</span></td><td>9876543210</td></tr>
+          <tr><td>WhatsApp</td><td><span class="tag tag-gray">Optional</span></td><td>Same or different</td></tr>
+          <tr><td>Email</td><td><span class="tag tag-gray">Optional</span></td><td>dr@clinic.com</td></tr>
+          <tr><td>State / City / Pincode</td><td><span class="tag tag-red">Required</span></td><td>Maharashtra / Pune / 411001</td></tr>
+          <tr><td>Equipment Interest</td><td><span class="tag tag-red">Required</span></td><td>Dental Chair</td></tr>
+          <tr><td>Source</td><td><span class="tag tag-red">Required</span></td><td>Phone (from SAP dropdown)</td></tr>
+          <tr><td>Category / Product</td><td><span class="tag tag-red">Required</span></td><td>Indian Products / DCH 148</td></tr>
+          <tr><td>Interest Level</td><td><span class="tag tag-red">Required</span></td><td>Hot / Warm / Cold</td></tr>
+          <tr><td>Budget Range</td><td><span class="tag tag-red">Required</span></td><td>₹5L – ₹10L</td></tr>
+          <tr><td>Our Employee</td><td><span class="tag tag-red">Required</span></td><td>Pick from SAP employee list</td></tr>
+          <tr><td>Expected By</td><td><span class="tag tag-red">Required</span></td><td>Date picker</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>What happens in the backend</h3>
+        <ul class="steps">
+          <li>SAP: Find/Create BusinessPartner by phone (Series 93)</li>
+          <li>SAP: Create SalesOpportunity linked to BP (StageKey=1)</li>
+          <li>MySQL: INSERT into lead_extensions (stage='new')</li>
+          <li>SAP: Sync UDFs — U_EquipmentInterest, U_CrmStage, U_LeadSource, U_City</li>
+        </ul>
+        <h3 style="margin-top:14px">Verify checklist</h3>
+        <ul class="check-list">
+          <li>Lead appears in Pipeline view</li>
+          <li>Stage shows "new"</li>
+          <li>SAP: SalesOpportunity created in Ashva</li>
+          <li>SAP: BusinessPartner created/found</li>
+          <li>Source dropdown shows SAP sources (not hardcoded)</li>
+        </ul>
+        <div class="note" style="margin-top:10px">TEST_MODE=true prefixes lead names with [TELECALLER-TEST] in SAP so test records are identifiable.</div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 3. PHONE VERIFICATION ─────────────────────────────────── -->
+  <h2>3 · Stage 2 — Phone Verification <span class="badge">Gate</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <ul class="steps">
+          <li>Open lead in Pipeline → Lead Detail view</li>
+          <li>Click <strong>Verify Phone</strong> button</li>
+          <li>lead_extensions.phone_verified → TRUE</li>
+          <li>Green shield appears on pipeline card</li>
+        </ul>
+        <div class="error" style="margin-top:10px"><strong>Gate:</strong> All subsequent actions (qualify, meeting, drip, close) are blocked until phone_verified = TRUE. API returns 403.</div>
+      </div>
+      <div>
+        <h3>Verify checklist</h3>
+        <ul class="check-list">
+          <li>Red shield on pipeline card before verification</li>
+          <li>Green shield after verification</li>
+          <li>Attempting "Rapid Qualify" before verify → blocked with error toast</li>
+          <li>After verify → qualify button becomes active</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 4. RAPID QUALIFICATION ───────────────────────────────── -->
+  <h2>4 · Stage 3 — Rapid Qualification <span class="badge">Stage: rapid_qualified</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>6-Field Checklist (all required to advance)</h3>
+        <table>
+          <tr><th>#</th><th>Field</th><th>Example</th></tr>
+          <tr><td>1</td><td>Phone Verified</td><td>✓ (pre-requisite)</td></tr>
+          <tr><td>2</td><td>Dentist Type</td><td>General Dentist</td></tr>
+          <tr><td>3</td><td>Practice Type</td><td>Single Chair Clinic</td></tr>
+          <tr><td>4</td><td>Budget Range</td><td>₹5L – ₹10L</td></tr>
+          <tr><td>5</td><td>Timeline</td><td>1 Month</td></tr>
+          <tr><td>6</td><td>Competitor Evaluated</td><td>Yes</td></tr>
+        </table>
+        <h3 style="margin-top:12px">Route Selection (required)</h3>
+        <table>
+          <tr><th>Route</th><th>Next Step</th></tr>
+          <tr><td>online_meeting</td><td>Schedule Zoom Meeting</td></tr>
+          <tr><td>physical_meeting</td><td>Jump to Physical Meeting</td></tr>
+          <tr><td>drip_info</td><td>Enter Drip Campaign</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>What syncs to SAP</h3>
+        <ul class="check-list">
+          <li>U_PhoneVerified = Y</li>
+          <li>U_DentistType, U_PracticeType</li>
+          <li>U_BudgetRange, U_PurchaseType</li>
+          <li>SalesProbability → 20%</li>
+          <li>U_CrmStage → rapid_qualified</li>
+        </ul>
+        <h3 style="margin-top:12px">Verify checklist</h3>
+        <ul class="check-list">
+          <li>Stage changes to "rapid_qualified" in pipeline</li>
+          <li>Qualification tab shows 6/6 checklist with green ticks</li>
+          <li>Progress bar shows 100%</li>
+          <li>SAP opportunity probability updated to 20%</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 5. FULL QUALIFICATION ─────────────────────────────────── -->
+  <h2>5 · Stage 4 — Full Qualification <span class="badge">Stage: full_qualified</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>Additional fields (all required)</h3>
+        <table>
+          <tr><th>Field</th><th>Example</th></tr>
+          <tr><td>Decision Maker</td><td>Dr. Rajesh (self)</td></tr>
+          <tr><td>Timeline Bucket</td><td>1_month / 3_month / 6_plus_month</td></tr>
+          <tr><td>Budget Range</td><td>Confirm/update from rapid qual</td></tr>
+          <tr><td>Competitors</td><td>Confident Dental / Local dealer</td></tr>
+          <tr><td>Funding Method</td><td>Self / Bank Loan / Lease</td></tr>
+          <tr><td>Dentist Type</td><td>Confirm from rapid qual</td></tr>
+          <tr><td>Practice Type</td><td>Confirm from rapid qual</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>What syncs to SAP</h3>
+        <ul class="check-list">
+          <li>U_DecisionMaker, U_FundingMethod</li>
+          <li>PredictedClosingDate (timeline offset)</li>
+          <li>SalesOpportunitiesCompetitors line</li>
+          <li>SalesProbability → 35%</li>
+          <li>U_CrmStage → full_qualified</li>
+        </ul>
+        <h3 style="margin-top:12px">Verify checklist</h3>
+        <ul class="check-list">
+          <li>Stage changes to "full_qualified"</li>
+          <li>SAP closing date updated</li>
+          <li>Zoom / Physical meeting buttons now active</li>
+        </ul>
+        <div class="note">CRM Lock: if a quotation SLA is breached, all actions are blocked with red banner until resolved.</div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 6. ZOOM MEETING ───────────────────────────────────────── -->
+  <h2>6 · Stage 5A — Zoom Meeting <span class="badge">Stage: zoom_meeting_done</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>Form fields</h3>
+        <table>
+          <tr><th>Field</th><th>Note</th></tr>
+          <tr><td>Meeting Date/Time</td><td>Required</td></tr>
+          <tr><td>Layout Shared</td><td>Was layout PDF sent?</td></tr>
+          <tr><td>Design Fee Discussed</td><td>Required checkbox</td></tr>
+          <tr><td>Design Fee Paid</td><td>If yes → upload payment proof (required)</td></tr>
+          <tr><td>Design Fee Declined</td><td>Only telecaller can log this</td></tr>
+          <tr><td>Notes</td><td>Optional</td></tr>
+        </table>
+        <h3 style="margin-top:12px">Stage outcomes</h3>
+        <table>
+          <tr><th>Condition</th><th>Next Stage</th></tr>
+          <tr><td>Fee paid + proof uploaded</td><td>sales_handover</td></tr>
+          <tr><td>Fee declined (telecaller only)</td><td>six_month_funnel</td></tr>
+          <tr><td>Neither</td><td>zoom_meeting_done</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>Verify checklist</h3>
+        <ul class="check-list">
+          <li>Meeting appears in Meetings tab of lead detail</li>
+          <li>Stage updates correctly per outcome table</li>
+          <li>SAP probability updates (50% / 75% / 15%)</li>
+          <li>Salesperson role trying to log "declined" → 403 error</li>
+          <li>Design fee paid without proof file → 422 error</li>
+        </ul>
+        <div class="note"><strong>SOP §4A:</strong> Only telecallers can move declined-fee leads. Salesperson attempting this gets 403.</div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 7. PHYSICAL MEETING ──────────────────────────────────── -->
+  <h2>7 · Stage 5B — Physical Meeting & Sales Handoff <span class="badge">Stage: physical_meeting_scheduled</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <ul class="steps">
+          <li>Schedule physical meeting: date, location</li>
+          <li>System auto-assigns salesperson (round-robin by load)</li>
+          <li>Lead ownership transfers to salesperson</li>
+          <li>Stage → physical_meeting_scheduled</li>
+          <li>Salesperson must upload meeting summary within 6h (SLA)</li>
+          <li>Quotation must be created within 12h (SLA)</li>
+        </ul>
+        <div class="error"><strong>SLA Breach:</strong> Missing summary or quote after deadline sets CRM lock, blocking all further actions until resolved.</div>
+      </div>
+      <div>
+        <h3>Verify checklist</h3>
+        <ul class="check-list">
+          <li>Lead disappears from telecaller's pipeline</li>
+          <li>Lead appears under salesperson's assigned leads</li>
+          <li>SAP probability → 65%</li>
+          <li>SLA timer visible on meeting detail</li>
+          <li>Upload summary → SLA timer stops</li>
+          <li>Confirm decision timeline checkbox works</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 8. QUOTATION ─────────────────────────────────────────── -->
+  <h2>8 · Stage 6 — Quotation <span class="badge">Stage: quotation_sent</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>Create quotation</h3>
+        <ul class="steps">
+          <li>Quotation Builder → Add line items from SAP item list</li>
+          <li>Optionally apply discount (manager approval if &gt;15%)</li>
+          <li>Preview PDF (opens in new tab)</li>
+          <li>Send via WhatsApp → stage moves to quotation_sent</li>
+        </ul>
+        <h3 style="margin-top:12px">Discount approval flow</h3>
+        <table>
+          <tr><th>Discount</th><th>Action</th></tr>
+          <tr><td>≤ 15%</td><td>Auto-approved, can send immediately</td></tr>
+          <tr><td>&gt; 15%</td><td>Sent for manager approval → managers notified</td></tr>
+          <tr><td>Approved</td><td>Requester notified, can send</td></tr>
+          <tr><td>Rejected</td><td>Requester notified, must revise</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>WhatsApp delivery flow</h3>
+        <ul class="steps">
+          <li>PDF generated and sent to lead's WhatsApp</li>
+          <li>Status: sent → delivered (on webhook)</li>
+          <li>Follow-up tasks created only after delivered</li>
+          <li>If failed → "Retry Send" button appears on quotation card</li>
+        </ul>
+        <h3 style="margin-top:12px">Verify checklist</h3>
+        <ul class="check-list">
+          <li>Items load from SAP (live prices)</li>
+          <li>PDF preview opens correctly</li>
+          <li>WhatsApp send triggers status = sent</li>
+          <li>Discount &gt;15% shows pending approval badge</li>
+          <li>Retry button appears on failed send</li>
+          <li>Stage → quotation_sent after successful send</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 9. CLOSURE ───────────────────────────────────────────── -->
+  <h2>9 · Stage 7 — Closure (WON / LOST) <span class="badge">Final Stage</span></h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>WON closure — required fields</h3>
+        <table>
+          <tr><th>Field</th><th>Note</th></tr>
+          <tr><td>Signed Quote (file)</td><td>PDF/image upload</td></tr>
+          <tr><td>Advance Payment Proof (file)</td><td>PDF/image upload</td></tr>
+          <tr><td>Dispatch Date</td><td>Date picker</td></tr>
+          <tr><td>Installation Date</td><td>Date picker</td></tr>
+        </table>
+        <div class="success" style="margin-top:8px">SAP: Creates Sales Order from latest quotation line items. Opportunity → SalesProbability 100%, Status closed.</div>
+      </div>
+      <div>
+        <h3>LOST closure — required fields</h3>
+        <table>
+          <tr><th>Field</th><th>Example</th></tr>
+          <tr><td>Lost Reason</td><td>price / competitor / timing</td></tr>
+          <tr><td>Competitor Name</td><td>Confident Dental</td></tr>
+          <tr><td>Price Gap Range</td><td>&lt;5% / 5-10% / 10-20% / &gt;20%</td></tr>
+          <tr><td>Reactivation Flag</td><td>If true → moves to 6-month funnel</td></tr>
+        </table>
+        <div class="error" style="margin-top:8px">SAP: SalesProbability → 0%, Status sos_Lost, Remarks include reason/competitor/gap, U_LostReason synced.</div>
+      </div>
+    </div>
+    <h3 style="margin-top:14px">Verify checklist</h3>
+    <div class="two-col">
+      <ul class="check-list">
+        <li>WON: lead moves to closed_won, disappears from pipeline</li>
+        <li>WON: SAP Sales Order visible in Ashva</li>
+        <li>WON: SAP Opportunity → 100% probability</li>
+      </ul>
+      <ul class="check-list">
+        <li>LOST: lead moves to closed_lost (or 6-month funnel if reactivation=true)</li>
+        <li>LOST: SAP Opportunity → 0%, status lost</li>
+        <li>LOST: U_CompetitorEval + U_LostReason synced to SAP</li>
+      </ul>
+    </div>
+  </div></div>
+
+  <!-- ─── 10. SPECIAL FLOWS ─────────────────────────────────────── -->
+  <h2>10 · Special Flows</h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>No-Response Flow (4+ failed calls)</h3>
+        <ul class="steps">
+          <li>Log 4+ call attempts with outcome = no_response</li>
+          <li>Lead appears in No-Response queue tab</li>
+          <li>Recovery WhatsApp option becomes available</li>
+          <li>Send recovery WhatsApp message to re-engage</li>
+        </ul>
+        <div class="note">Check: No-Response queue badge count updates after 4th failed attempt.</div>
+
+        <h3 style="margin-top:14px">Drip Campaign</h3>
+        <ul class="steps">
+          <li>From full_qualified lead, click "Enter Drip"</li>
+          <li>Select track: 1_month / 3_month / 6_plus_month</li>
+          <li>Drip engine sends WhatsApp messages on schedule</li>
+          <li>Lead appears in Drip Queue tab with next message time</li>
+          <li>Manual exit: "Exit Drip" with reason</li>
+        </ul>
+        <div class="note">Cadence: 1-month = 9 messages over 17 days. 6-month = 13 messages over 168 days.</div>
+      </div>
+      <div>
+        <h3>6-Month Funnel / Reactivation</h3>
+        <ul class="steps">
+          <li>Set timeline = 6_plus_months OR reactivation_flag = true on LOST</li>
+          <li>Lead appears in "6+ Month Funnel" queue</li>
+          <li>Set reactivate_by date on lead</li>
+          <li>Daily scanner sends reminder 7 days before reactivate_by</li>
+        </ul>
+        <div class="note">Notification badge shows when a reactivation reminder fires.</div>
+
+        <h3 style="margin-top:14px">Idle Lead Scanner</h3>
+        <ul class="check-list">
+          <li>Leads with no activity for 14+ days → Idle Queue</li>
+          <li>Yellow warning banner on lead detail after 14 days idle</li>
+          <li>Idle queue badge shows count</li>
+        </ul>
+
+        <h3 style="margin-top:14px">Sales Hand-Back</h3>
+        <ul class="check-list">
+          <li>Sales can return a lead to telecaller with a reason</li>
+          <li>Lead stage → handed_back, appears in Reactivation queue</li>
+          <li>SAP probability reset to 10%</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 11. MANAGER FEATURES ──────────────────────────────────── -->
+  <h2>11 · Manager Features</h2>
+  <div class="section"><div class="section-body">
+    <div class="two-col">
+      <div>
+        <h3>Analytics Dashboard (Manager view)</h3>
+        <ul class="check-list">
+          <li>Login as manager → Dashboard shows team-wide data</li>
+          <li>Team leaderboard with per-telecaller breakdown</li>
+          <li>Total leads, calls, meetings, WON/LOST across all users</li>
+          <li>Recent activity includes "actor" name</li>
+        </ul>
+        <div class="note">Telecaller login → sees only own data. Manager login → sees entire team.</div>
+      </div>
+      <div>
+        <h3>Discount Approvals</h3>
+        <ul class="check-list">
+          <li>Telecaller requests discount &gt;15% → all managers notified</li>
+          <li>Manager sees pending approval in notification bell</li>
+          <li>Approve → requester notified, quote can be sent</li>
+          <li>Reject → requester notified with reason</li>
+        </ul>
+        <h3 style="margin-top:12px">Notification Bell</h3>
+        <ul class="check-list">
+          <li>Unread count badge on bell icon</li>
+          <li>Mark individual/all as read</li>
+          <li>Types: discount_approval_request, reactivation_reminder, sla_breach</li>
+        </ul>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ─── 12. SAP SYNC VERIFICATION ────────────────────────────── -->
+  <h2>12 · SAP Sync Verification</h2>
+  <div class="section"><div class="section-body">
+    <table>
+      <tr><th>Action</th><th>What to check in SAP Ashva</th><th>Expected Value</th></tr>
+      <tr><td>Create Lead</td><td>SalesOpportunities → find by DocEntry</td><td>Status=Open, StageKey=1, CardCode set</td></tr>
+      <tr><td>Rapid Qualify</td><td>SalesOpportunities → UDFs tab</td><td>U_PhoneVerified=Y, SalesProbability=20</td></tr>
+      <tr><td>Full Qualify</td><td>SalesOpportunities → closing date</td><td>PredictedClosingDate = today + timeline offset</td></tr>
+      <tr><td>Zoom Meeting</td><td>SalesOpportunities</td><td>SalesProbability=50 (or 75 if fee paid)</td></tr>
+      <tr><td>Physical Meeting</td><td>SalesOpportunities</td><td>SalesProbability=65</td></tr>
+      <tr><td>Quotation Sent</td><td>SalesOpportunities</td><td>SalesProbability=85</td></tr>
+      <tr><td>WON Closure</td><td>SalesOpportunities + Orders</td><td>Probability=100, new Sales Order created</td></tr>
+      <tr><td>LOST Closure</td><td>SalesOpportunities</td><td>Status=sos_Lost, Probability=0, U_LostReason set</td></tr>
+      <tr><td>Lead Detail View</td><td>BP detail in Ashva</td><td>Phone/Email/City enriched from SAP BP data</td></tr>
+      <tr><td>Pipeline Queue</td><td>BP names in dashboard</td><td>Shows real CardName from SAP, not "Lead #123"</td></tr>
+    </table>
+    <div class="note" style="margin-top:10px">All SAP sync calls are <strong>non-blocking</strong> — if SAP is slow/down, the MySQL operation still completes. Check console logs for <code>[sap-stage]</code>, <code>[sap-udf]</code> warnings.</div>
+  </div></div>
+
+  <!-- ─── 13. ERROR REFERENCE ──────────────────────────────────── -->
+  <h2>13 · Quick Error Reference</h2>
+  <div class="section"><div class="section-body">
+    <table>
+      <tr><th>HTTP</th><th>Error Code</th><th>Meaning</th><th>Fix</th></tr>
+      <tr><td>400</td><td>—</td><td>Invalid lead id / missing required field</td><td>Check request body</td></tr>
+      <tr><td>401</td><td>—</td><td>JWT expired or missing</td><td>Re-login to get fresh token</td></tr>
+      <tr><td>403</td><td>phone_not_verified</td><td>Phone not verified yet</td><td>Verify phone first</td></tr>
+      <tr><td>403</td><td>qualification_incomplete</td><td>Rapid/Full qual not done</td><td>Complete all 6 qual fields</td></tr>
+      <tr><td>403</td><td>crm_locked</td><td>Quotation SLA breached</td><td>Resolve overdue quotation</td></tr>
+      <tr><td>403</td><td>only_telecaller_can_move_declined</td><td>Salesperson tried fee-declined move</td><td>Must be telecaller</td></tr>
+      <tr><td>404</td><td>—</td><td>Lead not found</td><td>Check opportunity_doc_entry</td></tr>
+      <tr><td>409</td><td>—</td><td>Lead already closed / summary already uploaded</td><td>No action needed</td></tr>
+      <tr><td>422</td><td>—</td><td>Validation failed — missing required fields</td><td>Check missingFields in response</td></tr>
+      <tr><td>423</td><td>crm_locked</td><td>CRM locked (SLA breach)</td><td>Red banner shown in UI</td></tr>
+      <tr><td>500</td><td>SAP timeout</td><td>SAP Ashva unreachable</td><td>Check VPN/network to 192.168.50.173</td></tr>
+    </table>
+  </div></div>
+
+  <div style="margin-top:32px; padding-top:14px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:11px; text-align:center;">
+    TeleCRM Dental Equipment Sales · Ashva SAP B1 Integration · Internal Testing Guide · 2026-05-29
+  </div>
+
+</div>
+</body>
+</html>

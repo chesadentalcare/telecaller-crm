@@ -13,6 +13,7 @@ export const zoomMeetingSchema = z
     }),
     paymentProof: fileSchema,
     notes: z.string().optional().default(""),
+    extraEmails: z.string().optional().default(""),
   })
   // When design fee is paid, proof of payment is mandatory.
   .refine(
@@ -24,10 +25,9 @@ export type ZoomMeetingValues = z.infer<typeof zoomMeetingSchema>
 
 export const zoomMeetingDefaults: ZoomMeetingValues = {
   meetingAt: "",
-  // Empty-string defaults won't satisfy the enum until the user picks, but
-  // RHF needs concrete defaults to register inputs. Cast happens at submit.
   layoutShared: "" as ZoomMeetingValues["layoutShared"],
   designFeeStatus: "" as ZoomMeetingValues["designFeeStatus"],
   paymentProof: null,
   notes: "",
+  extraEmails: "",
 }

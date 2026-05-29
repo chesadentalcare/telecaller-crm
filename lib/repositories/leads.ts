@@ -56,13 +56,14 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   name: r.customer_name || placeholderName(r.id),
   phone: placeholderPhone,
   equipment: r.equipment ?? "—",
-  source: "—",
+  source: r.source || "—",
   city: "—",
   status: stageToStatus(r.stage),
   phoneVerified: !!r.phone_verified,
   failedAttempts: Number(r.failed_attempts) || 0,
   createdAt: new Date(r.created_at),
   lastAttemptTime: parseDate(r.last_attempt_time),
+  value: r.budget_range || undefined,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {

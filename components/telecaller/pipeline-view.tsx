@@ -139,7 +139,11 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 {filteredLeads.map((lead) => {
                   const statusConfig = getStatusConfig(lead.status)
                   return (
-                    <TableRow key={lead.id} className="group hover:bg-muted/50">
+                    <TableRow
+                      key={lead.id}
+                      className="group hover:bg-muted/50 cursor-pointer"
+                      onClick={() => onOpenLead?.(lead.id)}
+                    >
                       <TableCell className="py-3">
                         <div className="flex items-center gap-3">
                           <div className="relative flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
@@ -176,8 +180,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                         </Badge>
                       </TableCell>
                       <TableCell><span className="text-xs text-muted-foreground">{formatTime(lead.createdAt)}</span></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
                           <Button size="sm" className="h-9 md:h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
                             <Phone className="size-3" />Call
                           </Button>

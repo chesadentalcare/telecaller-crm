@@ -24,13 +24,21 @@ import { useRapidQualify, useEnterDrip } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 
 const DENTIST_TYPES = [
-  "General Dentist", "Orthodontist", "Periodontist", "Endodontist",
-  "Oral Surgeon", "Pediatric Dentist", "Prosthodontist",
+  { value: "general_practitioner",          label: "General Practitioner" },
+  { value: "orthodontist",                   label: "Orthodontist" },
+  { value: "endodontist",                    label: "Endodontist" },
+  { value: "prosthodontist_implantologist",  label: "Prosthodontist / Implantologist" },
+  { value: "oral_maxillofacial_surgeon",     label: "Oral / Maxillofacial Surgeon" },
+  { value: "other",                          label: "Other" },
 ] as const
 
 const PRACTICE_TYPES = [
-  "Solo Practice", "Group Practice", "Hospital/Clinic Chain",
-  "Dental College", "Corporate Dental", "Mobile Dental Unit",
+  { value: "solo_practice",          label: "Solo Practice" },
+  { value: "group_clinic",           label: "Group Clinic" },
+  { value: "multi_specialty_clinic", label: "Multi-Specialty Clinic" },
+  { value: "chain_corporate",        label: "Chain / Corporate" },
+  { value: "hospital_or_academic",   label: "Hospital / Academic" },
+  { value: "other",                  label: "Other" },
 ] as const
 
 // SOP §3: 3-tier timeline aligned to 1 Month / 3 Months / 6+ Months
@@ -41,8 +49,10 @@ const TIMELINE_OPTIONS = [
 ] as const
 
 const BUDGET_RANGES = [
-  "Under ₹50,000", "₹50K - ₹1L", "₹1L - ₹2.5L",
-  "₹2.5L - ₹5L", "₹5L - ₹10L", "Above ₹10L",
+  { value: "<5L",    label: "Under ₹5L"    },
+  { value: "5-10L",  label: "₹5L – ₹10L"  },
+  { value: "10-25L", label: "₹10L – ₹25L" },
+  { value: "25L+",   label: "₹25L+"        },
 ] as const
 
 const ROUTE_OPTIONS = [
@@ -190,7 +200,7 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
                     <SelectContent>
-                      {DENTIST_TYPES.map((t) => <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>)}
+                      {DENTIST_TYPES.map((t) => <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
@@ -209,7 +219,7 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Select practice" /></SelectTrigger>
                     <SelectContent>
-                      {PRACTICE_TYPES.map((t) => <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>)}
+                      {PRACTICE_TYPES.map((t) => <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
@@ -263,7 +273,7 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Select budget range" /></SelectTrigger>
                   <SelectContent>
-                    {BUDGET_RANGES.map((r) => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                    {BUDGET_RANGES.map((r) => <SelectItem key={r.value} value={r.value} className="text-sm">{r.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}

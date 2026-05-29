@@ -44,7 +44,9 @@ export interface LeadExtensionRow {
   city: string | null
   purchase_type: string | null
   equipment_interest: string | null
+  source: string | null
   phone_verified: 0 | 1
+  timeline: string | null
   decision_maker: string | null
   dentist_type: string | null
   practice_type: string | null
@@ -299,6 +301,8 @@ export interface LeadDetail {
 export interface PipelineRow {
   id: number
   equipment: string | null
+  source: string | null
+  budget_range: string | null
   stage: string
   first_call_route: string
   assigned_to: string
@@ -399,6 +403,7 @@ export const leadsApi = {
     fd.append("design_fee_paid", values.designFeeStatus === "paid" ? "true" : "false")
     fd.append("design_fee_declined", values.designFeeStatus === "declined" ? "true" : "false")
     if (values.notes) fd.append("notes", values.notes)
+    if (values.extraEmails) fd.append("extra_emails", values.extraEmails)
     if (values.paymentProof) fd.append("paymentProof", values.paymentProof)
     return unwrap(
       api.post<Envelope<{ meetingId: number; paymentProofUrl: string | null }>>(
@@ -412,7 +417,11 @@ export const leadsApi = {
     unwrap(
       api.post<
         Envelope<{ meetingId: number; assignedSalesperson: string; event: string }>
-      >(endpoints.leadPhysicalMeeting(String(id)), values),
+      >(endpoints.leadPhysicalMeeting(String(id)), {
+        meetingAt: values.meetingAt,
+        location: values.location,
+        extraEmails: values.extraEmails || undefined,
+      }),
     ),
 
   recoveryWhatsapp: (

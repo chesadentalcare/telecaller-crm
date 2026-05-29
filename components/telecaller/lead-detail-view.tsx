@@ -29,6 +29,7 @@ import {
   Inbox,
   History,
   Lock,
+  ShieldCheck,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -91,6 +92,7 @@ import {
   usePhysicalMeeting,
   useExitDrip,
   useRecoveryWhatsapp,
+  useVerifyPhone,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -178,7 +180,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     email: ext.email || undefined,
     city: ext.city || "—",
     equipment: ext.equipment_interest ?? "—",
-    source: "—",
+    source: ext.source || "—",
     stage: ext.stage,
     status: (
       ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
@@ -200,7 +202,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     phoneVerified: !!ext.phone_verified,
     dentistType: ext.dentist_type ?? undefined,
     practiceType: ext.practice_type ?? undefined,
-    timelineBucket: undefined,
+    timelineBucket: ext.timeline ?? undefined,
     budgetRange: ext.budget_range ?? undefined,
     firstCallRoute: ext.first_call_route,
     decisionMaker: ext.decision_maker ?? undefined,
@@ -420,6 +422,8 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
 
 // ─── Header ────────────────────────────────────────────────────────────
 function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => void }) {
+  const verifyPhone = useVerifyPhone(lead.id)
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -450,6 +454,12 @@ function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => vo
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
                 <Badge variant="outline" className="text-[10px] bg-primary/5">Source: {lead.source}</Badge>
+                {lead.phoneVerified && (
+                  <Badge className="text-[10px] gap-1 bg-success/10 text-success border-success/30">
+                    <ShieldCheck className="size-3" />
+                    Verified
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -462,6 +472,21 @@ function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => vo
               <MessageSquare className="size-3.5" />
               WhatsApp
             </Button>
+            {!lead.phoneVerified && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+                onClick={() => verifyPhone.mutate(undefined, {
+                  onSuccess: () => toast.success("Phone verified"),
+                  onError: () => toast.error("Verification failed"),
+                })}
+                disabled={verifyPhone.isPending}
+              >
+                <ShieldCheck className="size-3.5" />
+                {verifyPhone.isPending ? "Verifying…" : "Verify Phone"}
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -1348,6 +1373,23 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
                     </div>
                   )}
                 />
+
+                <Controller
+                  control={control}
+                  name="extraEmails"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Additional email recipients (optional)</Label>
+                      <Input
+                        {...field}
+                        placeholder="e.g. manager@clinic.com, partner@clinic.com"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Comma-separated. Customer &amp; telecaller are included automatically.
+                      </p>
+                    </div>
+                  )}
+                />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -1467,6 +1509,22 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
                       <Label className="text-xs">Location</Label>
                       <Input {...field} placeholder="Clinic address or city" />
                       {errors.location && <p className="text-[11px] text-destructive">{errors.location.message}</p>}
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="extraEmails"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Additional email recipients (optional)</Label>
+                      <Input
+                        {...field}
+                        placeholder="e.g. manager@clinic.com, partner@clinic.com"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Comma-separated. Customer &amp; telecaller are included automatically.
+                      </p>
                     </div>
                   )}
                 />
