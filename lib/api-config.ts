@@ -113,6 +113,7 @@ export const endpoints = {
   dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
   sapEmployees: "/api/telecaller/sap/employees",
   sapItems: "/api/telecaller/sap/items",
+  sapSources: "/api/telecaller/sap/sources",
   queuePipeline: "/api/telecaller/queue/pipeline",
   queueNoResponse: "/api/telecaller/queue/no-response",
   queueDrip: "/api/telecaller/queue/drip",

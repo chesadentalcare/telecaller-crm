@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useProducts } from "@/hooks/use-products"
 import { useSapEmployees } from "@/hooks/use-sap-employees"
+import { useSapSources } from "@/hooks/use-sap-sources"
 import { useCreateLead } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
@@ -45,10 +46,7 @@ const EQUIPMENT_OPTIONS = [
   "Light Cure","Imaging System","Other",
 ] as const
 
-const SOURCE_OPTIONS = [
-  "Website Inquiry","Trade Show","Referral","Cold Call","Social Media",
-  "Google Ads","Email Campaign","Walk-in",
-] as const
+// Sources are loaded dynamically from SAP — see useSapSources()
 
 const CATEGORY_OPTIONS = [
   "Indian Products","Imported Products","Bundled Packages","Software & Services",
@@ -89,6 +87,7 @@ export function LeadIntakeForm() {
   const [createdDocEntry, setCreatedDocEntry] = useState<number | null>(null)
   const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
   const { data: salesEmployees, isLoading: employeesLoading } = useSapEmployees()
+  const { data: sapSources, isLoading: sourcesLoading } = useSapSources()
   const { mutateAsync: createLead } = useCreateLead()
 
   const form = useForm<LeadIntakeValues>({
@@ -544,11 +543,15 @@ function Step3Interest({
             name="source"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className={cn("h-9", errors.source && "border-destructive")}>
-                  <SelectValue placeholder="How did they find us?" />
+                <SelectTrigger className={cn("h-9", errors.source && "border-destructive")} disabled={sourcesLoading}>
+                  <SelectValue placeholder={sourcesLoading ? "Loading sources…" : "How did they find us?"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {SOURCE_OPTIONS.map((o) => <SelectItem key={o} value={o} className="text-sm">{o}</SelectItem>)}
+                  {(sapSources ?? []).map((s) => (
+                    <SelectItem key={s.sequenceNo} value={s.description} className="text-sm">
+                      {s.description}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
