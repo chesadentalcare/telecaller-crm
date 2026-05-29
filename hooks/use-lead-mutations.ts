@@ -183,6 +183,15 @@ export function useSendQuotationWhatsapp(id: string | number) {
   })
 }
 
+export function useRetryQuotationSend(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { phone: string; customerName?: string }) =>
+      leadsApi.retryQuotationSend(id, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
 export function useCompleteFollowUp(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

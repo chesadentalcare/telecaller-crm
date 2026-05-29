@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Plus, Trash2, FileText, Upload, History, Package, IndianRupee,
-  ChevronDown, Search, Send, CheckCircle2, Eye,
+  ChevronDown, Search, Send, CheckCircle2, Eye, RefreshCw, AlertCircle,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -27,7 +27,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api/client"
 import { useSapItems, useLeadQuotations, useQuotationVersions, useApprovalStatus } from "@/hooks/use-leads"
-import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRequestApproval } from "@/hooks/use-lead-mutations"
+import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRetryQuotationSend, useRequestApproval } from "@/hooks/use-lead-mutations"
 import {
   quotationSchema, quotationDefaults, emptyLineItem,
   type QuotationValues,
@@ -518,6 +518,7 @@ function QuotationCard({
   const { data: approvalData } = useApprovalStatus(q.status === "draft" ? q.id : undefined)
   const { mutateAsync: syncSap, isPending: syncing } = useSyncQuotationToSap(q.id)
   const { mutateAsync: sendWa, isPending: sending } = useSendQuotationWhatsapp(q.id)
+  const { mutateAsync: retrySend, isPending: retrying } = useRetryQuotationSend(q.id)
   const { mutateAsync: reqApproval, isPending: requesting } = useRequestApproval(q.id)
 
   const statusColor: Record<string, string> = {
@@ -528,6 +529,20 @@ function QuotationCard({
     accepted: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     expired: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    failed: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+  }
+
+  const handleRetry = async () => {
+    if (!phoneInput.trim()) {
+      toast.error("Enter a phone number to retry")
+      return
+    }
+    try {
+      const r = await retrySend({ phone: phoneInput.trim(), customerName })
+      toast.success(r.dryRun ? "Quotation resent (dry-run)" : "Quotation resent via WhatsApp")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Retry failed")
+    }
   }
 
   const handleSendWhatsApp = async () => {
@@ -581,6 +596,37 @@ function QuotationCard({
         {q.sap_doc_entry && <span className="text-green-600">SAP #{q.sap_doc_entry}</span>}
         {q.pdf_url && <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDF</a>}
       </div>
+
+      {/* Failed delivery — show retry UI */}
+      {q.status === "failed" && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2.5 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="size-3.5 text-destructive shrink-0" />
+            <p className="text-[11px] font-medium text-destructive">
+              WhatsApp delivery failed — the message was not delivered to the recipient
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="tel"
+              placeholder="Phone (e.g. 919876543210)"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              className="text-xs h-7 flex-1 max-w-48"
+            />
+            <Button
+              size="sm"
+              variant="destructive"
+              className="text-xs h-7 gap-1"
+              onClick={handleRetry}
+              disabled={retrying}
+            >
+              <RefreshCw className={cn("size-3", retrying && "animate-spin")} />
+              {retrying ? "Retrying..." : "Retry Send"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Discount approval gate + WhatsApp send — only for draft quotes */}
       {q.status === "draft" && approvalData && approvalData.needsApproval && !approvalData.canSend && (

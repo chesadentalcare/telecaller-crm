@@ -122,7 +122,7 @@ export interface QuotationRow {
   grand_total: string
   validity_date: string
   payment_terms: string
-  status: "draft" | "sent" | "delivered" | "read" | "accepted" | "rejected" | "expired"
+  status: "draft" | "sent" | "delivered" | "read" | "accepted" | "rejected" | "expired" | "failed"
   wa_message_id: string | null
   sent_at: string | null
   delivered_at: string | null
@@ -537,6 +537,13 @@ export const leadsApi = {
         quotationId: number; messageId: string | null; dryRun: boolean;
         pdfUrl: string; followUpsCreated: number
       }>>(endpoints.quotationSendWhatsapp(String(id)), body),
+    ),
+
+  retryQuotationSend: (id: number | string, body: { phone: string; customerName?: string }) =>
+    unwrap(
+      api.post<Envelope<{
+        quotationId: number; messageId: string | null; dryRun: boolean; pdfUrl: string
+      }>>(endpoints.quotationRetrySend(String(id)), body),
     ),
 
   // ─── Follow-Ups (Phase 5) ─────────────────────────────────────
