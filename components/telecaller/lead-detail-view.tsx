@@ -158,9 +158,8 @@ type LeadDetail = {
 
 // ─── Backend → UI mapper ────────────────────────────────────────────────
 // The view's LeadDetail type is the rich, UI-friendly shape. The backend
-// only stores opportunity_doc_entry + extension fields — customer name,
-// phone, email come from SAP and aren't enriched yet. Until then we show
-// placeholders so the layout stays correct.
+// enriches extension with SAP BP data (phone, email, city, cardName) before
+// returning — so these fields are real values, not placeholders.
 function mapDetail(d: ApiLeadDetail): LeadDetail {
   const ext = d.extension
   const id = String(ext.opportunity_doc_entry)
@@ -174,10 +173,10 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
   return {
     id,
     name: ext.customer_name || `Lead #${id}`,
-    phone: "—",
-    whatsappNumber: undefined,
-    email: undefined,
-    city: "—",
+    phone: ext.phone || "—",
+    whatsappNumber: ext.phone2 || undefined,
+    email: ext.email || undefined,
+    city: ext.city || "—",
     equipment: ext.equipment_interest ?? "—",
     source: "—",
     stage: ext.stage,

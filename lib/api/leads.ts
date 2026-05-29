@@ -38,6 +38,10 @@ export interface LeadExtensionRow {
   opportunity_doc_entry: number
   customer_card_code: string | null
   customer_name: string | null
+  phone: string | null
+  phone2: string | null
+  email: string | null
+  city: string | null
   purchase_type: string | null
   equipment_interest: string | null
   phone_verified: 0 | 1
