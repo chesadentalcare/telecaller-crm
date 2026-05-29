@@ -5,7 +5,7 @@ import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Plus, Trash2, FileText, Upload, History, Package, IndianRupee,
-  ChevronDown, Search, Send, CheckCircle2, Eye, RefreshCw, AlertCircle,
+  ChevronDown, Search, Send, CheckCircle2, Eye, RefreshCw, AlertCircle, ExternalLink,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -27,7 +27,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api/client"
 import { useSapItems, useLeadQuotations, useQuotationVersions, useApprovalStatus } from "@/hooks/use-leads"
-import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRetryQuotationSend, useRequestApproval } from "@/hooks/use-lead-mutations"
+import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRetryQuotationSend, usePreviewQuotationPdf, useRequestApproval } from "@/hooks/use-lead-mutations"
 import {
   quotationSchema, quotationDefaults, emptyLineItem,
   type QuotationValues,
@@ -519,7 +519,17 @@ function QuotationCard({
   const { mutateAsync: syncSap, isPending: syncing } = useSyncQuotationToSap(q.id)
   const { mutateAsync: sendWa, isPending: sending } = useSendQuotationWhatsapp(q.id)
   const { mutateAsync: retrySend, isPending: retrying } = useRetryQuotationSend(q.id)
+  const { mutateAsync: previewPdf, isPending: previewing } = usePreviewQuotationPdf(q.id)
   const { mutateAsync: reqApproval, isPending: requesting } = useRequestApproval(q.id)
+
+  const handlePreview = async () => {
+    try {
+      const r = await previewPdf()
+      window.open(r.pdfUrl, "_blank", "noopener,noreferrer")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to generate PDF preview")
+    }
+  }
 
   const statusColor: Record<string, string> = {
     draft: "bg-muted text-muted-foreground",
@@ -677,6 +687,14 @@ function QuotationCard({
       )}
 
       <div className="flex items-center gap-1.5 pt-1">
+        <Button
+          size="sm" variant="outline" className="text-xs h-7 gap-1"
+          onClick={handlePreview}
+          disabled={previewing}
+        >
+          <ExternalLink className={cn("size-3", previewing && "animate-pulse")} />
+          {previewing ? "Generating..." : "Preview PDF"}
+        </Button>
         {!q.sap_doc_entry && (
           <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={async () => {
             try { const r = await syncSap(); toast.success(`Synced to SAP (DocEntry: ${r.sapDocEntry})`) }

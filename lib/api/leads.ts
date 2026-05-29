@@ -531,6 +531,9 @@ export const leadsApi = {
 
   // ─── SAP Items ──────────────────────────────────────────────────────
   // ─── Quotation Delivery (Phase 5) ───────────────────────────────
+  previewQuotationPdf: (id: number | string) =>
+    unwrap(api.get<Envelope<{ pdfUrl: string }>>(endpoints.quotationPreviewPdf(String(id)))),
+
   sendQuotationWhatsapp: (id: number | string, body: { phone: string; customerName?: string }) =>
     unwrap(
       api.post<Envelope<{

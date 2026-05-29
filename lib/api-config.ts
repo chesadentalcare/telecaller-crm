@@ -85,6 +85,7 @@ export const endpoints = {
   quotationDetail: (id: string) => `/api/telecaller/quotations/${id}`,
   quotationVersions: (id: string) => `/api/telecaller/quotations/${id}/versions`,
   quotationSyncSap: (id: string) => `/api/telecaller/quotations/${id}/sync-sap`,
+  quotationPreviewPdf: (id: string) => `/api/telecaller/quotations/${id}/preview-pdf`,
   quotationSendWhatsapp: (id: string) => `/api/telecaller/quotations/${id}/send-whatsapp`,
   quotationRetrySend: (id: string) => `/api/telecaller/quotations/${id}/retry-send`,
   leadQuotations: (id: string) => `/api/telecaller/leads/${id}/quotations`,

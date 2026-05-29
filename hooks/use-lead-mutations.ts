@@ -183,6 +183,12 @@ export function useSendQuotationWhatsapp(id: string | number) {
   })
 }
 
+export function usePreviewQuotationPdf(id: string | number) {
+  return useMutation({
+    mutationFn: () => leadsApi.previewQuotationPdf(id),
+  })
+}
+
 export function useRetryQuotationSend(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
