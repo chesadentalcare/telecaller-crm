@@ -12,9 +12,9 @@ export interface LoginResponse {
 
 export const authApi = {
   /**
-   * POST /api/telecaller/login. Throws ApiError on failure.
-   * skipAuth so we don't send a stale token alongside the request.
+   * POST <telecaller-base>/login (gateway: /api/telecaller/login). Throws
+   * ApiError on failure. skipAuth so we don't send a stale token along.
    */
   login: (username: string, password: string) =>
-    api.post<LoginResponse>("/api/telecaller/login", { username, password }, { skipAuth: true }),
+    api.post<LoginResponse>("/login", { username, password }, { skipAuth: true }),
 }

@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Static export → emits a self-contained `out/` folder of HTML/JS that any
+  // static host (nginx) can serve. The app is a client-rendered SPA (no API
+  // routes / middleware / server actions), so export is safe. Requires
+  // images.unoptimized (set below).
+  output: 'export',
+  // Each route becomes a folder with index.html (e.g. /login/index.html) — the
+  // friendliest layout for a plain static file server / nginx try_files.
+  trailingSlash: true,
   typescript: {
     ignoreBuildErrors: true,
   },

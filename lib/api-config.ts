@@ -10,11 +10,22 @@
 
 export type Environment = "dev" | "staging" | "prod"
 
-/** Per-environment base URLs. Edit here to change where each env points. */
+/**
+ * Per-environment base URLs — these INCLUDE the telecaller service mount, so the
+ * endpoint paths below stay relative (`/leads`, not `/api/telecaller/leads`).
+ *
+ *   dev   → hits the standalone gateway DIRECTLY; it serves under /api/telecaller.
+ *   prod  → goes through the nginx reverse-proxy, which rewrites the public
+ *           `/telecaller/*` prefix onto the gateway's `/api/telecaller/*`
+ *           (Option B deployment — see claude-plan/ROADMAP_TO_100.md).
+ *
+ * Net path on the gateway is identical in every env; only the public prefix and
+ * host differ. Edit here to change where each env points.
+ */
 export const API_BASE_URLS: Record<Environment, string> = {
-  dev:     "http://localhost:4002",
-  staging: "https://staging-api.chesadentalcare.com",
-  prod:    "https://api.chesadentalcare.com",
+  dev:     "http://localhost:4002/api/telecaller",
+  staging: "https://staging-api.chesadentalcare.com/telecaller",
+  prod:    "https://api.chesadentalcare.com/telecaller",
 }
 
 /**
@@ -65,70 +76,70 @@ export const endpoints = {
   salesEmployees: "/sales_employees",     // GET — list sales employees
 
   // Lead lifecycle (Track 1 — see Track1_Telecaller_Dashboard_7Day_Plan.docx §4.2)
-  leads: "/api/telecaller/leads",
-  leadDetail: (id: string) => `/api/telecaller/leads/${id}`,
-  leadVerifyPhone: (id: string) => `/api/telecaller/leads/${id}/verify-phone`,
-  leadAttempt: (id: string) => `/api/telecaller/leads/${id}/attempt`,
-  leadRapidQualify: (id: string) => `/api/telecaller/leads/${id}/rapid-qualify`,
-  leadFullQualify: (id: string) => `/api/telecaller/leads/${id}/full-qualify`,
-  leadZoomMeeting: (id: string) => `/api/telecaller/leads/${id}/zoom-meeting`,
-  leadPhysicalMeeting: (id: string) => `/api/telecaller/leads/${id}/physical-meeting/schedule`,
-  leadRecoveryWhatsapp: (id: string) => `/api/telecaller/leads/${id}/recovery-whatsapp`,
-  leadTimeline: (id: string) => `/api/telecaller/leads/${id}/timeline`,
-  leadHandBack: (id: string) => `/api/telecaller/leads/${id}/hand-back`,
+  leads: "/leads",
+  leadDetail: (id: string) => `/leads/${id}`,
+  leadVerifyPhone: (id: string) => `/leads/${id}/verify-phone`,
+  leadAttempt: (id: string) => `/leads/${id}/attempt`,
+  leadRapidQualify: (id: string) => `/leads/${id}/rapid-qualify`,
+  leadFullQualify: (id: string) => `/leads/${id}/full-qualify`,
+  leadZoomMeeting: (id: string) => `/leads/${id}/zoom-meeting`,
+  leadPhysicalMeeting: (id: string) => `/leads/${id}/physical-meeting/schedule`,
+  leadRecoveryWhatsapp: (id: string) => `/leads/${id}/recovery-whatsapp`,
+  leadTimeline: (id: string) => `/leads/${id}/timeline`,
+  leadHandBack: (id: string) => `/leads/${id}/hand-back`,
   // Meeting SLAs (Phase 3)
-  meetingSummaryUpload: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/summary`,
-  meetingSlaStatus: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/sla`,
-  meetingConfirmTimeline: (meetingId: string) => `/api/telecaller/meetings/${meetingId}/confirm-timeline`,
+  meetingSummaryUpload: (meetingId: string) => `/meetings/${meetingId}/summary`,
+  meetingSlaStatus: (meetingId: string) => `/meetings/${meetingId}/sla`,
+  meetingConfirmTimeline: (meetingId: string) => `/meetings/${meetingId}/confirm-timeline`,
   // Quotations (Phase 4)
-  quotations: `/api/telecaller/quotations`,
-  quotationDetail: (id: string) => `/api/telecaller/quotations/${id}`,
-  quotationVersions: (id: string) => `/api/telecaller/quotations/${id}/versions`,
-  quotationSyncSap: (id: string) => `/api/telecaller/quotations/${id}/sync-sap`,
-  quotationPreviewPdf: (id: string) => `/api/telecaller/quotations/${id}/preview-pdf`,
-  quotationSendWhatsapp: (id: string) => `/api/telecaller/quotations/${id}/send-whatsapp`,
-  quotationRetrySend: (id: string) => `/api/telecaller/quotations/${id}/retry-send`,
-  leadQuotations: (id: string) => `/api/telecaller/leads/${id}/quotations`,
-  leadFollowUps: (id: string) => `/api/telecaller/leads/${id}/follow-ups`,
-  pendingFollowUps: `/api/telecaller/follow-ups/pending`,
-  completeFollowUp: (id: string) => `/api/telecaller/follow-ups/${id}/complete`,
+  quotations: `/quotations`,
+  quotationDetail: (id: string) => `/quotations/${id}`,
+  quotationVersions: (id: string) => `/quotations/${id}/versions`,
+  quotationSyncSap: (id: string) => `/quotations/${id}/sync-sap`,
+  quotationPreviewPdf: (id: string) => `/quotations/${id}/preview-pdf`,
+  quotationSendWhatsapp: (id: string) => `/quotations/${id}/send-whatsapp`,
+  quotationRetrySend: (id: string) => `/quotations/${id}/retry-send`,
+  leadQuotations: (id: string) => `/leads/${id}/quotations`,
+  leadFollowUps: (id: string) => `/leads/${id}/follow-ups`,
+  pendingFollowUps: `/follow-ups/pending`,
+  completeFollowUp: (id: string) => `/follow-ups/${id}/complete`,
   // Discount approvals (Phase 6)
-  discountLimit: `/api/telecaller/config/discount-limit`,
-  approvalStatus: (id: string) => `/api/telecaller/quotations/${id}/approval-status`,
-  requestApproval: (id: string) => `/api/telecaller/quotations/${id}/request-approval`,
-  approveDiscount: (id: string) => `/api/telecaller/approvals/${id}/approve`,
-  rejectDiscount: (id: string) => `/api/telecaller/approvals/${id}/reject`,
-  pendingApprovals: `/api/telecaller/approvals/pending`,
+  discountLimit: `/config/discount-limit`,
+  approvalStatus: (id: string) => `/quotations/${id}/approval-status`,
+  requestApproval: (id: string) => `/quotations/${id}/request-approval`,
+  approveDiscount: (id: string) => `/approvals/${id}/approve`,
+  rejectDiscount: (id: string) => `/approvals/${id}/reject`,
+  pendingApprovals: `/approvals/pending`,
   // Closure (Phase 6)
-  closeLead: (id: string) => `/api/telecaller/leads/${id}/close`,
-  closureRecord: (id: string) => `/api/telecaller/leads/${id}/closure`,
+  closeLead: (id: string) => `/leads/${id}/close`,
+  closureRecord: (id: string) => `/leads/${id}/closure`,
   // Analytics (Phase 7)
-  dashboardAnalytics: `/api/telecaller/analytics/dashboard`,
+  dashboardAnalytics: `/analytics/dashboard`,
   // Notifications (Phase 7)
-  notifications: `/api/telecaller/notifications`,
-  notificationCount: `/api/telecaller/notifications/count`,
-  markNotificationRead: (id: string) => `/api/telecaller/notifications/${id}/read`,
-  markAllNotificationsRead: `/api/telecaller/notifications/read-all`,
-  dripEnter: (id: string) => `/api/telecaller/drip/enter/${id}`,
-  dripExit: (id: string) => `/api/telecaller/drip/exit/${id}`,
-  sapEmployees: "/api/telecaller/sap/employees",
-  sapItems: "/api/telecaller/sap/items",
-  sapSources: "/api/telecaller/sap/sources",
-  queuePipeline: "/api/telecaller/queue/pipeline",
-  queueNoResponse: "/api/telecaller/queue/no-response",
-  queueDrip: "/api/telecaller/queue/drip",
-  queueIdle: "/api/telecaller/queue/idle",
-  queueDormant: "/api/telecaller/queue/dormant",
-  queueReactivation: "/api/telecaller/queue/reactivation",
-  queueSixMonth: "/api/telecaller/queue/six-month",
-  queueCounts: "/api/telecaller/queue/counts",
+  notifications: `/notifications`,
+  notificationCount: `/notifications/count`,
+  markNotificationRead: (id: string) => `/notifications/${id}/read`,
+  markAllNotificationsRead: `/notifications/read-all`,
+  dripEnter: (id: string) => `/drip/enter/${id}`,
+  dripExit: (id: string) => `/drip/exit/${id}`,
+  sapEmployees: "/sap/employees",
+  sapItems: "/sap/items",
+  sapSources: "/sap/sources",
+  queuePipeline: "/queue/pipeline",
+  queueNoResponse: "/queue/no-response",
+  queueDrip: "/queue/drip",
+  queueIdle: "/queue/idle",
+  queueDormant: "/queue/dormant",
+  queueReactivation: "/queue/reactivation",
+  queueSixMonth: "/queue/six-month",
+  queueCounts: "/queue/counts",
 } as const
 
 /**
  * Builds a fully-qualified URL from a registered path (string) or path-builder
  * (function). Use this instead of string-concatenation at call sites.
  *
- *   apiUrl(endpoints.leadAttempt("L-001"))   → "<telecaller-base>/api/telecaller/leads/L-001/attempt"
+ *   apiUrl(endpoints.leadAttempt("L-001"))   → "<telecaller-base>/leads/L-001/attempt"
  *   sharedApiUrl(endpoints.products)         → "<chesa-prod>/crmpro"
  */
 export const apiUrl = (path: string): string => `${API_BASE_URL}${path}`
