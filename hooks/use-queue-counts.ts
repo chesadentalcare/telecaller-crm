@@ -1,16 +1,26 @@
 "use client"
 
 import type { QueueCounts } from "@/lib/types/lead"
-import { MOCK_QUEUE_COUNTS } from "@/lib/mocks/leads"
 import { useQueueCountsQuery } from "@/hooks/use-leads"
 
+const EMPTY_QUEUE_COUNTS: QueueCounts = {
+  pipeline: 0,
+  noResponse: 0,
+  drip: 0,
+  idle: 0,
+  dormant: 0,
+  reactivation: 0,
+  sixMonth: 0,
+}
+
 // Thin wrapper kept for backwards-compat with the sidebar/bottom-tab callers.
-// Returns a synchronous QueueCounts shape — falls back to the mock object
-// while the query is in flight so the first paint still has badge counts.
+// Returns a synchronous QueueCounts shape — falls back to zeroed counts while
+// the query is in flight or on error, so the badges never show fabricated
+// numbers and a failed request isn't masked by stale mock data.
 //
 // New callers should prefer `useQueueCountsQuery()` directly so they can react
 // to loading / error states.
 export function useQueueCounts(): QueueCounts {
   const { data } = useQueueCountsQuery()
-  return data ?? MOCK_QUEUE_COUNTS
+  return data ?? EMPTY_QUEUE_COUNTS
 }

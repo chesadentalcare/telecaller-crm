@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -12,12 +13,29 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Droplets, Send, MoreHorizontal, Phone, Calendar, Timer, MessageSquare,
+  Droplets, Send, MoreHorizontal, Phone, Calendar, Timer, MessageSquare, Trash2, ClipboardList, AlertTriangle,
 } from "lucide-react"
-import { useDripLeads } from "@/hooks/use-leads"
+import { useDripLeads, usePendingFollowUps } from "@/hooks/use-leads"
+import { useExitDrip } from "@/hooks/use-lead-mutations"
+import { ApiError } from "@/lib/api/client"
 import type { DripLead, DripTrack } from "@/lib/types/lead"
+
+// wa.me wants a country-coded number with no punctuation; strip everything but
+// digits and prefix the India dial code when the number isn't already coded.
+function toWhatsappNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "")
+  if (!digits) return ""
+  return digits.length === 10 ? `91${digits}` : digits
+}
 
 function formatCountdown(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
@@ -153,23 +171,7 @@ export function DripQueueView() {
                       </TableCell>
                       <TableCell><span className="text-xs text-muted-foreground">{formatDate(lead.lastEngagement)}</span></TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <Button size="sm" variant="outline" className="h-9 md:h-7 px-2.5 gap-1.5">
-                            <Send className="size-3" />Send Now
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem className="text-xs"><Phone className="mr-2 size-3.5" />Call Lead</DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs"><MessageSquare className="mr-2 size-3.5" />WhatsApp</DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs text-destructive">Remove from Drip</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <DripRowActions lead={lead} />
                       </TableCell>
                     </TableRow>
                   )
@@ -179,7 +181,197 @@ export function DripQueueView() {
           </div>
         </CardContent>
       </Card>
+
+      <PendingFollowUpsCard />
     </div>
+  )
+}
+
+// ─── Row actions — Remove from Drip (wired) + Call / WhatsApp shortcuts ──
+function DripRowActions({ lead }: { lead: DripLead }) {
+  const [exitOpen, setExitOpen] = useState(false)
+  const [exitReason, setExitReason] = useState("")
+  const { mutateAsync: exitDrip, isPending: exiting } = useExitDrip(lead.id)
+
+  const handleExit = async () => {
+    if (!exitReason) {
+      toast.error("Please select a reason")
+      return
+    }
+    try {
+      await exitDrip({ reason: exitReason })
+      toast.success("Lead removed from drip")
+      setExitOpen(false)
+      setExitReason("")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to remove from drip")
+    }
+  }
+
+  const waNumber = toWhatsappNumber(lead.phone)
+  const callHref = lead.phone ? `tel:${lead.phone.replace(/\s/g, "")}` : undefined
+
+  return (
+    <>
+      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        {waNumber ? (
+          <Button asChild size="sm" variant="outline" className="h-9 md:h-7 px-2.5 gap-1.5">
+            <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
+              <Send className="size-3" />Send Now
+            </a>
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" className="h-9 md:h-7 px-2.5 gap-1.5" disabled>
+            <Send className="size-3" />Send Now
+          </Button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              className="text-xs"
+              disabled={!callHref}
+              asChild={!!callHref}
+            >
+              {callHref ? (
+                <a href={callHref}><Phone className="mr-2 size-3.5" />Call Lead</a>
+              ) : (
+                <span><Phone className="mr-2 size-3.5" />Call Lead</span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-xs"
+              disabled={!waNumber}
+              asChild={!!waNumber}
+            >
+              {waNumber ? (
+                <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
+                  <MessageSquare className="mr-2 size-3.5" />WhatsApp
+                </a>
+              ) : (
+                <span><MessageSquare className="mr-2 size-3.5" />WhatsApp</span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-xs text-destructive"
+              onSelect={(e) => { e.preventDefault(); setExitOpen(true) }}
+            >
+              <Trash2 className="mr-2 size-3.5" />Remove from Drip
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Dialog open={exitOpen} onOpenChange={setExitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove lead from drip</DialogTitle>
+            <DialogDescription>
+              Select a reason. The lead will be removed from the sequence and a record kept for audit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label className="text-xs">Reason</Label>
+            <Select value={exitReason} onValueChange={setExitReason}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select reason" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="replied">Replied — re-enter qualification</SelectItem>
+                <SelectItem value="meeting_booked">Meeting booked via CTA</SelectItem>
+                <SelectItem value="opted_out">Opted out</SelectItem>
+                <SelectItem value="purchased_elsewhere">Purchased elsewhere</SelectItem>
+                <SelectItem value="wrong_lead">Wrong lead / spam</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExitOpen(false)}>Cancel</Button>
+            <Button onClick={handleExit} disabled={exiting}>
+              {exiting ? "Removing…" : "Confirm Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+// ─── Pending Follow-Ups — surfaces the per-user worklist endpoint ───────
+function PendingFollowUpsCard() {
+  const { data, isLoading } = usePendingFollowUps()
+  const tasks = data ?? []
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3 border-b">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <ClipboardList className="size-4 text-muted-foreground" />Follow-Ups Due
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (tasks.length === 0) return null
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <ClipboardList className="size-4 text-muted-foreground" />Follow-Ups Due
+            </CardTitle>
+            <CardDescription className="text-xs">Pending and overdue follow-ups assigned to you</CardDescription>
+          </div>
+          <Badge variant="outline" className="text-[10px]">{tasks.length}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="divide-y">
+          {tasks.map((task) => {
+            const overdue = task.status === "overdue" || new Date(task.due_at).getTime() < Date.now()
+            const due = new Date(task.due_at)
+            return (
+              <div key={task.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {task.customer_name || `Lead #${task.opportunity_doc_entry}`}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    {task.quote_number && <span>{task.quote_number}</span>}
+                    {task.quote_number && task.equipment_interest && <span>•</span>}
+                    {task.equipment_interest && <span className="truncate">{task.equipment_interest}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {due.toLocaleDateString()}
+                  </span>
+                  {overdue && (
+                    <Badge variant="outline" className="text-[10px] gap-1 bg-destructive/10 text-destructive border-destructive/20">
+                      <AlertTriangle className="size-3" />Overdue
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -10,8 +10,10 @@
 //   await createLead(values)
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 import { leadsApi } from "@/lib/api/leads"
+import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
 import type { RapidQualificationValues } from "@/lib/schemas/rapid-qualification"
@@ -26,6 +28,13 @@ import type { QuotationValues } from "@/lib/schemas/quotation"
 // queries are cheap and we have a small set of them.
 const invalidateAllLeads = (qc: ReturnType<typeof useQueryClient>) =>
   qc.invalidateQueries({ queryKey: leadKeys.all })
+
+// Surface a failed mutation to the user. Mutations are otherwise silent on
+// error (TanStack only tracks isError/error), so call sites that don't render
+// their own error UI still get a toast. ApiError carries the server message;
+// fall back to a caller-supplied label otherwise.
+const toastError = (fallback: string) => (err: unknown) =>
+  toast.error(err instanceof ApiError ? err.message : fallback)
 
 export function useCreateLead() {
   const qc = useQueryClient()
@@ -120,6 +129,7 @@ export function useUpdateTimeline(id: string | number) {
   return useMutation({
     mutationFn: (body: { stage: string }) => leadsApi.updateTimeline(id, body),
     onSuccess: () => invalidateAllLeads(qc),
+    onError: toastError("Failed to update the timeline stage"),
   })
 }
 
@@ -139,6 +149,7 @@ export function useHandBackLead(id: string | number) {
   return useMutation({
     mutationFn: (body: { reason: string }) => leadsApi.handBack(id, body),
     onSuccess: () => invalidateAllLeads(qc),
+    onError: toastError("Failed to hand the lead back to the telecaller"),
   })
 }
 
@@ -247,6 +258,7 @@ export function useMarkNotificationRead() {
       qc.invalidateQueries({ queryKey: leadKeys.notifications() })
       qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
     },
+    onError: toastError("Could not mark the notification as read"),
   })
 }
 
@@ -258,6 +270,7 @@ export function useMarkAllNotificationsRead() {
       qc.invalidateQueries({ queryKey: leadKeys.notifications() })
       qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
     },
+    onError: toastError("Could not mark all notifications as read"),
   })
 }
 

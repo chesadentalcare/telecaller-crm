@@ -5,7 +5,17 @@
 // SSR-safe: every accessor short-circuits when `window` isn't defined so
 // Next can render the login page on the server without crashing.
 
-export type UserRole = "telecaller" | "salesperson" | "manager" | "admin"
+// Roles match the backend login.role ENUM (migration 013_align_sales_roles):
+// the sales track is sale_staff / coordinator / sale_head. "salesperson" is kept
+// as a legacy alias for older seeds/tests — the gateway issues the raw DB role.
+export type UserRole =
+  | "telecaller"
+  | "salesperson"
+  | "sale_staff"
+  | "coordinator"
+  | "sale_head"
+  | "manager"
+  | "admin"
 
 export interface AuthUser {
   id: number

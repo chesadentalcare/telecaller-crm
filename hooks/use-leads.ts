@@ -200,6 +200,7 @@ export function useNotifications(limit = 20) {
     queryKey: leadKeys.notifications(),
     queryFn: () => leadsApi.getNotifications(limit),
     staleTime: 30_000,
+    refetchInterval: 60_000, // keep list in sync with the polled badge count
   })
 }
 

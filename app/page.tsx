@@ -9,6 +9,9 @@ import { BottomTabNav } from "@/components/telecaller/bottom-tab-nav"
 import { ViewSkeleton } from "@/components/telecaller/view-skeleton"
 import { ViewErrorBoundary } from "@/components/telecaller/error-boundary"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
+import { useRole } from "@/hooks/use-role"
+import { useLeadFullDetail } from "@/hooks/use-leads"
+import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -66,6 +69,26 @@ const SixMonthFunnelView = dynamic(
   () => import("@/components/telecaller/six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })),
   { loading: () => <ViewSkeleton /> },
 )
+const PendingApprovalsView = dynamic(
+  () => import("@/components/telecaller/pending-approvals"),
+  { loading: () => <ViewSkeleton /> },
+)
+
+// Wraps RapidQualificationForm so the screen header can confirm *which* lead
+// is being qualified. The form supports a `lead` prop but the registry only
+// has the leadId from the URL, so we fetch the extension here and map it.
+function RapidQualificationScreen({ leadId }: { leadId?: string }) {
+  const { data: detail } = useLeadFullDetail(leadId)
+  const ext = detail?.extension
+  const lead = ext
+    ? {
+        name: ext.customer_name ?? `Lead #${ext.opportunity_doc_entry}`,
+        phone: ext.phone ?? "",
+        equipment: ext.equipment_interest ?? "",
+      }
+    : undefined
+  return <RapidQualificationForm leadId={leadId} lead={lead} />
+}
 
 // ─── View registry ───────────────────────────────────────────────────
 // Open/closed: registering a new view = one entry. The dashboard switch
@@ -83,6 +106,8 @@ interface ViewContext {
 interface ViewDefinition {
   title: string
   subtitle: string
+  /** Roles allowed to open this view. Omitted/undefined ⇒ visible to all roles. */
+  roles?: UserRole[]
   render: (ctx: ViewContext) => React.ReactNode
 }
 
@@ -116,7 +141,7 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Qualify lead for next steps",
     render: ({ selectedLeadId }) => (
       <div className="max-w-xl mx-auto">
-        <RapidQualificationForm leadId={selectedLeadId ?? undefined} />
+        <RapidQualificationScreen leadId={selectedLeadId ?? undefined} />
       </div>
     ),
   },
@@ -150,6 +175,12 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Long-cycle nurture pool",
     render: ({ openLead }) => <SixMonthFunnelView onOpenLead={openLead} />,
   },
+  approvals: {
+    title: "Pending Approvals",
+    subtitle: "Discount requests awaiting review",
+    roles: ["manager", "admin"],
+    render: () => <PendingApprovalsView />,
+  },
 }
 
 const FALLBACK_VIEW = VIEW_REGISTRY.home
@@ -177,6 +208,7 @@ function TelecallerDashboardInner() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const queueCounts = useQueueCounts()
+  const { role, hasRole } = useRole()
 
   // Stable callback identity so memoized children don't re-render needlessly.
   const setActiveView = useMemo(
@@ -205,7 +237,13 @@ function TelecallerDashboardInner() {
     [pathname, router, searchParams],
   )
 
-  const view = VIEW_REGISTRY[activeView] ?? FALLBACK_VIEW
+  const requested = VIEW_REGISTRY[activeView]
+  // Role-gated views (e.g. manager-only approvals) fall back to home when the
+  // current user lacks the required role, so a deep-link can't expose them.
+  const view =
+    requested && (!requested.roles || (role !== null && hasRole(...requested.roles)))
+      ? requested
+      : FALLBACK_VIEW
   const pageInfo = { title: view.title, subtitle: view.subtitle }
   const renderContent = () => view.render({ selectedLeadId, setActiveView, openLead })
 

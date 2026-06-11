@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   Bell, CheckCheck, Clock, AlertTriangle, FileText, MessageSquare, Shield,
 } from "lucide-react"
@@ -51,12 +52,24 @@ function timeAgo(dateStr: string) {
   return `${days}d ago`
 }
 
+// Backend stores deep-links like `/leads/:id`, `/leads/quotation/:id` or
+// `/approvals/:id`. This is a single-page static-export SPA whose navigation is
+// URL-query-driven (?view=...&leadId=...), so translate those links into the
+// app's query scheme instead of pushing them verbatim (which would 404).
+function linkToHref(link: string): string | null {
+  const lead = link.match(/^\/leads\/(?:quotation\/)?(\d+)/)
+  if (lead) return `/?view=lead-detail&leadId=${lead[1]}`
+  if (/^\/approvals(\/\d+)?$/.test(link)) return `/?view=approvals`
+  return null
+}
+
 export function NotificationBell() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const { data: countData } = useUnreadNotificationCount()
   const { data: notifications } = useNotifications(15)
   const { mutate: markRead } = useMarkNotificationRead()
-  const { mutate: markAllRead } = useMarkAllNotificationsRead()
+  const { mutate: markAllRead, isPending: markingAll } = useMarkAllNotificationsRead()
 
   const unread = countData?.count ?? 0
 
@@ -79,6 +92,7 @@ export function NotificationBell() {
             <Button
               variant="ghost" size="sm" className="text-xs h-6 gap-1"
               onClick={() => markAllRead()}
+              disabled={markingAll}
             >
               <CheckCheck className="size-3" /> Mark all read
             </Button>
@@ -94,6 +108,7 @@ export function NotificationBell() {
                 key={n.id}
                 notification={n}
                 onRead={() => { if (!n.is_read) markRead(n.id) }}
+                onNavigate={(href) => { setOpen(false); router.push(href) }}
               />
             ))
           )}
@@ -106,17 +121,20 @@ export function NotificationBell() {
 function NotificationItem({
   notification: n,
   onRead,
+  onNavigate,
 }: {
   notification: NotificationRow
   onRead: () => void
+  onNavigate: (href: string) => void
 }) {
   const Icon = TYPE_ICONS[n.type] || Bell
   const color = TYPE_COLORS[n.type] || "text-muted-foreground"
+  const href = n.link ? linkToHref(n.link) : null
 
   return (
     <div
-      className={`flex gap-2.5 px-3 py-2.5 hover:bg-muted/50 cursor-pointer border-b last:border-0 ${!n.is_read ? "bg-primary/5" : ""}`}
-      onClick={onRead}
+      className={`flex gap-2.5 px-3 py-2.5 hover:bg-muted/50 border-b last:border-0 ${href ? "cursor-pointer" : "cursor-default"} ${!n.is_read ? "bg-primary/5" : ""}`}
+      onClick={() => { onRead(); if (href) onNavigate(href) }}
     >
       <Icon className={`size-4 mt-0.5 shrink-0 ${color}`} />
       <div className="min-w-0 flex-1">

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/lib/auth/AuthContext"
 import { useRole } from "@/hooks/use-role"
 import { useDashboardAnalytics } from "@/hooks/use-leads"
+import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -38,7 +39,7 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import { HomeHeroBanner } from "./home-hero-banner"
+import { HomeHeroBanner, type HeroBannerStats } from "./home-hero-banner"
 
 // ─── Stage label / color mappings for charts ────────────────────────
 const STAGE_COLORS: Record<string, string> = {
@@ -95,6 +96,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const { user } = useAuth()
   const { isManagerOrAbove } = useRole()
   const { data: analytics, isLoading } = useDashboardAnalytics()
+  const queueCounts = useQueueCounts()
 
   const firstName =
     (user?.fullName?.split(/\s+/)[0]) || user?.username || "there"
@@ -162,6 +164,18 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const quotations = analytics?.quotations ?? { total: 0, sent: 0, read: 0, pipelineValue: 0 }
   const pipelineTotal = analytics?.pipeline?.total ?? 0
 
+  // Real figures fed to the rotating hero banner so its slides reflect the
+  // logged-in user's live workload instead of hardcoded placeholders.
+  // hotLeads uses the qualified-stage count as a proxy (no dedicated "<30 day"
+  // bucket exists); recovery/drip come from the live queue counts.
+  const heroStats: HeroBannerStats = {
+    hotLeads: analytics?.pipeline?.stages?.qualified ?? 0,
+    noResponse: queueCounts.noResponse,
+    drip: queueCounts.drip,
+    callsToday: todayStats.totalCalls,
+    callTarget: todayStats.targetCalls,
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Header — flex-wrap so badges drop below greeting on
@@ -186,8 +200,9 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
         </div>
       </div>
 
-      {/* Rotating hero banner — auto-advances every 5s, pause on hover */}
-      <HomeHeroBanner onNavigate={onNavigate} />
+      {/* Rotating hero banner — auto-advances every 5s, pause on hover.
+          Fed real per-user figures so slides reflect live workload. */}
+      <HomeHeroBanner onNavigate={onNavigate} stats={heroStats} />
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

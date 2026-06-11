@@ -71,8 +71,8 @@ const toDrip = (r: DripQueueRow): DripLead => {
   const nextMessageIn = next ? Math.max(0, Math.floor((next - Date.now()) / 1000)) : 0
   return {
     id: String(r.id),
-    name: placeholderName(r.id),
-    phone: placeholderPhone,
+    name: r.customer_name || placeholderName(r.id),
+    phone: r.phone || placeholderPhone,
     track: trackBackToFront(r.track),
     nextMessageIn,
     lastEngagement: r.last_engagement ? new Date(r.last_engagement) : new Date(0),
@@ -106,6 +106,43 @@ const toDormant = (r: DormantRow): DormantLead => ({
   phone: placeholderPhone,
   dormantDays: r.dormant_days,
   reason: r.reason ?? "no response",
+})
+
+// Row shapes for the reactivation / six-month queues are declared inline on
+// leadsApi.queues.* — mirror them here so the mappers stay type-safe.
+type ReactivationRow = {
+  id: number
+  equipment: string | null
+  handed_back_at: string
+  handed_back_by: string
+  reason: string
+}
+
+type SixMonthRow = {
+  id: number
+  equipment: string | null
+  timeline: string
+  reactivate_by: string | null
+  reason: string | null
+  source?: string | null
+}
+
+const toReactivation = (r: ReactivationRow): ReactivationLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  handedBackAt: humanAgo(r.handed_back_at),
+  handedBackBy: r.handed_back_by,
+  reason: r.reason ?? "—",
+})
+
+const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  reactivateBy: r.reactivate_by ?? "—",
+  source: r.source ?? "—",
+  reason: r.reason ?? "—",
 })
 
 // Tiny relative-time helper. The mock data already used strings like
@@ -148,10 +185,15 @@ export const fetchDormantLeads = async (): Promise<DormantLead[]> => {
   return rows.map(toDormant)
 }
 
-// Reactivation + sixMonth aren't wired in the backend yet (waiting on Track 2
-// for the handback event). Return empty so views render their empty states.
-export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => []
-export const fetchSixMonthLeads = async (): Promise<SixMonthLead[]> => []
+export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {
+  const rows = await leadsApi.queues.reactivation()
+  return rows.map(toReactivation)
+}
+
+export const fetchSixMonthLeads = async (): Promise<SixMonthLead[]> => {
+  const rows = await leadsApi.queues.sixMonth()
+  return rows.map(toSixMonth)
+}
 
 export const fetchQueueCounts = async (): Promise<QueueCounts> => {
   const c = await leadsApi.queues.counts()

@@ -104,6 +104,12 @@ export interface MeetingRow {
   assigned_salesperson: string | null
   notes: string | null
   created_at: string
+  // Zoom integration fields (persisted by scheduleZoomMeeting)
+  zoom_meeting_id: number | null
+  zoom_join_url: string | null
+  zoom_start_url: string | null
+  zoom_passcode: string | null
+  duration_minutes: number | null
   // Phase 3 SLA fields
   meeting_summary_url: string | null
   meeting_summary_uploaded_at: string | null
@@ -328,6 +334,8 @@ export interface DripQueueRow {
   next_message_at: string | null
   last_engagement: string | null
   equipment: string | null
+  customer_name: string | null
+  phone: string | null
 }
 
 export interface IdleRow {
@@ -402,14 +410,23 @@ export const leadsApi = {
     fd.append("design_fee_discussed", "true")
     fd.append("design_fee_paid", values.designFeeStatus === "paid" ? "true" : "false")
     fd.append("design_fee_declined", values.designFeeStatus === "declined" ? "true" : "false")
+    if (values.durationMinutes) fd.append("duration_minutes", String(values.durationMinutes))
     if (values.notes) fd.append("notes", values.notes)
     if (values.extraEmails) fd.append("extra_emails", values.extraEmails)
     if (values.paymentProof) fd.append("paymentProof", values.paymentProof)
     return unwrap(
-      api.post<Envelope<{ meetingId: number; paymentProofUrl: string | null }>>(
-        endpoints.leadZoomMeeting(String(id)),
-        fd,
-      ),
+      api.post<
+        Envelope<{
+          meetingId: number
+          paymentProofUrl: string | null
+          stage: string | null
+          stageChanged: boolean
+          zoomCreated: boolean
+          zoomJoinUrl: string | null
+          zoomStartUrl: string | null
+          zoomPasscode: string | null
+        }>
+      >(endpoints.leadZoomMeeting(String(id)), fd),
     )
   },
 
@@ -551,7 +568,7 @@ export const leadsApi = {
     unwrap(
       api.post<Envelope<{
         quotationId: number; messageId: string | null; dryRun: boolean;
-        pdfUrl: string; followUpsCreated: number
+        pdfUrl: string
       }>>(endpoints.quotationSendWhatsapp(String(id)), body),
     ),
 
@@ -657,7 +674,7 @@ export const leadsApi = {
     idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
     reactivation: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; handed_back_at: string; handed_back_by: string; reason: string }>>>(endpoints.queueReactivation)),
-    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; timeline: string; reactivate_by: string | null; reason: string | null }>>>(endpoints.queueSixMonth)),
+    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null }>>>(endpoints.queueSixMonth)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }

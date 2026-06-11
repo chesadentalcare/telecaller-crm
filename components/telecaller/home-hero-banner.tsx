@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Autoplay from "embla-carousel-autoplay"
 import {
   Flame, RefreshCw, Timer, Target, Lightbulb, ArrowRight,
@@ -40,72 +40,121 @@ interface HeroSlide {
   progress?: { value: number; label: string }
 }
 
-const SLIDES: HeroSlide[] = [
-  {
-    id: "hot-leads",
-    gradient: "bg-gradient-to-br from-red-500/15 via-orange-500/10 to-amber-500/5",
-    iconBg: "bg-red-500/15",
-    iconColor: "text-red-600",
-    icon: Flame,
-    eyebrow: "Today's focus",
-    headline: "5 hot leads are waiting",
-    body: "Highest-value calls first — these doctors are ready to buy in <30 days.",
-    action: { label: "Open Pipeline", view: "pipeline" },
-  },
-  {
-    id: "recovery",
-    gradient: "bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-lime-500/5",
-    iconBg: "bg-amber-500/15",
-    iconColor: "text-amber-600",
-    icon: RefreshCw,
-    eyebrow: "Recovery queue",
-    headline: "4 leads need a WhatsApp nudge",
-    body: "Failed 4+ call attempts — a templated WhatsApp re-engages 38% of them.",
-    action: { label: "Go to Recovery", view: "no-response" },
-  },
-  {
-    id: "drip",
-    gradient: "bg-gradient-to-br from-violet-500/15 via-purple-500/10 to-fuchsia-500/5",
-    iconBg: "bg-violet-500/15",
-    iconColor: "text-violet-600",
-    icon: Timer,
-    eyebrow: "Drip campaigns",
-    headline: "8 messages queued for today",
-    body: "Auto-send fires every 30 minutes. Skim the queue before it sends.",
-    action: { label: "Review Drip", view: "drip" },
-  },
-  {
-    id: "target",
-    gradient: "bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-cyan-500/5",
-    iconBg: "bg-emerald-500/15",
-    iconColor: "text-emerald-600",
-    icon: Target,
-    eyebrow: "Daily target",
-    headline: "78% of today's call goal",
-    body: "13 calls to hit 60. You're ahead of your weekly pace — keep going.",
-    progress: { value: 78, label: "47 / 60 calls" },
-  },
-  {
-    id: "tip",
-    gradient: "bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-indigo-500/5",
-    iconBg: "bg-blue-500/15",
-    iconColor: "text-blue-600",
-    icon: Lightbulb,
-    eyebrow: "Smart tip",
-    headline: "Call 11am–1pm to convert 3× more",
-    body: "Based on the last 30 days — dentists are between patients in this window.",
-  },
-]
+// Live figures the banner needs to derive its slides. Sourced by the parent
+// (home-dashboard) from useDashboardAnalytics()/useQueueCounts() and passed in
+// — the banner itself stays presentational and fetch-free.
+export interface HeroBannerStats {
+  hotLeads: number      // ready-to-buy / qualified count
+  noResponse: number    // recovery queue size (4+ failed attempts)
+  drip: number          // drip messages queued
+  callsToday: number    // total calls made today
+  callTarget: number    // daily call target
+}
+
+// The "Smart tip" slide carries no live metric, so it is always shown — it is
+// kept separate from the data-driven slides below.
+const TIP_SLIDE: HeroSlide = {
+  id: "tip",
+  gradient: "bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-indigo-500/5",
+  iconBg: "bg-blue-500/15",
+  iconColor: "text-blue-600",
+  icon: Lightbulb,
+  eyebrow: "Smart tip",
+  headline: "Call 11am–1pm to convert 3× more",
+  body: "Based on the last 30 days — dentists are between patients in this window.",
+}
+
+// Derive slides from live stats. A bucket with 0 leads is omitted rather than
+// shown with a stale number; the daily-target slide is always shown so the
+// telecaller can see their progress (including 0 / target). The static tip
+// slide is always appended last. When stats are unavailable, only the tip
+// slide renders so no fabricated figures are ever shown.
+function buildSlides(stats?: HeroBannerStats): HeroSlide[] {
+  if (!stats) return [TIP_SLIDE]
+
+  const slides: HeroSlide[] = []
+
+  if (stats.hotLeads > 0) {
+    slides.push({
+      id: "hot-leads",
+      gradient: "bg-gradient-to-br from-red-500/15 via-orange-500/10 to-amber-500/5",
+      iconBg: "bg-red-500/15",
+      iconColor: "text-red-600",
+      icon: Flame,
+      eyebrow: "Today's focus",
+      headline: `${stats.hotLeads} hot lead${stats.hotLeads === 1 ? "" : "s"} ${stats.hotLeads === 1 ? "is" : "are"} waiting`,
+      body: "Highest-value calls first — these doctors are ready to buy in <30 days.",
+      action: { label: "Open Pipeline", view: "pipeline" },
+    })
+  }
+
+  if (stats.noResponse > 0) {
+    slides.push({
+      id: "recovery",
+      gradient: "bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-lime-500/5",
+      iconBg: "bg-amber-500/15",
+      iconColor: "text-amber-600",
+      icon: RefreshCw,
+      eyebrow: "Recovery queue",
+      headline: `${stats.noResponse} lead${stats.noResponse === 1 ? "" : "s"} need${stats.noResponse === 1 ? "s" : ""} a WhatsApp nudge`,
+      body: "Failed 4+ call attempts — a templated WhatsApp re-engages 38% of them.",
+      action: { label: "Go to Recovery", view: "no-response" },
+    })
+  }
+
+  if (stats.drip > 0) {
+    slides.push({
+      id: "drip",
+      gradient: "bg-gradient-to-br from-violet-500/15 via-purple-500/10 to-fuchsia-500/5",
+      iconBg: "bg-violet-500/15",
+      iconColor: "text-violet-600",
+      icon: Timer,
+      eyebrow: "Drip campaigns",
+      headline: `${stats.drip} message${stats.drip === 1 ? "" : "s"} queued for today`,
+      body: "Auto-send fires every 30 minutes. Skim the queue before it sends.",
+      action: { label: "Review Drip", view: "drip" },
+    })
+  }
+
+  if (stats.callTarget > 0) {
+    const pct = Math.min(100, Math.round((stats.callsToday / stats.callTarget) * 100))
+    const remaining = Math.max(0, stats.callTarget - stats.callsToday)
+    slides.push({
+      id: "target",
+      gradient: "bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-cyan-500/5",
+      iconBg: "bg-emerald-500/15",
+      iconColor: "text-emerald-600",
+      icon: Target,
+      eyebrow: "Daily target",
+      headline: `${pct}% of today's call goal`,
+      body:
+        remaining > 0
+          ? `${remaining} call${remaining === 1 ? "" : "s"} to hit ${stats.callTarget}. Keep going.`
+          : `Target reached — ${stats.callsToday} call${stats.callsToday === 1 ? "" : "s"} today. Great work.`,
+      progress: { value: pct, label: `${stats.callsToday} / ${stats.callTarget} calls` },
+    })
+  }
+
+  slides.push(TIP_SLIDE)
+  return slides
+}
 
 const AUTOPLAY_DELAY_MS = 5000
 
 interface HomeHeroBannerProps {
   onNavigate?: (view: string) => void
+  // Live figures from the dashboard. When omitted (e.g. while loading), the
+  // banner shows only the static tip slide rather than fabricated numbers.
+  stats?: HeroBannerStats
 }
 
-export function HomeHeroBanner({ onNavigate }: HomeHeroBannerProps) {
+export function HomeHeroBanner({ onNavigate, stats }: HomeHeroBannerProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
+
+  // Derive the slide set from live stats. Memoized so the array identity is
+  // stable across renders (keeps the embla reInit effect and dots in sync).
+  const slides = useMemo(() => buildSlides(stats), [stats])
 
   // Plugin instance lives in a ref — Autoplay() is a factory and must be
   // created exactly once. Recreating it per render restarts the timer and
@@ -129,7 +178,7 @@ export function HomeHeroBanner({ onNavigate }: HomeHeroBannerProps) {
       api.off("select", onSelect)
       api.off("reInit", onSelect)
     }
-  }, [api])
+  }, [api, slides.length])
 
   const goTo = (index: number) => {
     api?.scrollTo(index)
@@ -146,7 +195,7 @@ export function HomeHeroBanner({ onNavigate }: HomeHeroBannerProps) {
         className="overflow-hidden rounded-xl"
       >
         <CarouselContent className="ml-0">
-          {SLIDES.map((slide) => {
+          {slides.map((slide) => {
             const Icon = slide.icon
             return (
               <CarouselItem key={slide.id} className="pl-0 basis-full">
@@ -210,9 +259,11 @@ export function HomeHeroBanner({ onNavigate }: HomeHeroBannerProps) {
       </Carousel>
 
       {/* Dots indicator — outer button wraps tap target (min 32×32) so taps
-          are forgiving on mobile; the visible bar sits centered inside. */}
+          are forgiving on mobile; the visible bar sits centered inside.
+          Hidden when only a single slide is shown (nothing to navigate). */}
+      {slides.length > 1 && (
       <div className="mt-2 flex items-center justify-center gap-0.5" role="tablist" aria-label="Banner slides">
-        {SLIDES.map((slide, i) => {
+        {slides.map((slide, i) => {
           const active = current === i
           return (
             <button
@@ -236,6 +287,7 @@ export function HomeHeroBanner({ onNavigate }: HomeHeroBannerProps) {
           )
         })}
       </div>
+      )}
     </div>
   )
 }

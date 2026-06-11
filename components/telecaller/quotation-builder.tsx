@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Plus, Trash2, FileText, Upload, History, Package, IndianRupee,
-  ChevronDown, Search, Send, CheckCircle2, Eye, RefreshCw, AlertCircle, ExternalLink,
+  ChevronDown, Search, Send, CheckCircle2, Eye, RefreshCw, AlertCircle, ExternalLink, Pencil,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -26,13 +26,14 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ApiError } from "@/lib/api/client"
-import { useSapItems, useLeadQuotations, useQuotationVersions, useApprovalStatus } from "@/hooks/use-leads"
-import { useCreateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRetryQuotationSend, usePreviewQuotationPdf, useRequestApproval } from "@/hooks/use-lead-mutations"
+import { useSapItems, useLeadQuotations, useQuotation, useQuotationVersions, useApprovalStatus } from "@/hooks/use-leads"
+import { useCreateQuotation, useUpdateQuotation, useSyncQuotationToSap, useSendQuotationWhatsapp, useRetryQuotationSend, usePreviewQuotationPdf, useRequestApproval } from "@/hooks/use-lead-mutations"
+import { useRole } from "@/hooks/use-role"
 import {
   quotationSchema, quotationDefaults, emptyLineItem,
   type QuotationValues,
 } from "@/lib/schemas/quotation"
-import type { QuotationRow, SapItemRow } from "@/lib/api/leads"
+import type { QuotationRow, QuotationDetailRow, SapItemRow } from "@/lib/api/leads"
 
 // ── Constants ───────────────────────────────────────────────────────
 const TAX_GROUPS = [
@@ -141,6 +142,29 @@ function ItemPicker({
   )
 }
 
+// ── Map a quotation detail row → form values (for edit / revise) ────
+function detailToFormValues(d: QuotationDetailRow, meetingId?: number): QuotationValues {
+  return {
+    opportunityDocEntry: d.opportunity_doc_entry,
+    customerCardCode: d.customer_card_code,
+    customerName: d.customer_name || "",
+    meetingId,
+    validityDate: d.validity_date ? String(d.validity_date).slice(0, 10) : "",
+    paymentTerms: d.payment_terms || "",
+    discountPct: Number(d.discount_pct) || 0,
+    lineItems: d.lineItems?.length
+      ? d.lineItems.map((li) => ({
+          itemCode: li.item_code,
+          description: li.description || "",
+          quantity: Number(li.quantity) || 1,
+          unitPrice: Number(li.unit_price) || 0,
+          taxGroup: li.tax_group || "NONE",
+          taxAmount: Number(li.tax_amount) || 0,
+        }))
+      : [{ ...emptyLineItem }],
+  }
+}
+
 // ── Quotation Builder Dialog ────────────────────────────────────────
 interface QuotationBuilderProps {
   opportunityDocEntry: number
@@ -148,23 +172,37 @@ interface QuotationBuilderProps {
   customerName?: string
   meetingId?: number
   trigger?: React.ReactNode
+  /** When set, the builder revises this quotation (PUT → new version) instead of creating. */
+  existingQuotationId?: number | string
+  /** Pre-populate the form (used for edit / revise). */
+  initialValues?: QuotationValues
+  /** Controlled-open support so a parent can open the builder in edit mode. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export function QuotationBuilder({
   opportunityDocEntry, customerCardCode, customerName, meetingId, trigger,
+  existingQuotationId, initialValues, open: openProp, onOpenChange,
 }: QuotationBuilderProps) {
-  const [open, setOpen] = useState(false)
+  const [openState, setOpenState] = useState(false)
+  const open = openProp ?? openState
+  const setOpen = onOpenChange ?? setOpenState
+  const isEdit = existingQuotationId != null
+  const { isSalesTrack } = useRole()
   const { data: sapItems = [], isLoading: itemsLoading } = useSapItems()
-  const { mutateAsync: create, isPending } = useCreateQuotation()
+  const { mutateAsync: create, isPending: creating } = useCreateQuotation()
+  const { mutateAsync: update, isPending: updating } = useUpdateQuotation(existingQuotationId ?? "")
+  const isPending = creating || updating
 
-  const defaultValues = useMemo<QuotationValues>(() => ({
+  const defaultValues = useMemo<QuotationValues>(() => initialValues ?? ({
     ...quotationDefaults,
     opportunityDocEntry,
     customerCardCode,
     customerName: customerName || "",
     meetingId,
     validityDate: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
-  }), [opportunityDocEntry, customerCardCode, customerName, meetingId])
+  }), [initialValues, opportunityDocEntry, customerCardCode, customerName, meetingId])
 
   const {
     control, handleSubmit, watch, setValue, reset,
@@ -174,6 +212,12 @@ export function QuotationBuilder({
   const { fields, append, remove } = useFieldArray({ control, name: "lineItems" })
   const watchedItems = watch("lineItems")
   const watchedDiscount = watch("discountPct")
+
+  // Re-sync the form to the provided initial values whenever the dialog opens
+  // (RHF only reads defaultValues on mount; edit/revise reuses the same instance).
+  useEffect(() => {
+    if (open) reset(defaultValues)
+  }, [open, defaultValues, reset])
 
   const recalcTax = useCallback((idx: number, taxGroup: string, price: number, qty: number) => {
     const rate = TAX_RATES[taxGroup] || 0
@@ -204,29 +248,40 @@ export function QuotationBuilder({
 
   const onSubmit = async (values: QuotationValues) => {
     try {
-      const result = await create(values)
-      toast.success(`Quotation ${result.quoteNumber} created`)
+      if (isEdit) {
+        const result = await update(values)
+        toast.success(`Quotation ${result.quoteNumber} revised — now v${result.version}`)
+      } else {
+        const result = await create(values)
+        toast.success(`Quotation ${result.quoteNumber} created`)
+      }
       setOpen(false)
       reset(defaultValues)
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to create quotation")
+      toast.error(err instanceof ApiError ? err.message : isEdit ? "Failed to revise quotation" : "Failed to create quotation")
     }
   }
 
+  // Gate: only sales-track roles may create / revise quotations (backend 403s otherwise).
+  // When the dialog is parent-controlled (edit mode), no trigger is rendered here.
+  const showTrigger = openProp === undefined && (trigger != null || isSalesTrack)
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button size="sm" className="gap-1.5">
-            <FileText className="size-4" /> Create Quotation
-          </Button>
-        )}
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button size="sm" className="gap-1.5">
+              <FileText className="size-4" /> Create Quotation
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Fixed header */}
         <div className="px-5 pt-5 pb-3">
           <DialogHeader>
-            <DialogTitle className="text-base">New Quotation</DialogTitle>
+            <DialogTitle className="text-base">{isEdit ? "Revise Quotation" : "New Quotation"}</DialogTitle>
             <DialogDescription className="text-xs">
               Lead #{opportunityDocEntry} &mdash; {customerName || customerCardCode || "Unknown"}
             </DialogDescription>
@@ -443,7 +498,9 @@ export function QuotationBuilder({
               <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" size="sm" disabled={isPending} className="gap-1.5">
                 <FileText className="size-3.5" />
-                {isPending ? "Creating..." : "Create Quotation"}
+                {isEdit
+                  ? isPending ? "Saving..." : "Save as New Version"
+                  : isPending ? "Creating..." : "Create Quotation"}
               </Button>
             </div>
           </div>
@@ -513,14 +570,23 @@ function QuotationCard({
   customerPhone?: string
 }) {
   const [showVersions, setShowVersions] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [phoneInput, setPhoneInput] = useState(customerPhone || "")
+  const { isSalesTrack } = useRole()
   const { data: versions } = useQuotationVersions(showVersions ? q.id : undefined)
+  // Fetch full line-item detail only when the user opens the revise dialog.
+  const { data: editDetail } = useQuotation(editOpen ? q.id : undefined)
   const { data: approvalData } = useApprovalStatus(q.status === "draft" ? q.id : undefined)
   const { mutateAsync: syncSap, isPending: syncing } = useSyncQuotationToSap(q.id)
   const { mutateAsync: sendWa, isPending: sending } = useSendQuotationWhatsapp(q.id)
   const { mutateAsync: retrySend, isPending: retrying } = useRetryQuotationSend(q.id)
   const { mutateAsync: previewPdf, isPending: previewing } = usePreviewQuotationPdf(q.id)
   const { mutateAsync: reqApproval, isPending: requesting } = useRequestApproval(q.id)
+
+  const editInitialValues = useMemo(
+    () => (editDetail ? detailToFormValues(editDetail) : undefined),
+    [editDetail],
+  )
 
   const handlePreview = async () => {
     try {
@@ -616,25 +682,27 @@ function QuotationCard({
               WhatsApp delivery failed — the message was not delivered to the recipient
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Input
-              type="tel"
-              placeholder="Phone (e.g. 919876543210)"
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              className="text-xs h-7 flex-1 max-w-48"
-            />
-            <Button
-              size="sm"
-              variant="destructive"
-              className="text-xs h-7 gap-1"
-              onClick={handleRetry}
-              disabled={retrying}
-            >
-              <RefreshCw className={cn("size-3", retrying && "animate-spin")} />
-              {retrying ? "Retrying..." : "Retry Send"}
-            </Button>
-          </div>
+          {isSalesTrack && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="tel"
+                placeholder="Phone (e.g. 919876543210)"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                className="text-xs h-7 flex-1 max-w-48"
+              />
+              <Button
+                size="sm"
+                variant="destructive"
+                className="text-xs h-7 gap-1"
+                onClick={handleRetry}
+                disabled={retrying}
+              >
+                <RefreshCw className={cn("size-3", retrying && "animate-spin")} />
+                {retrying ? "Retrying..." : "Retry Send"}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -648,7 +716,7 @@ function QuotationCard({
             <Badge className="bg-amber-100 text-amber-800 text-[10px]">Approval Pending</Badge>
           ) : approvalData.approval?.status === "rejected" ? (
             <Badge variant="destructive" className="text-[10px]">Approval Rejected{approvalData.approval.review_notes ? `: ${approvalData.approval.review_notes}` : ""}</Badge>
-          ) : (
+          ) : isSalesTrack ? (
             <Button
               size="sm" variant="outline" className="text-xs h-7 gap-1"
               onClick={async () => {
@@ -659,7 +727,7 @@ function QuotationCard({
             >
               {requesting ? "Requesting..." : "Request Manager Approval"}
             </Button>
-          )}
+          ) : null}
         </div>
       )}
       {approvalData?.canSend && approvalData.needsApproval && (
@@ -667,7 +735,7 @@ function QuotationCard({
           Discount Approved by {approvalData.approval?.reviewed_by}
         </Badge>
       )}
-      {q.status === "draft" && (!approvalData?.needsApproval || approvalData?.canSend) && (
+      {isSalesTrack && q.status === "draft" && (!approvalData?.needsApproval || approvalData?.canSend) && (
         <div className="flex items-center gap-2 pt-1">
           <Input
             type="tel"
@@ -695,7 +763,12 @@ function QuotationCard({
           <ExternalLink className={cn("size-3", previewing && "animate-pulse")} />
           {previewing ? "Generating..." : "Preview PDF"}
         </Button>
-        {!q.sap_doc_entry && (
+        {isSalesTrack && q.status === "draft" && (
+          <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-3" /> Edit / Revise
+          </Button>
+        )}
+        {isSalesTrack && !q.sap_doc_entry && (
           <Button size="sm" variant="outline" className="text-xs h-7 gap-1" onClick={async () => {
             try { const r = await syncSap(); toast.success(`Synced to SAP (DocEntry: ${r.sapDocEntry})`) }
             catch (err) { toast.error(err instanceof ApiError ? err.message : "SAP sync failed") }
@@ -707,6 +780,19 @@ function QuotationCard({
           <History className="size-3" /> Versions
         </Button>
       </div>
+
+      {/* Edit / Revise — re-opens the builder pre-populated, submits via PUT (new version) */}
+      {editOpen && editInitialValues && (
+        <QuotationBuilder
+          opportunityDocEntry={q.opportunity_doc_entry}
+          customerCardCode={q.customer_card_code}
+          customerName={q.customer_name || customerName}
+          existingQuotationId={q.id}
+          initialValues={editInitialValues}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      )}
       {showVersions && versions && (
         <div className="pt-2 border-t space-y-1">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Version History</p>

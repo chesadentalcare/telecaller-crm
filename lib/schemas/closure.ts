@@ -25,16 +25,35 @@ export const closureWonSchema = z.object({
   // files are handled outside zod (FormData)
 })
 
-export const closureLostSchema = z.object({
-  outcome: z.literal("lost"),
-  lostReason: z.enum(
-    ["price", "timing", "competitor", "features", "budget", "no_response", "went_local", "other"],
-    { required_error: "Lost reason is required" },
-  ),
-  competitorName: z.string().min(1, "Competitor name is required"),
-  priceGapRange: z.enum(["<5%", "5-10%", "10-20%", ">20%"], { required_error: "Price gap range is required" }),
-  reactivationFlag: z.boolean().default(false),
-})
+export const closureLostSchema = z
+  .object({
+    outcome: z.literal("lost"),
+    lostReason: z.enum(
+      ["price", "timing", "competitor", "features", "budget", "no_response", "went_local", "other"],
+      { required_error: "Lost reason is required" },
+    ),
+    competitorName: z.string().optional(),
+    priceGapRange: z.enum(["<5%", "5-10%", "10-20%", ">20%"]).optional(),
+    reactivationFlag: z.boolean().default(false),
+  })
+  .superRefine((v, ctx) => {
+    if (v.lostReason === "competitor" || v.lostReason === "price") {
+      if (!v.competitorName || v.competitorName.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["competitorName"],
+          message: "Competitor name is required",
+        })
+      }
+      if (!v.priceGapRange) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["priceGapRange"],
+          message: "Price gap range is required",
+        })
+      }
+    }
+  })
 
 export type ClosureWonValues = z.infer<typeof closureWonSchema>
 export type ClosureLostValues = z.infer<typeof closureLostSchema>

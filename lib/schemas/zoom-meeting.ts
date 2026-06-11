@@ -12,6 +12,12 @@ export const zoomMeetingSchema = z
       message: "Please mark design fee discussion status",
     }),
     paymentProof: fileSchema,
+    durationMinutes: z.coerce
+      .number()
+      .int()
+      .positive("Enter a valid meeting length")
+      .optional()
+      .default(40),
     notes: z.string().optional().default(""),
     extraEmails: z.string().optional().default(""),
   })
@@ -28,6 +34,7 @@ export const zoomMeetingDefaults: ZoomMeetingValues = {
   layoutShared: "" as ZoomMeetingValues["layoutShared"],
   designFeeStatus: "" as ZoomMeetingValues["designFeeStatus"],
   paymentProof: null,
+  durationMinutes: 40,
   notes: "",
   extraEmails: "",
 }

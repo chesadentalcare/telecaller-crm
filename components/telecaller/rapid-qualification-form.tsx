@@ -99,10 +99,16 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
       return
     }
     try {
+      // Only send phoneVerified when the telecaller actually flipped it on.
+      // Sending a defined `false` would defeat the backend COALESCE guard and
+      // silently un-verify a lead that was already verified elsewhere; omitting
+      // the field lets the backend preserve the existing phone_verified state.
+      const { phoneVerified, ...rest } = values
       await rapidQualify({
-        ...values,
+        ...rest,
+        ...(phoneVerified ? { phoneVerified: true } : {}),
         routeSelection: ROUTE_TO_BACKEND[values.routeSelection] || values.routeSelection,
-      })
+      } as RapidQualificationValues)
       // If telecaller picked drip, also enter the drip track immediately so
       // the no-extra-clicks UX matches the SOP.
       if (values.routeSelection === "drip") {

@@ -21,6 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
+import { API_BASE_URL } from "@/lib/api-config"
 import { useClosureRecord } from "@/hooks/use-leads"
 import { useCloseLead } from "@/hooks/use-lead-mutations"
 import {
@@ -68,6 +69,17 @@ export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: numb
   )
 }
 
+// Proof URLs are stored relative to the gateway origin (e.g. "/uploads/proofs/x").
+// API_BASE_URL includes the "/api/telecaller" mount, so derive just the origin.
+function proofHref(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url
+  try {
+    return `${new URL(API_BASE_URL).origin}${url.startsWith("/") ? "" : "/"}${url}`
+  } catch {
+    return url
+  }
+}
+
 // ── Closure Record Display ───────────────────────────────────────────
 function ClosureRecordDisplay({ record: r }: { record: ClosureRecordRow }) {
   const isWon = r.outcome === "won"
@@ -93,6 +105,20 @@ function ClosureRecordDisplay({ record: r }: { record: ClosureRecordRow }) {
             {r.dispatch_date && <p>Dispatch: {new Date(r.dispatch_date).toLocaleDateString("en-IN")}</p>}
             {r.installation_date && <p>Installation: {new Date(r.installation_date).toLocaleDateString("en-IN")}</p>}
             {r.sap_order_doc_entry && <p className="text-green-600">SAP Sales Order #{r.sap_order_doc_entry}</p>}
+            {r.signed_quote_url && (
+              <p>
+                <a href={proofHref(r.signed_quote_url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  View signed quotation
+                </a>
+              </p>
+            )}
+            {r.advance_payment_proof_url && (
+              <p>
+                <a href={proofHref(r.advance_payment_proof_url)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  View advance payment proof
+                </a>
+              </p>
+            )}
           </div>
         )}
         {!isWon && (
@@ -270,8 +296,8 @@ function LostForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: numbe
     const fd = new FormData()
     fd.append("outcome", "lost")
     fd.append("lostReason", values.lostReason)
-    fd.append("competitorName", values.competitorName)
-    fd.append("priceGapRange", values.priceGapRange)
+    if (values.competitorName) fd.append("competitorName", values.competitorName)
+    if (values.priceGapRange) fd.append("priceGapRange", values.priceGapRange)
     fd.append("reactivationFlag", String(values.reactivationFlag))
 
     try {
@@ -315,8 +341,9 @@ function LostForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: numbe
             name="competitorName"
             render={({ field }) => (
               <div className="space-y-1.5">
-                <Label className="text-xs">Competitor Name</Label>
+                <Label className="text-xs">Competitor Name *</Label>
                 <Input {...field} placeholder="e.g. Confident, Gnatus" className="text-xs" />
+                {errors.competitorName && <p className="text-[11px] text-destructive">{errors.competitorName.message}</p>}
               </div>
             )}
           />
@@ -325,7 +352,7 @@ function LostForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: numbe
             name="priceGapRange"
             render={({ field }) => (
               <div className="space-y-1.5">
-                <Label className="text-xs">Price Gap</Label>
+                <Label className="text-xs">Price Gap *</Label>
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger className="text-xs"><SelectValue placeholder="How much cheaper?" /></SelectTrigger>
                   <SelectContent>
@@ -334,6 +361,7 @@ function LostForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: numbe
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.priceGapRange && <p className="text-[11px] text-destructive">{errors.priceGapRange.message}</p>}
               </div>
             )}
           />

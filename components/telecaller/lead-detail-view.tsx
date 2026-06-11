@@ -84,7 +84,7 @@ import {
   physicalMeetingDefaults,
   type PhysicalMeetingValues,
 } from "@/lib/schemas/physical-meeting"
-import { useLeadFullDetail } from "@/hooks/use-leads"
+import { useLeadFullDetail, useMeetingSlaStatus } from "@/hooks/use-leads"
 import {
   useLogAttempt,
   useFullQualify,
@@ -93,10 +93,31 @@ import {
   useExitDrip,
   useRecoveryWhatsapp,
   useVerifyPhone,
+  useUploadMeetingSummary,
+  useConfirmDecisionTimeline,
+  useUpdateTimeline,
+  useHandBackLead,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
+
+// Some backend errors (e.g. the SAP CheckSession 500) return a body with no
+// `message` key, so ApiError.message falls back to the bare statusText
+// ("Internal Server Error"). Prefer the richer `details`/`error` fields when
+// present so the toast is actionable instead of generic.
+function readApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const p = err.payload
+    if (p && typeof p === "object") {
+      const rec = p as Record<string, unknown>
+      const detail = rec.message || rec.details || rec.error
+      if (typeof detail === "string" && detail.trim()) return detail
+    }
+    if (err.message && err.message !== "Internal Server Error") return err.message
+  }
+  return fallback
+}
 
 // ─── Mock data — replace with real fetch when backend lands ─────────────
 type CallAttempt = {
@@ -154,8 +175,20 @@ type LeadDetail = {
   crmLockedReason?: string
   // Meetings (Phase 4 — for meeting linkage)
   latestPhysicalMeetingId?: number
+  // Persisted Zoom meetings (join/host link + passcode survive reloads)
+  zoomMeetings: ZoomMeetingSummary[]
+  // Most recent recovery WhatsApp send (so the "sent" state persists past the toast)
+  recoveryWhatsappSentAt?: Date
   // Attempts
   attempts: CallAttempt[]
+}
+
+type ZoomMeetingSummary = {
+  id: number
+  meetingAt: string
+  joinUrl: string | null
+  startUrl: string | null
+  passcode: string | null
 }
 
 // ─── Backend → UI mapper ────────────────────────────────────────────────
@@ -171,6 +204,22 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
 
   // Find the latest physical meeting for quotation linkage
   const latestPhysicalMeeting = d.meetings.find((m) => m.meeting_type === "physical")
+
+  // Zoom meetings carry the persisted join/host link + passcode columns.
+  const zoomMeetings: ZoomMeetingSummary[] = d.meetings
+    .filter((m) => m.meeting_type === "zoom" && (m.zoom_join_url || m.zoom_start_url))
+    .map((m) => ({
+      id: m.id,
+      meetingAt: m.meeting_at,
+      joinUrl: m.zoom_join_url,
+      startUrl: m.zoom_start_url,
+      passcode: m.zoom_passcode,
+    }))
+
+  // Latest recovery WhatsApp send — surfaces a durable "recovery sent" marker.
+  const latestRecovery = d.whatsapp
+    .filter((w) => w.message_type === "recovery")
+    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())[0]
 
   return {
     id,
@@ -217,6 +266,8 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     crmLocked: !!ext.crm_locked,
     crmLockedReason: ext.crm_locked_reason ?? undefined,
     latestPhysicalMeetingId: latestPhysicalMeeting?.id,
+    zoomMeetings,
+    recoveryWhatsappSentAt: latestRecovery ? new Date(latestRecovery.sent_at) : undefined,
     attempts: d.attempts.map((a) => ({
       id: String(a.id),
       attemptedAt: new Date(a.attempted_at),
@@ -254,6 +305,7 @@ const mockLead: LeadDetail = {
   fundingMethod: "loan",
   crmLocked: false,
   inDrip: false,
+  zoomMeetings: [],
   attempts: [
     {
       id: "a1",
@@ -281,6 +333,9 @@ interface LeadDetailViewProps {
 
 export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
   const { data: detail, isLoading, error } = useLeadFullDetail(leadId)
+  // Active tab is controlled so the header "Call" quick-action can switch the
+  // user straight to the Calls tab (dial → log) instead of being a dead button.
+  const [activeTab, setActiveTab] = useState("overview")
   // Map backend payload → rich UI shape. useMemo so child tabs see stable
   // identity and don't re-render when sibling state changes.
   const lead: LeadDetail | null = useMemo(
@@ -328,7 +383,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <LeadDetailHeader lead={lead} onBack={onBack} />
+      <LeadDetailHeader lead={lead} onBack={onBack} onCall={() => setActiveTab("calls")} />
 
       {/* CRM Lock banner — SOP §4B: quote SLA breach locks all actions */}
       {lead.crmLocked && (
@@ -382,7 +437,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
 
       {/* Tabs — horizontally scrollable on mobile so all 5 stay readable
           instead of wrapping to an uneven 3+2 grid. Snap to grid on sm+. */}
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
           <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Calls</TabsTrigger>
@@ -401,7 +456,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         </TabsContent>
 
         <TabsContent value="qualification" className="mt-4">
-          <QualificationTab lead={lead} />
+          <QualificationTab lead={lead} onNavigate={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="drip" className="mt-4">
@@ -421,8 +476,20 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
 }
 
 // ─── Header ────────────────────────────────────────────────────────────
-function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => void }) {
+function LeadDetailHeader({
+  lead,
+  onBack,
+  onCall,
+}: {
+  lead: LeadDetail
+  onBack: () => void
+  /** Called after the dialer opens so the parent can switch to the Calls tab. */
+  onCall?: () => void
+}) {
   const verifyPhone = useVerifyPhone(lead.id)
+
+  const hasPhone = lead.phone !== "—"
+  const waNumber = (lead.whatsappNumber || (hasPhone ? lead.phone : "")).replace(/\D/g, "")
 
   return (
     <Card>
@@ -464,11 +531,33 @@ function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => vo
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" className="gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+            <Button
+              size="sm"
+              className="gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+              disabled={!hasPhone}
+              onClick={() => {
+                // Open the device dialer, then drop the user on the Calls tab so
+                // they can log the outcome after the call (dial → log).
+                window.location.href = `tel:${lead.phone.replace(/\D/g, "")}`
+                onCall?.()
+              }}
+            >
               <Phone className="size-3.5" />
               Call
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={!waNumber}
+              onClick={() => {
+                if (!waNumber) {
+                  toast.error("No WhatsApp number on this lead")
+                  return
+                }
+                window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer")
+              }}
+            >
               <MessageSquare className="size-3.5" />
               WhatsApp
             </Button>
@@ -497,7 +586,16 @@ function LeadDetailHeader({ lead, onBack }: { lead: LeadDetail; onBack: () => vo
 // ─── Overview Tab ──────────────────────────────────────────────────────
 function OverviewTab({ lead }: { lead: LeadDetail }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">{overviewCards(lead)}</div>
+      <LeadActionsCard lead={lead} />
+    </div>
+  )
+}
+
+function overviewCards(lead: LeadDetail) {
+  return (
+    <>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Lead Info</CardTitle>
@@ -532,7 +630,133 @@ function OverviewTab({ lead }: { lead: LeadDetail }) {
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
+  )
+}
+
+// ── Update timeline (stage urgency) + Hand-back to telecaller ──────────────
+// Both are real backend endpoints (PUT /leads/:id/timeline, POST
+// /leads/:id/hand-back) that previously had no UI. Hand-back is role-gated to
+// sales/manager/admin via useRole().canHandBack, mirroring the backend.
+function LeadActionsCard({ lead }: { lead: LeadDetail }) {
+  const { canHandBack, isSalesperson } = useRole()
+  const [stage, setStage] = useState(lead.timelineBucket ?? "")
+  const [handBackOpen, setHandBackOpen] = useState(false)
+  const [handBackReason, setHandBackReason] = useState("")
+
+  const { mutateAsync: updateTimeline, isPending: updatingTimeline } = useUpdateTimeline(lead.id)
+  const { mutateAsync: handBack, isPending: handingBack } = useHandBackLead(lead.id)
+
+  // Sales may only escalate urgency (shorter timeline), never downgrade — same
+  // rule the backend enforces. Disable the lower-urgency options for sales.
+  const currentUrgency = TIMELINE_OPTIONS.find((o) => o.value === lead.timelineBucket)?.urgency ?? 0
+
+  const handleUpdateTimeline = async () => {
+    if (!stage) {
+      toast.error("Select a timeline first")
+      return
+    }
+    try {
+      await updateTimeline({ stage })
+      toast.success("Timeline updated")
+    } catch (err) {
+      toast.error(readApiError(err, "Failed to update the timeline"))
+    }
+  }
+
+  const handleHandBack = async () => {
+    if (!handBackReason.trim()) {
+      toast.error("Enter a reason")
+      return
+    }
+    try {
+      await handBack({ reason: handBackReason })
+      toast.success("Lead handed back to telecaller")
+      setHandBackOpen(false)
+      setHandBackReason("")
+    } catch (err) {
+      toast.error(readApiError(err, "Failed to hand the lead back"))
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">Lead Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Update timeline / closing-date urgency */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Update timeline (closing-date urgency)</Label>
+          <div className="flex items-center gap-2">
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger className="flex-1"><SelectValue placeholder="Select timeline" /></SelectTrigger>
+              <SelectContent>
+                {TIMELINE_OPTIONS.map((opt) => {
+                  const blocked = isSalesperson && opt.urgency < currentUrgency
+                  return (
+                    <SelectItem key={opt.value} value={opt.value} disabled={blocked}>
+                      {opt.label}{blocked ? " (cannot downgrade)" : ""}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              disabled={updatingTimeline || lead.crmLocked || !stage || stage === lead.timelineBucket}
+              onClick={handleUpdateTimeline}
+            >
+              {updatingTimeline ? "Saving…" : "Update"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {isSalesperson
+              ? "Sales can only escalate timeline urgency (shorter)."
+              : "Telecaller/manager can move timeline in any direction."}
+          </p>
+        </div>
+
+        {/* Hand back to telecaller — role-gated (sales/manager/admin) */}
+        {canHandBack && (
+          <div className="pt-1 border-t">
+            <Dialog open={handBackOpen} onOpenChange={setHandBackOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1.5 mt-3">
+                  <ArrowLeft className="size-3.5" />
+                  Hand back to telecaller
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Hand lead back to telecaller</DialogTitle>
+                  <DialogDescription>
+                    The lead moves to the Reactivation queue. Give a reason for the audit trail.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 py-2">
+                  <Label className="text-xs">Reason</Label>
+                  <Textarea
+                    value={handBackReason}
+                    onChange={(e) => setHandBackReason(e.target.value)}
+                    placeholder="e.g. Customer postponed purchase by 6 months"
+                    rows={3}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setHandBackOpen(false)}>Cancel</Button>
+                  <Button onClick={handleHandBack} disabled={handingBack}>
+                    {handingBack ? "Handing back…" : "Confirm Hand-back"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -605,6 +829,17 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Phone-verified prerequisite — POST /leads/:id/attempt is behind
+              phoneVerifiedGate, so logging on an unverified lead 403s. Surface
+              the requirement upfront instead of letting the submit fail. */}
+          {!lead.phoneVerified && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
+              <XCircle className="size-3.5 text-destructive shrink-0" />
+              <span className="text-[11px] text-destructive">
+                Phone must be verified (header → Verify Phone) before logging a call attempt.
+              </span>
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <Controller
               control={control}
@@ -639,9 +874,14 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
               )}
             />
             <div className="flex justify-end gap-2">
-              <Button type="submit" size="sm" disabled={isSubmitting || lead.crmLocked} className="gap-1.5">
-                {lead.crmLocked ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
-                {lead.crmLocked ? "CRM Locked" : "Log Attempt"}
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting || lead.crmLocked || !lead.phoneVerified}
+                className="gap-1.5"
+              >
+                {lead.crmLocked || !lead.phoneVerified ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
+                {lead.crmLocked ? "CRM Locked" : !lead.phoneVerified ? "Verify Phone First" : "Log Attempt"}
               </Button>
             </div>
           </form>
@@ -669,6 +909,14 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {lead.recoveryWhatsappSentAt && (
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-1.5">
+              <MessageSquare className="size-3.5 text-success shrink-0" />
+              <span className="text-[11px] text-success">
+                Recovery WhatsApp sent on {lead.recoveryWhatsappSentAt.toLocaleString()}
+              </span>
+            </div>
+          )}
           {lead.attempts.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No attempts logged yet</p>
           ) : (
@@ -705,7 +953,14 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
 }
 
 // ─── Qualification Tab — Gap #3: Full Qualification + Gap #10 Route Action ─
-function QualificationTab({ lead }: { lead: LeadDetail }) {
+function QualificationTab({
+  lead,
+  onNavigate,
+}: {
+  lead: LeadDetail
+  /** Switch the parent's active tab (used by the Next Action CTA). */
+  onNavigate?: (tab: string) => void
+}) {
   const [editOpen, setEditOpen] = useState(false)
 
   // Rapid Qualification checklist items (SOP §1–2)
@@ -774,7 +1029,14 @@ function QualificationTab({ lead }: { lead: LeadDetail }) {
                 </p>
               </div>
             </div>
-            <Button size="sm" className="gap-1.5" disabled={lead.crmLocked}>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={lead.crmLocked}
+              onClick={() =>
+                onNavigate?.(lead.firstCallRoute === "drip_info" ? "drip" : "meetings")
+              }
+            >
               {lead.crmLocked
                 ? (<><Lock className="size-3.5" /> CRM Locked</>)
                 : (<>
@@ -883,7 +1145,7 @@ function FullQualificationDialog({
       onOpenChange(false)
       reset()
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to save qualification")
+      toast.error(readApiError(err, "Failed to save qualification"))
     }
   }
 
@@ -1226,8 +1488,18 @@ function QuotesTab({ lead }: { lead: LeadDetail }) {
 // ── Gap #4: Zoom Meeting Form ──────────────────────────────────────────
 // `open` is UI state (dialog open/closed), not form state — kept as useState.
 // Everything that is form state goes through useForm + zod.
+type ZoomResult = {
+  zoomCreated: boolean
+  zoomJoinUrl: string | null
+  zoomStartUrl: string | null
+  zoomPasscode: string | null
+}
+
 function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
   const [open, setOpen] = useState(false)
+  // Hold the join link/passcode returned by the schedule mutation so the rep
+  // can copy/send it after the dialog closes (the dialog only collects input).
+  const [zoomResult, setZoomResult] = useState<ZoomResult | null>(null)
   const { mutateAsync: saveZoom } = useZoomMeeting(lead.id)
   const { isTelecaller } = useRole()
 
@@ -1241,14 +1513,24 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
 
   const onSubmit = async (values: ZoomMeetingValues) => {
     try {
-      await saveZoom(values)
-      toast.success("Zoom meeting saved")
+      const res = await saveZoom(values)
       setOpen(false)
       reset(zoomMeetingDefaults)
+      if (res.zoomCreated) {
+        setZoomResult(res)
+        toast.success("Zoom meeting created — join link ready below")
+      } else {
+        setZoomResult(null)
+        toast.success("Zoom meeting logged (no Zoom link generated — Zoom not configured)")
+      }
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to save Zoom meeting")
+      toast.error(readApiError(err, "Failed to save Zoom meeting"))
     }
   }
+
+  // Persisted zoom rows from the lead detail — so the link survives reloads /
+  // closing the dialog (the just-scheduled link is shown via zoomResult above).
+  const persistedZoomMeetings = lead.zoomMeetings
 
   return (
     <Card>
@@ -1286,6 +1568,28 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
                       <Label className="text-xs">Meeting date &amp; time</Label>
                       <Input type="datetime-local" {...field} />
                       {errors.meetingAt && <p className="text-[11px] text-destructive">{errors.meetingAt.message}</p>}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="durationMinutes"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Meeting length</Label>
+                      <Select
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="40">40 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.durationMinutes && <p className="text-[11px] text-destructive">{errors.durationMinutes.message}</p>}
                     </div>
                   )}
                 />
@@ -1398,16 +1702,110 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Just-scheduled join link/passcode — kept visible after the dialog
+            closes so the rep can copy it to send to the customer. */}
+        {zoomResult?.zoomCreated && (
+          <div className="mt-3">
+            <ZoomLinkPanel
+              title="Zoom meeting created"
+              joinUrl={zoomResult.zoomJoinUrl}
+              startUrl={zoomResult.zoomStartUrl}
+              passcode={zoomResult.zoomPasscode}
+            />
+          </div>
+        )}
+
+        {/* Persisted zoom meetings — durable list so the link survives reloads. */}
+        {persistedZoomMeetings.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Scheduled Zoom meetings</p>
+            {persistedZoomMeetings.map((m) => (
+              <ZoomLinkPanel
+                key={m.id}
+                title={new Date(m.meetingAt).toLocaleString()}
+                joinUrl={m.joinUrl}
+                startUrl={m.startUrl}
+                passcode={m.passcode}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
+  )
+}
+
+// Copyable Zoom join/host link + passcode panel. Renders nothing actionable if
+// no joinUrl is present (e.g. Zoom not configured at schedule time).
+function ZoomLinkPanel({
+  title,
+  joinUrl,
+  startUrl,
+  passcode,
+}: {
+  title: string
+  joinUrl: string | null
+  startUrl: string | null
+  passcode: string | null
+}) {
+  const copy = (label: string, value: string | null) => {
+    if (!value) return
+    navigator.clipboard
+      ?.writeText(value)
+      .then(() => toast.success(`${label} copied`))
+      .catch(() => toast.error(`Could not copy ${label.toLowerCase()}`))
+  }
+
+  return (
+    <div className="rounded-md border bg-violet-500/5 border-violet-500/30 p-3 space-y-2 text-sm">
+      <div className="flex items-center gap-2 text-xs font-medium text-violet-700">
+        <Video className="size-3.5" />
+        {title}
+      </div>
+      {joinUrl ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Input readOnly value={joinUrl} className="text-xs h-8" />
+            <Button size="sm" variant="outline" className="shrink-0 h-8" onClick={() => copy("Join link", joinUrl)}>
+              Copy
+            </Button>
+          </div>
+          {passcode && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Passcode:</span>
+              <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{passcode}</code>
+              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => copy("Passcode", passcode)}>
+                Copy
+              </Button>
+            </div>
+          )}
+          {startUrl && (
+            <div className="flex items-center gap-2">
+              <Input readOnly value={startUrl} className="text-xs h-8" />
+              <Button size="sm" variant="ghost" className="shrink-0 h-8 text-[11px]" onClick={() => copy("Host link", startUrl)}>
+                Copy
+              </Button>
+            </div>
+          )}
+          {startUrl && (
+            <p className="text-[10px] text-destructive/80">
+              Host start link — do not share with the customer.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No Zoom join link was generated for this meeting.</p>
+      )}
+    </div>
   )
 }
 
 // ── Gap #5: Schedule Physical Meeting + Handoff Confirmation ───────────
 // `scheduleOpen`/`handoffOpen` are dialog UI state. `assignedSalesperson` is
 // post-submit result state. None of those are form state — only meetingAt and
-// location go through RHF.
-const MOCK_SALESPEOPLE = ["Ravi Kumar", "Anita Verma", "Jagjit Singh"] as const
+// location go through RHF. The salesperson is chosen server-side (round-robin)
+// and read back from the response, so there is no client-side roster.
 
 function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
@@ -1573,7 +1971,128 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Post-meeting workflow: summary upload (6h SLA), SLA countdowns, and
+            decision-timeline confirmation — only once a physical meeting exists. */}
+        {lead.latestPhysicalMeetingId != null && (
+          <MeetingSlaPanel meetingId={lead.latestPhysicalMeetingId} />
+        )}
       </CardContent>
     </Card>
+  )
+}
+
+// ── Phase 3 SLA: summary upload + countdowns + confirm decision timeline ──
+function MeetingSlaPanel({ meetingId }: { meetingId: number }) {
+  const { data: sla, isLoading } = useMeetingSlaStatus(meetingId)
+  const { mutateAsync: uploadSummary, isPending: uploading } = useUploadMeetingSummary(meetingId)
+  const { mutateAsync: confirmTimeline, isPending: confirming } = useConfirmDecisionTimeline(meetingId)
+  const [summaryFile, setSummaryFile] = useState<File | null>(null)
+
+  const handleUpload = async () => {
+    if (!summaryFile) {
+      toast.error("Choose a summary file first")
+      return
+    }
+    try {
+      const res = await uploadSummary(summaryFile)
+      toast.success(
+        res.withinSla
+          ? `Summary uploaded within SLA (${res.hoursElapsed}h elapsed)`
+          : `Summary uploaded — SLA breached (${res.hoursElapsed}h elapsed)`,
+      )
+      setSummaryFile(null)
+    } catch (err) {
+      toast.error(readApiError(err, "Failed to upload meeting summary"))
+    }
+  }
+
+  const handleConfirmTimeline = async () => {
+    try {
+      await confirmTimeline()
+      toast.success("Decision timeline confirmed")
+    } catch (err) {
+      toast.error(readApiError(err, "Failed to confirm decision timeline"))
+    }
+  }
+
+  const fmtRemaining = (ms: number) => {
+    if (ms <= 0) return "overdue"
+    const h = Math.floor(ms / 3_600_000)
+    const m = Math.floor((ms % 3_600_000) / 60_000)
+    return h > 0 ? `${h}h ${m}m left` : `${m}m left`
+  }
+
+  return (
+    <div className="rounded-md border bg-card p-3 space-y-3">
+      <div className="flex items-center gap-2 text-xs font-medium">
+        <Timer className="size-3.5 text-blue-500" />
+        Post-Meeting SLA
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading SLA status…</p>
+      ) : !sla ? (
+        <p className="text-xs text-muted-foreground">SLA status unavailable.</p>
+      ) : (
+        <div className="space-y-2 text-xs">
+          {/* Summary 6h SLA */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Summary (6h)</span>
+            {sla.summary.uploaded ? (
+              <Badge className="text-[10px] bg-success/10 text-success border-success/30">Uploaded</Badge>
+            ) : sla.summary.breached ? (
+              <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">Breached</Badge>
+            ) : (
+              <span className="text-muted-foreground">{fmtRemaining(sla.summary.remainingMs)}</span>
+            )}
+          </div>
+
+          {/* Quote 12h SLA */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Quotation (12h)</span>
+            {sla.quotation.created ? (
+              <Badge className="text-[10px] bg-success/10 text-success border-success/30">Created</Badge>
+            ) : sla.quotation.breached ? (
+              <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">Breached</Badge>
+            ) : (
+              <span className="text-muted-foreground">{fmtRemaining(sla.quotation.remainingMs)}</span>
+            )}
+          </div>
+
+          {/* Decision timeline */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Decision timeline</span>
+            {sla.decisionTimelineConfirmed ? (
+              <Badge className="text-[10px] bg-success/10 text-success border-success/30">Confirmed</Badge>
+            ) : (
+              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" disabled={confirming} onClick={handleConfirmTimeline}>
+                <CheckCircle2 className="size-3" />
+                {confirming ? "Confirming…" : "Confirm"}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Summary upload — shown until a summary exists */}
+      {!sla?.summary.uploaded && (
+        <div className="space-y-1.5 pt-1 border-t">
+          <Label className="text-xs">Upload meeting summary</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept="image/*,application/pdf,.doc,.docx"
+              onChange={(e) => setSummaryFile(e.target.files?.[0] ?? null)}
+              className="text-xs"
+            />
+            <Button size="sm" className="shrink-0 gap-1.5" disabled={uploading || !summaryFile} onClick={handleUpload}>
+              <Upload className="size-3.5" />
+              {uploading ? "Uploading…" : "Upload"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
