@@ -40,10 +40,16 @@ export interface LeadExtensionRow {
   customer_name: string | null
   phone: string | null
   phone2: string | null
+  whatsapp_number: string | null
   email: string | null
   city: string | null
+  state: string | null
+  pincode: string | null
+  address: string | null
   purchase_type: string | null
   equipment_interest: string | null
+  product1_id: string | null
+  product2_id: string | null
   source: string | null
   phone_verified: 0 | 1
   timeline: string | null

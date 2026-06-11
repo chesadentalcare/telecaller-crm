@@ -142,7 +142,12 @@ type LeadDetail = {
   whatsappNumber?: string  // Only set if different from `phone`
   email?: string
   city: string
+  state?: string
+  pincode?: string
+  address?: string
   equipment: string
+  products?: string[]      // SAP item codes the lead is interested in
+  purchaseType?: string
   source: string
   stage: string
   status: "new" | "contacted" | "qualified" | "meeting-scheduled" | "drip" | "dormant"
@@ -228,7 +233,12 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     whatsappNumber: ext.phone2 || undefined,
     email: ext.email || undefined,
     city: ext.city || "—",
+    state: ext.state ?? undefined,
+    pincode: ext.pincode ?? undefined,
+    address: ext.address ?? undefined,
     equipment: ext.equipment_interest ?? "—",
+    products: [ext.product1_id, ext.product2_id].filter((p): p is string => !!p),
+    purchaseType: ext.purchase_type ?? undefined,
     source: ext.source || "—",
     stage: ext.stage,
     status: (
@@ -594,25 +604,71 @@ function OverviewTab({ lead }: { lead: LeadDetail }) {
 }
 
 function overviewCards(lead: LeadDetail) {
+  const digits = (s?: string) => (s || "").replace(/\D/g, "")
+  const phoneDigits = digits(lead.phone !== "—" ? lead.phone : "")
+  const waSource = lead.whatsappNumber || (lead.phone !== "—" ? lead.phone : "")
+  const waDigits = digits(waSource)
+  const titleCase = (s?: string) => (s ? s.replace(/_/g, " ") : undefined)
+
   return (
     <>
+      {/* Contact — phone/whatsapp/email are tappable so the rep can act in one tap */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Lead Info</CardTitle>
+          <CardTitle className="text-sm">Contact</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <InfoRow icon={User} label="Name" value={lead.name} />
-          <InfoRow icon={Phone} label="Mobile" value={lead.phone} />
-          {lead.whatsappNumber && lead.whatsappNumber !== lead.phone && (
-            <InfoRow icon={MessageSquare} label="WhatsApp" value={lead.whatsappNumber} />
-          )}
-          {lead.email && <InfoRow icon={Mail} label="Email" value={lead.email} />}
-          <InfoRow icon={MapPin} label="City" value={lead.city} />
-          <InfoRow icon={Inbox} label="Equipment" value={lead.equipment} />
-          <InfoRow icon={Target} label="Source" value={lead.source} />
+          <InfoRow icon={Phone} label="Mobile" value={lead.phone}
+            href={phoneDigits ? `tel:${phoneDigits}` : undefined} emptyText="No phone on file" />
+          <InfoRow icon={MessageSquare} label="WhatsApp" value={waSource || undefined}
+            href={waDigits ? `https://wa.me/${waDigits.length === 10 ? "91" + waDigits : waDigits}` : undefined} />
+          <InfoRow icon={Mail} label="Email" value={lead.email}
+            href={lead.email ? `mailto:${lead.email}` : undefined} />
         </CardContent>
       </Card>
 
+      {/* Location */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Location</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <InfoRow icon={MapPinned} label="Address" value={lead.address} />
+          <InfoRow icon={MapPin} label="City" value={lead.city} />
+          <InfoRow icon={Building2} label="State" value={lead.state} />
+          <InfoRow icon={MapPin} label="Pincode" value={lead.pincode} />
+        </CardContent>
+      </Card>
+
+      {/* Interested In — what the lead is planning to buy (pushed to the SAP opportunity) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Interested In</CardTitle>
+          <CardDescription className="text-xs">What this lead is planning to buy</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <InfoRow icon={Inbox} label="Equipment" value={lead.equipment} emptyText="Not specified yet" />
+          {lead.products && lead.products.length > 0 && (
+            <div className="flex items-start gap-2.5">
+              <Target className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Items</span>
+              <div className="flex flex-wrap gap-1">
+                {lead.products.map((p) => (
+                  <Badge key={p} variant="secondary" className="text-[10px] font-normal">{p}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          <InfoRow icon={Wallet} label="Budget" value={titleCase(lead.budgetRange)} />
+          <InfoRow icon={Timer} label="Timeline" value={titleCase(lead.timelineBucket)} />
+          <InfoRow icon={Banknote} label="Purchase" value={titleCase(lead.purchaseType)} />
+          <InfoRow icon={User} label="Decision maker" value={titleCase(lead.decisionMaker)} />
+          <InfoRow icon={ChevronRight} label="Source" value={lead.source} />
+        </CardContent>
+      </Card>
+
+      {/* Status */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Status</CardTitle>
@@ -764,16 +820,36 @@ function InfoRow({
   icon: Icon,
   label,
   value,
+  href,
+  emptyText = "Not captured",
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  value: string
+  value?: string | null
+  /** When set and value is present, renders the value as a link (tel:/mailto:/wa.me). */
+  href?: string
+  /** Muted placeholder shown when the value is missing. */
+  emptyText?: string
 }) {
+  const isEmpty = !value || value === "—"
+  const external = href?.startsWith("http")
   return (
     <div className="flex items-center gap-2.5 text-foreground">
       <Icon className="size-3.5 text-muted-foreground shrink-0" />
       <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
-      <span className="text-sm font-medium truncate">{value}</span>
+      {isEmpty ? (
+        <span className="text-sm italic text-muted-foreground/60 truncate">{emptyText}</span>
+      ) : href ? (
+        <a
+          href={href}
+          className="text-sm font-medium text-primary hover:underline truncate"
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        >
+          {value}
+        </a>
+      ) : (
+        <span className="text-sm font-medium truncate">{value}</span>
+      )}
     </div>
   )
 }
