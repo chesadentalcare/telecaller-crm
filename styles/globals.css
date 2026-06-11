@@ -122,4 +122,20 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Neutralize the browser autofill paint (Chrome fills a pale blue/yellow over
+     our transparent inputs) so autofilled fields match the theme and look the
+     same as the ones the user typed into. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0 1000px var(--background) inset;
+    box-shadow: 0 0 0 1000px var(--background) inset;
+    caret-color: var(--foreground);
+    transition: background-color 9999s ease-in-out 0s;
+  }
 }

@@ -1051,13 +1051,13 @@ function QualificationTab({
   const [editOpen, setEditOpen] = useState(false)
 
   // Rapid Qualification checklist items (SOP §1–2)
-  const rapidFields = [
-    { label: "Phone Verified", filled: lead.phoneVerified },
-    { label: "Dentist Type", filled: !!lead.dentistType },
-    { label: "Practice Type", filled: !!lead.practiceType },
-    { label: "Timeline", filled: !!lead.timelineBucket },
-    { label: "Budget Range", filled: !!lead.budgetRange },
-    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending" },
+  const rapidFields: { label: string; filled: boolean; hint?: string }[] = [
+    { label: "Phone Verified", filled: lead.phoneVerified, hint: "Verify the lead's phone number before logging calls." },
+    { label: "Dentist Type", filled: !!lead.dentistType, hint: "Capture the dentist type during Rapid Qualification." },
+    { label: "Practice Type", filled: !!lead.practiceType, hint: "Capture the practice type during Rapid Qualification." },
+    { label: "Timeline", filled: !!lead.timelineBucket, hint: "Set the purchase timeline (1 / 3 / 6+ months)." },
+    { label: "Budget Range", filled: !!lead.budgetRange, hint: "Record the budget band for this lead." },
+    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending", hint: "Pick the first-call route — Online Meeting, Physical Meeting, or Drip — in the Rapid Qualification form. It stays “pending” until you choose one." },
   ]
   const rapidCompleted = rapidFields.filter((f) => f.filled).length
 
@@ -1088,12 +1088,17 @@ function QualificationTab({
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           {rapidFields.map((f) => (
-            <div key={f.label} className="flex items-center gap-2.5 rounded-md border bg-card px-3 py-2">
+            <div key={f.label} className="flex items-start gap-2.5 rounded-md border bg-card px-3 py-2" title={f.hint}>
               {f.filled
-                ? <CheckCircle2 className="size-4 text-success shrink-0" />
-                : <XCircle className="size-4 text-destructive/60 shrink-0" />
+                ? <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
+                : <XCircle className="size-4 text-destructive/60 shrink-0 mt-0.5" />
               }
-              <span className={cn("text-xs", f.filled ? "font-medium" : "text-muted-foreground")}>{f.label}</span>
+              <div className="min-w-0">
+                <span className={cn("text-xs", f.filled ? "font-medium" : "text-muted-foreground")}>{f.label}</span>
+                {!f.filled && f.hint && (
+                  <p className="text-[10px] leading-tight text-muted-foreground/70 mt-0.5">{f.hint}</p>
+                )}
+              </div>
             </div>
           ))}
         </CardContent>

@@ -217,7 +217,7 @@ export function LeadIntakeForm() {
           </div>
         </CardHeader>
 
-        <CardContent className="pt-2">
+        <CardContent className="pt-5 pb-6">
           {currentStep === 1 && <Step1Contact control={control} register={register} errors={errors} />}
           {currentStep === 2 && <Step2Location control={control} register={register} errors={errors} />}
           {currentStep === 3 && (
@@ -284,32 +284,25 @@ function FieldError({ message }: { message?: string }) {
 
 // ─── Step 1: Contact ──────────────────────────────────────────────────
 function Step1Contact({ control, register, errors }: StepProps) {
-  const leadName = useWatch({ control, name: "leadName" })
   const phoneNumber = useWatch({ control, name: "phoneNumber" })
   const whatsappSameAsMobile = useWatch({ control, name: "whatsappSameAsMobile" })
 
-  const initials = leadName?.trim()
-    ? leadName.trim().split(" ").slice(-2).map((n) => n[0]).join("").toUpperCase()
-    : "?"
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-semibold shrink-0">
-          {initials}
-        </div>
-        <div className="flex-1 space-y-1.5">
-          <Label htmlFor="leadName" className="text-xs font-medium">
-            Lead's Full Name <span className="text-destructive">*</span>
-          </Label>
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <Label htmlFor="leadName" className="text-xs font-medium">
+          Lead&apos;s Full Name <span className="text-destructive">*</span>
+        </Label>
+        <div className="relative">
+          <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="leadName"
             placeholder="Dr. Ramesh Sharma"
             {...register("leadName")}
-            className={cn("h-9", errors.leadName && "border-destructive focus-visible:ring-destructive")}
+            className={cn("h-9 pl-9", errors.leadName && "border-destructive focus-visible:ring-destructive")}
           />
-          <FieldError message={errors.leadName?.message} />
         </div>
+        <FieldError message={errors.leadName?.message} />
       </div>
 
       <div className="space-y-1.5">
@@ -403,7 +396,7 @@ function Step1Contact({ control, register, errors }: StepProps) {
 // ─── Step 2: Location ──────────────────────────────────────────────────
 function Step2Location({ control, register, errors }: StepProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between gap-2 rounded-md bg-emerald-500/5 border border-emerald-500/20 p-2.5">
         <p className="text-xs text-muted-foreground">
           📍 Saves to the dentist's billing & shipping address in SAP.
@@ -520,7 +513,7 @@ function Step3Interest({
   // this component, not behind a conditional in the parent — rules-of-hooks.
   const currentProduct1Id = useWatch({ control, name: "product1Id" })
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">Equipment Interest <span className="text-destructive">*</span></Label>
@@ -787,7 +780,7 @@ function Step4Review({
   const bud = BUDGET_OPTIONS.find((b) => b.value === v.budget)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-center">
         <p className="text-xs text-muted-foreground">
           Final check before adding to the pipeline. Tap any section to edit.
