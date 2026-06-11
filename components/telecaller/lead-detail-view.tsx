@@ -214,8 +214,10 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
   const latestPhysicalMeeting = d.meetings.find((m) => m.meeting_type === "physical")
 
   // Zoom meetings carry the persisted join/host link + passcode columns.
+  // Include ALL zoom meetings (even ones without a generated link) so the rep
+  // sees the booking and a clear "no link" note instead of an empty tab.
   const zoomMeetings: ZoomMeetingSummary[] = d.meetings
-    .filter((m) => m.meeting_type === "zoom" && (m.zoom_join_url || m.zoom_start_url))
+    .filter((m) => m.meeting_type === "zoom")
     .map((m) => ({
       id: m.id,
       meetingAt: m.meeting_at,
@@ -1057,7 +1059,7 @@ function QualificationTab({
     { label: "Practice Type", filled: !!lead.practiceType, hint: "Capture the practice type during Rapid Qualification." },
     { label: "Timeline", filled: !!lead.timelineBucket, hint: "Set the purchase timeline (1 / 3 / 6+ months)." },
     { label: "Budget Range", filled: !!lead.budgetRange, hint: "Record the budget band for this lead." },
-    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending", hint: "Pick the first-call route — Online Meeting, Physical Meeting, or Drip — in the Rapid Qualification form. It stays “pending” until you choose one." },
+    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending", hint: "Set automatically when you book an Online or Physical meeting (Meetings tab) or enter Drip (Drip tab). Stays “pending” until then." },
   ]
   const rapidCompleted = rapidFields.filter((f) => f.filled).length
 
