@@ -50,6 +50,8 @@ export interface LeadExtensionRow {
   equipment_interest: string | null
   product1_id: string | null
   product2_id: string | null
+  category: string | null
+  interest_level: string | null
   source: string | null
   phone_verified: 0 | 1
   timeline: string | null

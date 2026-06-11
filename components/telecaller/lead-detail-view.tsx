@@ -100,6 +100,7 @@ import {
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
+import { useProducts } from "@/hooks/use-products"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
 
 // Some backend errors (e.g. the SAP CheckSession 500) return a body with no
@@ -146,7 +147,9 @@ type LeadDetail = {
   pincode?: string
   address?: string
   equipment: string
-  products?: string[]      // SAP item codes the lead is interested in
+  products?: string[]      // product ids the lead is interested in (resolved to names via useProducts)
+  category?: string
+  interestLevel?: string
   purchaseType?: string
   source: string
   stage: string
@@ -238,6 +241,8 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     address: ext.address ?? undefined,
     equipment: ext.equipment_interest ?? "—",
     products: [ext.product1_id, ext.product2_id].filter((p): p is string => !!p),
+    category: ext.category ?? undefined,
+    interestLevel: ext.interest_level ?? undefined,
     purchaseType: ext.purchase_type ?? undefined,
     source: ext.source || "—",
     stage: ext.stage,
@@ -595,15 +600,19 @@ function LeadDetailHeader({
 
 // ─── Overview Tab ──────────────────────────────────────────────────────
 function OverviewTab({ lead }: { lead: LeadDetail }) {
+  const { data: products } = useProducts()
+  // Stored interest is the product id; resolve to the friendly name shown in the
+  // intake dropdown (falls back to the raw id while products load / on a miss).
+  const productName = (id: string) => products.find((p) => String(p.id) === String(id))?.pname ?? id
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">{overviewCards(lead)}</div>
+      <div className="grid gap-4 lg:grid-cols-2">{overviewCards(lead, productName)}</div>
       <LeadActionsCard lead={lead} />
     </div>
   )
 }
 
-function overviewCards(lead: LeadDetail) {
+function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
   const digits = (s?: string) => (s || "").replace(/\D/g, "")
   const phoneDigits = digits(lead.phone !== "—" ? lead.phone : "")
   const waSource = lead.whatsappNumber || (lead.phone !== "—" ? lead.phone : "")
@@ -649,17 +658,19 @@ function overviewCards(lead: LeadDetail) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <InfoRow icon={Inbox} label="Equipment" value={lead.equipment} emptyText="Not specified yet" />
+          <InfoRow icon={Target} label="Category" value={lead.category} />
           {lead.products && lead.products.length > 0 && (
             <div className="flex items-start gap-2.5">
-              <Target className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
-              <span className="text-xs text-muted-foreground w-24 shrink-0">Items</span>
+              <Inbox className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-xs text-muted-foreground w-24 shrink-0">Products</span>
               <div className="flex flex-wrap gap-1">
                 {lead.products.map((p) => (
-                  <Badge key={p} variant="secondary" className="text-[10px] font-normal">{p}</Badge>
+                  <Badge key={p} variant="secondary" className="text-[10px] font-normal">{productName(p)}</Badge>
                 ))}
               </div>
             </div>
           )}
+          <InfoRow icon={AlertTriangle} label="Interest" value={titleCase(lead.interestLevel)} />
           <InfoRow icon={Wallet} label="Budget" value={titleCase(lead.budgetRange)} />
           <InfoRow icon={Timer} label="Timeline" value={titleCase(lead.timelineBucket)} />
           <InfoRow icon={Banknote} label="Purchase" value={titleCase(lead.purchaseType)} />
