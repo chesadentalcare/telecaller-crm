@@ -7,10 +7,10 @@ import { toast } from "sonner"
 import {
   Phone, MapPin, CheckCircle2, Mail, MessageSquare, Home, Hash, MapIcon,
   Package, Wallet, Flame, User, Calendar, Loader2,
-  ArrowLeft, ArrowRight, Check, Sparkles, Snowflake, Eye, Thermometer,
+  ArrowLeft, ArrowRight, Check, Sparkles, Snowflake, Eye, Thermometer, Pencil,
 } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -53,29 +53,27 @@ const CATEGORY_OPTIONS = [
 ] as const
 
 const INTEREST_LEVELS = [
-  { value: "hot",            label: "Hot",      desc: "Ready to buy",    icon: Flame,       cls: "bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20" },
-  { value: "warm",           label: "Warm",     desc: "Strong interest", icon: Thermometer, cls: "bg-orange-500/10 text-orange-600 border-orange-500/30 hover:bg-orange-500/20" },
-  { value: "cold",           label: "Cold",     desc: "Just exploring",  icon: Snowflake,   cls: "bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20" },
-  { value: "just_exploring", label: "Curious",  desc: "Window-shopping", icon: Eye,         cls: "bg-slate-500/10 text-slate-600 border-slate-500/30 hover:bg-slate-500/20" },
+  { value: "hot",            label: "Hot",      desc: "Ready to buy",    icon: Flame,       cls: "bg-red-500/10 text-red-600 border-red-500/40" },
+  { value: "warm",           label: "Warm",     desc: "Strong interest", icon: Thermometer, cls: "bg-orange-500/10 text-orange-600 border-orange-500/40" },
+  { value: "cold",           label: "Cold",     desc: "Just exploring",  icon: Snowflake,   cls: "bg-blue-500/10 text-blue-600 border-blue-500/40" },
+  { value: "just_exploring", label: "Curious",  desc: "Window-shopping", icon: Eye,         cls: "bg-slate-500/10 text-slate-600 border-slate-500/40" },
 ] as const
 
 const BUDGET_OPTIONS = [
-  { value: "<5L",    label: "Under ₹5L",   tier: "Starter"                  },
-  { value: "5-10L",  label: "₹5L – ₹10L",  tier: "Growing Practice"         },
-  { value: "10-25L", label: "₹10L – ₹25L", tier: "Established"              },
-  { value: "25L+",   label: "₹25L+",       tier: "Premium / Multi-chair"   },
+  { value: "<5L",    label: "Under ₹5L",   tier: "Starter"                },
+  { value: "5-10L",  label: "₹5L – ₹10L",  tier: "Growing Practice"       },
+  { value: "10-25L", label: "₹10L – ₹25L", tier: "Established"            },
+  { value: "25L+",   label: "₹25L+",       tier: "Premium / Multi-chair"  },
 ] as const
 
 // Sales employees are now fetched live from SAP Ashva via useSapEmployees().
-// The hardcoded 73-76 list is gone — those IDs were inactive in Ashva, which
-// is why the previous lead creation flow hit "-5002 Inactive employee".
 
 // ─── Step config ──────────────────────────────────────────────────────
 const STEPS = [
-  { id: 1, title: "Contact",  subtitle: "Who is the lead?",            icon: User,         accent: "text-blue-600",    bg: "bg-blue-500/10"    },
-  { id: 2, title: "Location", subtitle: "Where are they?",             icon: MapPin,       accent: "text-emerald-600", bg: "bg-emerald-500/10" },
-  { id: 3, title: "Interest", subtitle: "What do they want?",          icon: Sparkles,     accent: "text-amber-600",   bg: "bg-amber-500/10"   },
-  { id: 4, title: "Review",   subtitle: "Confirm and add to pipeline", icon: CheckCircle2, accent: "text-violet-600",  bg: "bg-violet-500/10"  },
+  { id: 1, title: "Contact",  subtitle: "Who is the lead?",            icon: User         },
+  { id: 2, title: "Location", subtitle: "Where are they based?",       icon: MapPin       },
+  { id: 3, title: "Interest", subtitle: "What do they want?",          icon: Sparkles     },
+  { id: 4, title: "Review",   subtitle: "Confirm & add to pipeline",   icon: CheckCircle2 },
 ] as const
 
 type StepId = 1 | 2 | 3 | 4
@@ -133,137 +131,190 @@ export function LeadIntakeForm() {
     }
   }
 
-  // Success card
+  // ── Success state ─────────────────────────────────────────────────
   if (submitSuccess) {
     const name = getValues("leadName")
     return (
-      <Card className="overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-        <CardContent className="relative flex flex-col items-center justify-center py-12 text-center">
-          <div className="flex size-16 items-center justify-center rounded-full bg-success/10 mb-4 ring-4 ring-success/20">
-            <CheckCircle2 className="size-8 text-success" />
-          </div>
-          <h3 className="text-lg font-semibold">Lead added to pipeline!</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {name ? `${name} ` : "The lead "}has been logged and is ready for the first call.
-          </p>
-          {createdDocEntry !== null && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              SAP Opportunity #<span className="font-mono">{createdDocEntry}</span> · MySQL row written.
+      <Card className="overflow-hidden border-success/20">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/10 to-transparent pointer-events-none" />
+          <CardContent className="relative flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex size-16 items-center justify-center rounded-full bg-success/10 mb-5 ring-8 ring-success/5">
+              <CheckCircle2 className="size-8 text-success" />
+            </div>
+            <h3 className="text-xl font-semibold tracking-tight">Lead added to pipeline</h3>
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-sm">
+              {name ? `${name} ` : "The lead "}has been logged and is ready for the first call.
             </p>
-          )}
-        </CardContent>
+            {createdDocEntry !== null && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-success" />
+                SAP Opportunity #<span className="font-mono font-medium text-foreground">{createdDocEntry}</span>
+                <span className="text-muted-foreground/60">·</span> Synced to MySQL
+              </div>
+            )}
+          </CardContent>
+        </div>
       </Card>
     )
   }
 
-  const currentStepConfig = STEPS[currentStep - 1]
-  const Icon = currentStepConfig.icon
   const progressPct = (currentStep / STEPS.length) * 100
+  const stepConfig = STEPS[currentStep - 1]
+  const StepIcon = stepConfig.icon
 
   return (
-    <Card className="overflow-hidden shadow-sm">
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <CardHeader className="pb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className={cn("flex size-11 items-center justify-center rounded-lg shrink-0", currentStepConfig.bg)}>
-              <Icon className={cn("size-5", currentStepConfig.accent)} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2">
-                <CardTitle className="text-base">{currentStepConfig.title}</CardTitle>
-                <span className="text-[11px] text-muted-foreground">Step {currentStep} of {STEPS.length}</span>
-              </div>
-              <CardDescription className="text-xs">{currentStepConfig.subtitle}</CardDescription>
-            </div>
+    <Card className="overflow-hidden p-0 shadow-sm">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="lg:grid lg:grid-cols-[15rem_1fr]">
+        {/* ── Desktop step rail ───────────────────────────────────── */}
+        <aside className="hidden lg:flex lg:flex-col border-r bg-muted/30 p-6">
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold tracking-tight">New Lead</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Four quick steps to add to the pipeline.</p>
           </div>
-
-          {/* Step dots */}
-          <div className="mt-4 flex items-center gap-1.5">
-            {STEPS.map((s) => {
+          <nav className="flex flex-col">
+            {STEPS.map((s, i) => {
               const isActive = s.id === currentStep
               const isDone = s.id < currentStep
               const isFuture = s.id > currentStep
+              const last = i === STEPS.length - 1
               return (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => jumpTo(s.id as StepId)}
                   disabled={isFuture}
-                  className={cn("flex items-center gap-1.5 group transition", isFuture && "opacity-40 cursor-not-allowed")}
-                  aria-label={`Step ${s.id}: ${s.title}`}
+                  className={cn(
+                    "group relative flex items-start gap-3 rounded-lg px-2.5 py-2.5 text-left transition",
+                    isActive && "bg-card shadow-sm ring-1 ring-border",
+                    !isActive && !isFuture && "hover:bg-card/60",
+                    isFuture && "cursor-not-allowed",
+                  )}
                 >
-                  <div className={cn(
-                    "flex size-6 items-center justify-center rounded-full text-[10px] font-semibold transition",
-                    isActive && cn(s.bg, s.accent, "ring-2 ring-offset-1 ring-offset-card"),
-                    isDone && "bg-success/15 text-success",
-                    isFuture && "bg-muted text-muted-foreground",
-                  )}>
-                    {isDone ? <Check className="size-3" /> : s.id}
+                  <div className="relative flex flex-col items-center">
+                    <span
+                      className={cn(
+                        "z-10 flex size-7 items-center justify-center rounded-full text-xs font-semibold transition",
+                        isActive && "bg-primary text-primary-foreground shadow-sm",
+                        isDone && "bg-success/15 text-success",
+                        isFuture && "bg-muted text-muted-foreground ring-1 ring-border",
+                      )}
+                    >
+                      {isDone ? <Check className="size-3.5" /> : s.id}
+                    </span>
+                    {!last && (
+                      <span
+                        className={cn(
+                          "absolute left-1/2 top-7 h-[calc(100%+0.6rem)] w-px -translate-x-1/2",
+                          isDone ? "bg-success/40" : "bg-border",
+                        )}
+                      />
+                    )}
                   </div>
-                  <span className={cn(
-                    "text-[11px] hidden sm:inline transition",
-                    isActive && "font-medium text-foreground",
-                    isDone && "text-success",
-                    isFuture && "text-muted-foreground",
-                  )}>{s.title}</span>
+                  <div className="min-w-0 pt-0.5">
+                    <div
+                      className={cn(
+                        "text-sm font-medium leading-tight transition",
+                        isActive ? "text-foreground" : isDone ? "text-foreground/80" : "text-muted-foreground",
+                      )}
+                    >
+                      {s.title}
+                    </div>
+                    <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{s.subtitle}</div>
+                  </div>
                 </button>
               )
             })}
+          </nav>
+        </aside>
+
+        {/* ── Main column ─────────────────────────────────────────── */}
+        <div className="flex min-h-[28rem] flex-col">
+          {/* Mobile progress header */}
+          <div className="border-b px-5 py-4 lg:hidden">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <StepIcon className="size-5 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="text-sm font-semibold tracking-tight">{stepConfig.title}</h2>
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    Step {currentStep} / {STEPS.length}
+                  </span>
+                </div>
+                <p className="truncate text-xs text-muted-foreground">{stepConfig.subtitle}</p>
+              </div>
+            </div>
+            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300 ease-out"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
           </div>
 
-          <div className="mt-3 h-1 w-full rounded-full bg-muted overflow-hidden">
-            <div className="h-full bg-primary transition-all duration-300 ease-out" style={{ width: `${progressPct}%` }} />
+          {/* Desktop step heading */}
+          <div className="hidden items-center gap-3 border-b px-7 py-5 lg:flex">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+              <StepIcon className="size-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold leading-tight tracking-tight">{stepConfig.title}</h2>
+              <p className="text-xs text-muted-foreground">{stepConfig.subtitle}</p>
+            </div>
           </div>
-        </CardHeader>
 
-        <CardContent className="pt-5 pb-6">
-          {currentStep === 1 && <Step1Contact control={control} register={register} errors={errors} />}
-          {currentStep === 2 && <Step2Location control={control} register={register} errors={errors} />}
-          {currentStep === 3 && (
-            <Step3Interest
-              control={control}
-              register={register}
-              errors={errors}
-              products={products}
-              productsLoading={productsLoading}
-              productsError={productsError}
-              employees={salesEmployees ?? []}
-              employeesLoading={employeesLoading}
-              sapSources={sapSources ?? []}
-              sourcesLoading={sourcesLoading}
-            />
-          )}
-          {currentStep === 4 && (
-            <Step4Review
-              control={control}
-              products={products}
-              employees={salesEmployees ?? []}
-              jumpTo={jumpTo}
-            />
-          )}
-        </CardContent>
+          {/* Step body */}
+          <div className="flex-1 px-5 py-6 sm:px-7">
+            {currentStep === 1 && <Step1Contact control={control} register={register} errors={errors} />}
+            {currentStep === 2 && <Step2Location control={control} register={register} errors={errors} />}
+            {currentStep === 3 && (
+              <Step3Interest
+                control={control}
+                register={register}
+                errors={errors}
+                products={products}
+                productsLoading={productsLoading}
+                productsError={productsError}
+                employees={salesEmployees ?? []}
+                employeesLoading={employeesLoading}
+                sapSources={sapSources ?? []}
+                sourcesLoading={sourcesLoading}
+              />
+            )}
+            {currentStep === 4 && (
+              <Step4Review
+                control={control}
+                products={products}
+                employees={salesEmployees ?? []}
+                jumpTo={jumpTo}
+              />
+            )}
+          </div>
 
-        <CardFooter className="flex justify-between gap-2 border-t bg-muted/30">
-          <Button type="button" variant="ghost" onClick={prevStep} disabled={currentStep === 1} className="gap-1.5">
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-          {currentStep < 4 ? (
-            <Button type="button" onClick={nextStep} className="gap-1.5">
-              Next
-              <ArrowRight className="size-4" />
+          {/* Footer nav */}
+          <div className="flex items-center justify-between gap-2 border-t bg-muted/20 px-5 py-3.5 sm:px-7">
+            <Button type="button" variant="ghost" onClick={prevStep} disabled={currentStep === 1} className="gap-1.5">
+              <ArrowLeft className="size-4" />
+              Back
             </Button>
-          ) : (
-            <Button type="submit" disabled={isSubmitting} className="gap-1.5">
-              {isSubmitting ? (
-                <><Loader2 className="size-4 animate-spin" />Adding Lead...</>
-              ) : (
-                <><CheckCircle2 className="size-4" />Add Lead to Pipeline</>
-              )}
-            </Button>
-          )}
-        </CardFooter>
+            {currentStep < 4 ? (
+              <Button type="button" onClick={nextStep} className="gap-1.5">
+                Continue
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isSubmitting} className="gap-1.5">
+                {isSubmitting ? (
+                  <><Loader2 className="size-4 animate-spin" />Adding Lead…</>
+                ) : (
+                  <><CheckCircle2 className="size-4" />Add Lead to Pipeline</>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
       </form>
     </Card>
   )
@@ -276,11 +327,61 @@ interface StepProps {
   errors: FieldErrors<LeadIntakeValues>
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────
+// ─── Small presentational helpers ──────────────────────────────────────
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
-  return <p className="text-[11px] text-destructive">{message}</p>
+  return <p className="text-xs text-destructive">{message}</p>
 }
+
+function Field({
+  label, htmlFor, required, optional, hint, error, children,
+}: {
+  label: string
+  htmlFor?: string
+  required?: boolean
+  optional?: boolean
+  hint?: string
+  error?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={htmlFor} className="text-sm font-medium">
+        {label}
+        {required && <span className="ml-0.5 text-destructive">*</span>}
+        {optional && <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span>}
+      </Label>
+      {children}
+      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+      <FieldError message={error} />
+    </div>
+  )
+}
+
+// A neutral panel that groups related controls (replaces the rainbow tint boxes).
+function Panel({
+  icon: Icon, title, children,
+}: {
+  icon?: React.ComponentType<{ className?: string }>
+  title?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+      {title && (
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="size-4 text-muted-foreground" />}
+          <span className="text-sm font-semibold">{title}</span>
+        </div>
+      )}
+      {children}
+    </div>
+  )
+}
+
+const inputCls = "h-10"
+const iconInputCls = "h-10 pl-10"
+const leadingIcon = "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
 
 // ─── Step 1: Contact ──────────────────────────────────────────────────
 function Step1Contact({ control, register, errors }: StepProps) {
@@ -289,48 +390,41 @@ function Step1Contact({ control, register, errors }: StepProps) {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1.5">
-        <Label htmlFor="leadName" className="text-xs font-medium">
-          Lead&apos;s Full Name <span className="text-destructive">*</span>
-        </Label>
+      <Field label="Lead's Full Name" htmlFor="leadName" required error={errors.leadName?.message}>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <User className={leadingIcon} />
           <Input
             id="leadName"
             placeholder="Dr. Ramesh Sharma"
             {...register("leadName")}
-            className={cn("h-9 pl-9", errors.leadName && "border-destructive focus-visible:ring-destructive")}
+            className={cn(iconInputCls, errors.leadName && "border-destructive focus-visible:ring-destructive")}
           />
         </div>
-        <FieldError message={errors.leadName?.message} />
-      </div>
+      </Field>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="phoneNumber" className="text-xs font-medium">
-          Mobile Number <span className="text-destructive">*</span>
-        </Label>
+      <Field label="Mobile Number" htmlFor="phoneNumber" required error={errors.phoneNumber?.message}>
         <div className="relative">
-          <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Phone className={leadingIcon} />
           <Controller
             control={control}
             name="phoneNumber"
             render={({ field }) => (
               <Input
                 id="phoneNumber"
+                inputMode="numeric"
                 placeholder="9876543210"
                 value={field.value}
                 onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 onBlur={field.onBlur}
-                className={cn("h-9 pl-9", errors.phoneNumber && "border-destructive focus-visible:ring-destructive")}
+                className={cn(iconInputCls, errors.phoneNumber && "border-destructive focus-visible:ring-destructive")}
               />
             )}
           />
         </div>
-        <FieldError message={errors.phoneNumber?.message} />
-      </div>
+      </Field>
 
-      <div className="rounded-md bg-muted/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
+      <Panel>
+        <div className="flex items-center gap-2.5">
           <Controller
             control={control}
             name="whatsappSameAsMobile"
@@ -342,53 +436,46 @@ function Step1Contact({ control, register, errors }: StepProps) {
               />
             )}
           />
-          <Label htmlFor="whatsappSameAsMobile" className="text-xs cursor-pointer">
-            WhatsApp number is same as mobile {phoneNumber && `(${phoneNumber})`}
+          <Label htmlFor="whatsappSameAsMobile" className="cursor-pointer text-sm font-normal">
+            WhatsApp is the same as mobile{phoneNumber ? ` (${phoneNumber})` : ""}
           </Label>
         </div>
         {!whatsappSameAsMobile && (
-          <div className="space-y-1.5">
-            <Label htmlFor="whatsappNumber" className="text-xs font-medium">
-              WhatsApp Number <span className="text-destructive">*</span>
-            </Label>
+          <Field label="WhatsApp Number" htmlFor="whatsappNumber" required error={errors.whatsappNumber?.message}>
             <div className="relative">
-              <MessageSquare className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#25D366]" />
+              <MessageSquare className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#25D366]" />
               <Controller
                 control={control}
                 name="whatsappNumber"
                 render={({ field }) => (
                   <Input
                     id="whatsappNumber"
+                    inputMode="numeric"
                     placeholder="9876543210"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     onBlur={field.onBlur}
-                    className={cn("h-9 pl-9", errors.whatsappNumber && "border-destructive focus-visible:ring-destructive")}
+                    className={cn(iconInputCls, errors.whatsappNumber && "border-destructive focus-visible:ring-destructive")}
                   />
                 )}
               />
             </div>
-            <FieldError message={errors.whatsappNumber?.message} />
-          </div>
+          </Field>
         )}
-      </div>
+      </Panel>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="email" className="text-xs font-medium">
-          Email <span className="text-muted-foreground">(optional)</span>
-        </Label>
+      <Field label="Email" htmlFor="email" optional error={errors.email?.message}>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Mail className={leadingIcon} />
           <Input
             id="email"
             type="email"
             placeholder="dr.name@example.com"
             {...register("email")}
-            className={cn("h-9 pl-9", errors.email && "border-destructive focus-visible:ring-destructive")}
+            className={cn(iconInputCls, errors.email && "border-destructive focus-visible:ring-destructive")}
           />
         </div>
-        <FieldError message={errors.email?.message} />
-      </div>
+      </Field>
     </div>
   )
 }
@@ -397,65 +484,56 @@ function Step1Contact({ control, register, errors }: StepProps) {
 function Step2Location({ control, register, errors }: StepProps) {
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2 rounded-md bg-emerald-500/5 border border-emerald-500/20 p-2.5">
+      <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          📍 Saves to the dentist's billing & shipping address in SAP.
+          Saved to the dentist's billing &amp; shipping address in SAP.
         </p>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-7 gap-1.5 text-xs"
-          onClick={() => toast.info("Map picker coming soon — Google Places integration will land in the next iteration.")}
+          className="h-8 shrink-0 gap-1.5 text-xs"
+          onClick={() => toast.info("Map picker coming soon — Google Places integration lands in the next iteration.")}
         >
           <MapIcon className="size-3.5" />
           Pick on Map
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">State <span className="text-destructive">*</span></Label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="State" required error={errors.state?.message}>
           <Controller
             control={control}
             name="state"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className={cn("h-9", errors.state && "border-destructive")}>
+                <SelectTrigger className={cn(inputCls, "w-full", errors.state && "border-destructive")}>
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {INDIAN_STATES.map((s) => <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>)}
+                  {INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
           />
-          <FieldError message={errors.state?.message} />
-        </div>
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="city" className="text-xs font-medium">
-            City <span className="text-destructive">*</span>
-          </Label>
+        <Field label="City" htmlFor="city" required error={errors.city?.message}>
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <MapPin className={leadingIcon} />
             <Input
               id="city"
               placeholder="Mumbai"
               {...register("city")}
-              className={cn("h-9 pl-9", errors.city && "border-destructive focus-visible:ring-destructive")}
+              className={cn(iconInputCls, errors.city && "border-destructive focus-visible:ring-destructive")}
             />
           </div>
-          <FieldError message={errors.city?.message} />
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="pincode" className="text-xs font-medium">
-          Pincode <span className="text-destructive">*</span>
-        </Label>
+      <Field label="Pincode" htmlFor="pincode" required error={errors.pincode?.message}>
         <div className="relative">
-          <Hash className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Hash className={leadingIcon} />
           <Controller
             control={control}
             name="pincode"
@@ -467,28 +545,27 @@ function Step2Location({ control, register, errors }: StepProps) {
                 value={field.value}
                 onChange={(e) => field.onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 onBlur={field.onBlur}
-                className={cn("h-9 pl-9", errors.pincode && "border-destructive focus-visible:ring-destructive")}
+                className={cn(iconInputCls, errors.pincode && "border-destructive focus-visible:ring-destructive")}
               />
             )}
           />
         </div>
-        <FieldError message={errors.pincode?.message} />
-      </div>
+      </Field>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="address" className="text-xs font-medium flex items-center gap-1.5">
-          <Home className="size-3.5 text-muted-foreground" />
-          Street Address <span className="text-destructive">*</span>
-        </Label>
+      <Field
+        label="Street Address"
+        htmlFor="address"
+        required
+        error={errors.address?.message}
+      >
         <Textarea
           id="address"
           placeholder="Building / Street / Landmark"
-          rows={2}
+          rows={3}
           {...register("address")}
-          className={cn(errors.address && "border-destructive focus-visible:ring-destructive")}
+          className={cn("resize-none", errors.address && "border-destructive focus-visible:ring-destructive")}
         />
-        <FieldError message={errors.address?.message} />
-      </div>
+      </Field>
     </div>
   )
 }
@@ -514,141 +591,119 @@ function Step3Interest({
   const currentProduct1Id = useWatch({ control, name: "product1Id" })
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Equipment Interest <span className="text-destructive">*</span></Label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Equipment Interest" required error={errors.equipmentInterest?.message}>
           <Controller
             control={control}
             name="equipmentInterest"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className={cn("h-9", errors.equipmentInterest && "border-destructive")}>
+                <SelectTrigger className={cn(inputCls, "w-full", errors.equipmentInterest && "border-destructive")}>
                   <SelectValue placeholder="Select equipment" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EQUIPMENT_OPTIONS.map((o) => <SelectItem key={o} value={o} className="text-sm">{o}</SelectItem>)}
+                  {EQUIPMENT_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
           />
-          <FieldError message={errors.equipmentInterest?.message} />
-        </div>
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Lead Source <span className="text-destructive">*</span></Label>
+        <Field label="Lead Source" required error={errors.source?.message}>
           <Controller
             control={control}
             name="source"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className={cn("h-9", errors.source && "border-destructive")} disabled={sourcesLoading}>
+                <SelectTrigger className={cn(inputCls, "w-full", errors.source && "border-destructive")} disabled={sourcesLoading}>
                   <SelectValue placeholder={sourcesLoading ? "Loading sources…" : "How did they find us?"} />
                 </SelectTrigger>
                 <SelectContent>
                   {(sapSources ?? []).map((s) => (
-                    <SelectItem key={s.sequenceNo} value={s.description} className="text-sm">
-                      {s.description}
-                    </SelectItem>
+                    <SelectItem key={s.sequenceNo} value={s.description}>{s.description}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           />
-          <FieldError message={errors.source?.message} />
-        </div>
+        </Field>
       </div>
 
       {/* Products */}
-      <div className="rounded-md border bg-amber-500/5 p-3 space-y-3">
-        <Label className="text-xs font-semibold flex items-center gap-1.5">
-          <Package className="size-3.5 text-amber-600" />
-          Products of Interest
-        </Label>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Category <span className="text-destructive">*</span></Label>
+      <Panel icon={Package} title="Products of Interest">
+        <Field label="Category" required error={errors.category?.message}>
           <Controller
             control={control}
             name="category"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger className={cn("h-9", errors.category && "border-destructive")}>
+                <SelectTrigger className={cn(inputCls, "w-full", errors.category && "border-destructive")}>
                   <SelectValue placeholder="Select one" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_OPTIONS.map((c) => <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>)}
+                  {CATEGORY_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
           />
-          <FieldError message={errors.category?.message} />
-        </div>
+        </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Product 1 <span className="text-destructive">*</span></Label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Product 1" required error={errors.product1Id?.message}>
             <Controller
               control={control}
               name="product1Id"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={productsLoading}>
-                  <SelectTrigger className={cn("h-9", errors.product1Id && "border-destructive")}>
+                  <SelectTrigger className={cn(inputCls, "w-full", errors.product1Id && "border-destructive")}>
                     {productsLoading ? (
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="size-3.5 animate-spin" />Loading...
+                        <Loader2 className="size-3.5 animate-spin" />Loading…
                       </div>
                     ) : <SelectValue placeholder="Select a product" />}
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    {products.map((p) => <SelectItem key={p.id} value={String(p.id)} className="text-sm">{p.pname}</SelectItem>)}
+                    {products.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.pname}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
             />
-            {productsError && <p className="text-[11px] text-destructive">Failed: {productsError}</p>}
-            <FieldError message={errors.product1Id?.message} />
-          </div>
+            {productsError && <p className="text-xs text-destructive">Failed: {productsError}</p>}
+          </Field>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">
-              Product 2 <span className="text-muted-foreground">(optional)</span>
-            </Label>
+          <Field label="Product 2" optional>
             <Controller
               control={control}
               name="product2Id"
               render={({ field }) => (
                 <Select
                   value={field.value}
-                  onValueChange={(v) => field.onChange(v === "_none" ? "" : v)}
+                  onValueChange={(val) => field.onChange(val === "_none" ? "" : val)}
                   disabled={productsLoading}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className={cn(inputCls, "w-full")}>
                     <SelectValue placeholder="Select (optional)" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    <SelectItem value="_none" className="text-sm italic text-muted-foreground">None</SelectItem>
+                    <SelectItem value="_none" className="italic text-muted-foreground">None</SelectItem>
                     {products
                       .filter((p) => String(p.id) !== currentProduct1Id)
-                      .map((p) => <SelectItem key={p.id} value={String(p.id)} className="text-sm">{p.pname}</SelectItem>)}
+                      .map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.pname}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
             />
-          </div>
+          </Field>
         </div>
-      </div>
+      </Panel>
 
       {/* Interest level pills */}
-      <div className="space-y-2">
-        <Label className="text-xs font-medium flex items-center gap-1.5">
-          <Flame className="size-3.5 text-muted-foreground" />
-          How interested are they? <span className="text-destructive">*</span>
-        </Label>
+      <Field label="How interested are they?" required error={errors.interestLevel?.message}>
         <Controller
           control={control}
           name="interestLevel"
           render={({ field }) => (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {INTEREST_LEVELS.map((lvl) => {
                 const I = lvl.icon
                 const active = field.value === lvl.value
@@ -658,33 +713,30 @@ function Step3Interest({
                     type="button"
                     onClick={() => field.onChange(lvl.value)}
                     className={cn(
-                      "flex flex-col items-center gap-1 rounded-lg border-2 px-3 py-3 transition text-center",
-                      active ? lvl.cls + " ring-2 ring-offset-1 ring-current" : "bg-card border-border hover:bg-muted/50",
+                      "flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3.5 text-center transition",
+                      active
+                        ? cn(lvl.cls, "ring-2 ring-current ring-offset-1 ring-offset-card")
+                        : "border-border bg-card hover:border-foreground/20 hover:bg-muted/40",
                     )}
                   >
                     <I className="size-5" />
-                    <span className="text-xs font-semibold leading-none">{lvl.label}</span>
-                    <span className="text-[10px] text-muted-foreground leading-none">{lvl.desc}</span>
+                    <span className="text-sm font-semibold leading-none">{lvl.label}</span>
+                    <span className="text-[11px] leading-none text-muted-foreground">{lvl.desc}</span>
                   </button>
                 )
               })}
             </div>
           )}
         />
-        <FieldError message={errors.interestLevel?.message} />
-      </div>
+      </Field>
 
       {/* Budget */}
-      <div className="space-y-2">
-        <Label className="text-xs font-medium flex items-center gap-1.5">
-          <Wallet className="size-3.5 text-muted-foreground" />
-          Budget Range <span className="text-destructive">*</span>
-        </Label>
+      <Field label="Budget Range" required error={errors.budget?.message}>
         <Controller
           control={control}
           name="budget"
           render={({ field }) => (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {BUDGET_OPTIONS.map((b) => {
                 const active = field.value === b.value
                 return (
@@ -693,40 +745,34 @@ function Step3Interest({
                     type="button"
                     onClick={() => field.onChange(b.value)}
                     className={cn(
-                      "rounded-lg border-2 px-3 py-2.5 transition text-left",
-                      active ? "border-primary bg-primary/5" : "bg-card border-border hover:bg-muted/50",
+                      "rounded-xl border px-3 py-3 text-left transition",
+                      active ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:border-foreground/20 hover:bg-muted/40",
                     )}
                   >
                     <div className={cn("text-sm font-semibold", active && "text-primary")}>{b.label}</div>
-                    <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">{b.tier}</div>
+                    <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{b.tier}</div>
                   </button>
                 )
               })}
             </div>
           )}
         />
-        <FieldError message={errors.budget?.message} />
-      </div>
+      </Field>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium flex items-center gap-1.5">
-            <User className="size-3.5 text-muted-foreground" />
-            Our Employee <span className="text-destructive">*</span>
-          </Label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Assigned Employee" required error={errors.ourEmployee?.message}>
           <Controller
             control={control}
             name="ourEmployee"
             render={({ field }) => (
               <Select value={field.value} onValueChange={field.onChange} disabled={employeesLoading}>
-                <SelectTrigger className={cn("h-9", errors.ourEmployee && "border-destructive")}>
-                  <SelectValue placeholder={employeesLoading ? "Loading employees…" : "-- Select Employee --"} />
+                <SelectTrigger className={cn(inputCls, "w-full", errors.ourEmployee && "border-destructive")}>
+                  <SelectValue placeholder={employeesLoading ? "Loading employees…" : "Select employee"} />
                 </SelectTrigger>
                 <SelectContent>
                   {(salesEmployees ?? []).map((e) => (
-                    <SelectItem key={e.employeeId} value={String(e.employeeId)} className="text-sm">
-                      {e.name}
-                      {e.jobTitle ? ` · ${e.jobTitle}` : ""}
+                    <SelectItem key={e.employeeId} value={String(e.employeeId)}>
+                      {e.name}{e.jobTitle ? ` · ${e.jobTitle}` : ""}
                     </SelectItem>
                   ))}
                   {!employeesLoading && salesEmployees?.length === 0 && (
@@ -736,26 +782,23 @@ function Step3Interest({
               </Select>
             )}
           />
-          <FieldError message={errors.ourEmployee?.message} />
-        </div>
+        </Field>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="expectedBy" className="text-xs font-medium flex items-center gap-1.5">
-            <Calendar className="size-3.5 text-muted-foreground" />
-            When do they plan to buy? <span className="text-destructive">*</span>
-          </Label>
+        <Field
+          label="Planned Purchase Date"
+          htmlFor="expectedBy"
+          required
+          hint="“By when would you like the equipment installed?”"
+          error={errors.expectedBy?.message}
+        >
           <Input
             id="expectedBy"
             type="date"
             min={new Date().toISOString().split("T")[0]}
             {...control.register("expectedBy")}
-            className={cn("h-9", errors.expectedBy && "border-destructive focus-visible:ring-destructive")}
+            className={cn(inputCls, errors.expectedBy && "border-destructive focus-visible:ring-destructive")}
           />
-          <p className="text-[10px] text-muted-foreground italic">
-            "By when would you like the equipment installed?"
-          </p>
-          <FieldError message={errors.expectedBy?.message} />
-        </div>
+        </Field>
       </div>
     </div>
   )
@@ -780,27 +823,25 @@ function Step4Review({
   const bud = BUDGET_OPTIONS.find((b) => b.value === v.budget)
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-md bg-violet-500/5 border border-violet-500/20 p-3 text-center">
-        <p className="text-xs text-muted-foreground">
-          Final check before adding to the pipeline. Tap any section to edit.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Review the details below, then add the lead to the pipeline. Tap a section to edit.
+      </p>
 
-      <ReviewSection title="Contact" stepNumber={1} jumpTo={jumpTo} accent="text-blue-600" bg="bg-blue-500/10" icon={User}>
+      <ReviewSection title="Contact" stepNumber={1} jumpTo={jumpTo} icon={User}>
         <Row label="Name" value={v.leadName} />
         <Row label="Mobile" value={v.phoneNumber} />
         <Row label="WhatsApp" value={v.whatsappSameAsMobile ? `${v.phoneNumber} (same as mobile)` : v.whatsappNumber} />
         <Row label="Email" value={v.email || "Not provided"} />
       </ReviewSection>
 
-      <ReviewSection title="Location" stepNumber={2} jumpTo={jumpTo} accent="text-emerald-600" bg="bg-emerald-500/10" icon={MapPin}>
+      <ReviewSection title="Location" stepNumber={2} jumpTo={jumpTo} icon={MapPin}>
         <Row label="Address" value={v.address} />
-        <Row label="City / State" value={`${v.city ?? ""}, ${v.state ?? ""}`} />
+        <Row label="City / State" value={[v.city, v.state].filter(Boolean).join(", ")} />
         <Row label="Pincode" value={v.pincode} />
       </ReviewSection>
 
-      <ReviewSection title="Interest" stepNumber={3} jumpTo={jumpTo} accent="text-amber-600" bg="bg-amber-500/10" icon={Sparkles}>
+      <ReviewSection title="Interest" stepNumber={3} jumpTo={jumpTo} icon={Sparkles}>
         <Row label="Category" value={v.category} />
         <Row label="Equipment" value={v.equipmentInterest} />
         <Row label="Source" value={v.source} />
@@ -809,14 +850,14 @@ function Step4Review({
         <Row
           label="Interest"
           value={lvl ? (
-            <Badge variant="outline" className={cn("text-[10px]", lvl.cls)}>
-              <lvl.icon className="size-2.5 mr-1" />{lvl.label}
+            <Badge variant="outline" className={cn("gap-1", lvl.cls)}>
+              <lvl.icon className="size-2.5" />{lvl.label}
             </Badge>
           ) : "—"}
         />
         <Row label="Budget" value={bud ? `${bud.label} · ${bud.tier}` : "—"} />
-        <Row label="Owner" value={emp} />
-        <Row label="Expected by" value={v.expectedBy ? new Date(v.expectedBy).toLocaleDateString() : "—"} />
+        <Row label="Assigned" value={emp} />
+        <Row label="Planned date" value={v.expectedBy ? new Date(v.expectedBy).toLocaleDateString() : "—"} />
       </ReviewSection>
     </div>
   )
@@ -824,9 +865,9 @@ function Step4Review({
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-1">
-      <span className="text-[11px] text-muted-foreground shrink-0">{label}</span>
-      <span className="text-xs font-medium text-right truncate">{value || "—"}</span>
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="truncate text-right text-sm font-medium">{value || "—"}</span>
     </div>
   )
 }
@@ -835,30 +876,29 @@ interface ReviewSectionProps {
   title: string
   stepNumber: 1 | 2 | 3
   jumpTo: (s: StepId) => void
-  accent: string
-  bg: string
   icon: React.ComponentType<{ className?: string }>
   children: React.ReactNode
 }
 
-function ReviewSection({ title, stepNumber, jumpTo, accent, bg, icon: Icon, children }: ReviewSectionProps) {
+function ReviewSection({ title, stepNumber, jumpTo, icon: Icon, children }: ReviewSectionProps) {
   return (
     <button
       type="button"
       onClick={() => jumpTo(stepNumber)}
-      className="block w-full text-left rounded-md border bg-card p-3 hover:bg-muted/30 transition group"
+      className="group block w-full rounded-xl border bg-card p-4 text-left transition hover:border-foreground/20 hover:bg-muted/20"
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-1.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={cn("flex size-7 items-center justify-center rounded-md", bg)}>
-            <Icon className={cn("size-3.5", accent)} />
+          <div className="flex size-7 items-center justify-center rounded-md bg-muted">
+            <Icon className="size-3.5 text-muted-foreground" />
           </div>
-          <span className="text-xs font-semibold">{title}</span>
+          <span className="text-sm font-semibold">{title}</span>
         </div>
-        <span className="text-[10px] text-muted-foreground group-hover:text-foreground">Edit</span>
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground transition group-hover:text-foreground">
+          <Pencil className="size-3" />Edit
+        </span>
       </div>
-      <div className="space-y-0">{children}</div>
+      <div className="divide-y divide-border/60">{children}</div>
     </button>
   )
 }
-

@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Eye, EyeOff, Loader2, Lock, LogIn, User } from "lucide-react"
+import { motion, type Variants } from "framer-motion"
+import { Eye, EyeOff, Loader2, Lock, ArrowRight, User } from "lucide-react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth/AuthContext"
 import { ApiError } from "@/lib/api/client"
+import { cn } from "@/lib/utils"
 import { loginSchema, loginDefaults, type LoginValues } from "@/lib/schemas/login"
 
 export function LoginForm() {
@@ -49,78 +50,89 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm shadow-xl border-border/60">
-      <CardHeader className="space-y-2 text-center">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <LogIn className="size-6" />
+    <motion.form
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-5"
+      noValidate
+      variants={formStagger}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={fieldItem} className="space-y-1.5">
+        <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+        <div className="relative">
+          <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="username"
+            autoComplete="username"
+            autoFocus
+            placeholder="e.g. tester"
+            className={cn("h-11 pl-10", errors.username && "border-destructive focus-visible:ring-destructive")}
+            aria-invalid={!!errors.username}
+            {...register("username")}
+          />
         </div>
-        <CardTitle className="text-xl">Telecaller Sign in</CardTitle>
-        <CardDescription>Use your CRM credentials to continue.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <div className="space-y-1.5">
-            <Label htmlFor="username">Username</Label>
-            <div className="relative">
-              <User className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="username"
-                autoComplete="username"
-                autoFocus
-                placeholder="e.g. tester"
-                className="pl-9"
-                aria-invalid={!!errors.username}
-                {...register("username")}
-              />
-            </div>
-            {errors.username && (
-              <p className="text-xs text-destructive">{errors.username.message}</p>
-            )}
-          </div>
+        {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
+      </motion.div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="password"
-                type={showPwd ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className="pl-9 pr-9"
-                aria-invalid={!!errors.password}
-                {...register("password")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd((s) => !s)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label={showPwd ? "Hide password" : "Show password"}
-              >
-                {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
-            )}
-          </div>
+      <motion.div variants={fieldItem} className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+          <button
+            type="button"
+            onClick={() => toast.info("Contact your CRM administrator to reset your password.")}
+            className="text-xs font-medium text-primary/80 hover:text-primary"
+          >
+            Forgot password?
+          </button>
+        </div>
+        <div className="relative">
+          <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="password"
+            type={showPwd ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="••••••••"
+            className={cn("h-11 pl-10 pr-10", errors.password && "border-destructive focus-visible:ring-destructive")}
+            aria-invalid={!!errors.password}
+            {...register("password")}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPwd((s) => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={showPwd ? "Hide password" : "Show password"}
+          >
+            {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
+        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+      </motion.div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Signing in…
-              </>
-            ) : (
-              "Sign in"
-            )}
-          </Button>
-
-          <p className="pt-2 text-center text-[11px] text-muted-foreground">
-            Staging build — use the seeded credentials your admin shared.
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+      <motion.div variants={fieldItem}>
+        <Button type="submit" className="h-11 w-full gap-1.5 text-sm font-semibold" disabled={submitting}>
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Signing in…
+            </>
+          ) : (
+            <>
+              Sign in
+              <ArrowRight className="size-4" />
+            </>
+          )}
+        </Button>
+      </motion.div>
+    </motion.form>
   )
+}
+
+const formStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
+}
+const fieldItem: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 }

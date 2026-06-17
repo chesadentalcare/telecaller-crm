@@ -13,7 +13,9 @@ import {
   Archive,
   RotateCcw,
   CalendarClock,
+  Briefcase,
 } from "lucide-react"
+import { useRole } from "@/hooks/use-role"
 import {
   Sheet,
   SheetContent,
@@ -44,30 +46,52 @@ export function BottomTabNav({
   queueCounts,
 }: BottomTabNavProps) {
   const [moreOpen, setMoreOpen] = useState(false)
+  const { isManagerOrAbove, isSalesperson, isTelecaller } = useRole()
+  // A pure sales role (sale_staff/coordinator/sale_head) — not a telecaller and
+  // not a manager/admin. Their bottom nav is sales-centric, not intake-centric.
+  const salesOnly = isSalesperson && !isManagerOrAbove && !isTelecaller
 
-  // Both arrays depend on queueCounts. Memoize so the per-render array identity
-  // doesn't bust child memoization.
+  // Both arrays depend on queueCounts + role. Memoize so the per-render array
+  // identity doesn't bust child memoization.
   const primaryTabs = useMemo(
-    () => [
-      { id: "home",     title: "Home",     icon: LayoutDashboard },
-      { id: "pipeline", title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
-      { id: "new-lead", title: "Add Lead", icon: UserPlus },
-      { id: "drip",     title: "Drip",     icon: Timer, count: queueCounts.drip },
-    ],
-    [queueCounts],
+    () =>
+      salesOnly
+        ? [
+            { id: "home",           title: "Home",     icon: LayoutDashboard },
+            { id: "sales-pipeline", title: "Sales",    icon: Briefcase },
+            { id: "pipeline",       title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
+          ]
+        : [
+            { id: "home",     title: "Home",     icon: LayoutDashboard },
+            { id: "pipeline", title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
+            { id: "new-lead", title: "Add Lead", icon: UserPlus },
+            { id: "drip",     title: "Drip",     icon: Timer, count: queueCounts.drip },
+          ],
+    [queueCounts, salesOnly],
   )
 
-  const moreItems = useMemo(
-    () => [
-      { id: "qualification", title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
-      { id: "no-response",   title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
-      { id: "idle",          title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
-      { id: "dormant",       title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
-      { id: "reactivation",  title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
-      { id: "six-month",     title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
-    ],
-    [queueCounts],
-  )
+  const moreItems = useMemo(() => {
+    if (salesOnly) {
+      return [
+        { id: "idle",      title: "Idle Queue",      icon: Moon,          subtitle: "No activity 7d",     count: queueCounts.idle    },
+        { id: "dormant",   title: "Dormant",         icon: Archive,       subtitle: "No activity 30d+",   count: queueCounts.dormant },
+        { id: "six-month", title: "6+ Month Funnel", icon: CalendarClock, subtitle: "Long-cycle nurture", count: queueCounts.sixMonth },
+      ]
+    }
+    const items = [
+      { id: "qualification",  title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
+      { id: "no-response",    title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
+      { id: "idle",           title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
+      { id: "dormant",        title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
+      { id: "reactivation",   title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
+      { id: "six-month",      title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
+    ]
+    // Managers/admins also get quick access to the sales pipeline.
+    if (isManagerOrAbove) {
+      items.splice(1, 0, { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase, subtitle: "Handed-over leads" })
+    }
+    return items
+  }, [queueCounts, salesOnly, isManagerOrAbove])
 
   const isMoreActive = moreItems.some((i) => i.id === activeView)
 

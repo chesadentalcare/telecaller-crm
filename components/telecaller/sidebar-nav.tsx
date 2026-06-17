@@ -38,6 +38,7 @@ import {
   LayoutDashboard,
   RotateCcw,
   CalendarClock,
+  Briefcase,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -112,6 +113,7 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
     () => [
       { id: "new-lead",      title: "New Lead",        subtitle: "Intake Form",         icon: UserPlus,      color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                       isAction: true,  roles: ["telecaller"] as UserRole[] },
       { id: "pipeline",      title: "Pipeline",        subtitle: "Active Leads",        icon: Inbox,         color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.pipeline,       isAction: false, roles: null },
+      { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-Over Leads",   icon: Briefcase,     color: "bg-indigo-500",  textColor: "text-indigo-500",  borderColor: "border-indigo-500",  count: null,                       isAction: false, roles: ["sale_staff", "coordinator", "sale_head"] as UserRole[] },
       { id: "qualification", title: "Qualification",   subtitle: "Rapid Qualify",       icon: PhoneCall,     color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: null,                       isAction: true,  roles: ["telecaller"] as UserRole[] },
       { id: "no-response",   title: "No Response",     subtitle: "4+ Failed Calls",     icon: PhoneOff,      color: "bg-red-500",     textColor: "text-red-500",     borderColor: "border-red-500",     count: queueCounts.noResponse,     isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "drip",          title: "Drip Queue",      subtitle: "Nurture Campaign",    icon: Timer,         color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: queueCounts.drip,           isAction: false, roles: ["telecaller"] as UserRole[] },

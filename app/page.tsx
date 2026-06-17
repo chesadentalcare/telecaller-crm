@@ -73,6 +73,10 @@ const PendingApprovalsView = dynamic(
   () => import("@/components/telecaller/pending-approvals"),
   { loading: () => <ViewSkeleton /> },
 )
+const SalesPipelineView = dynamic(
+  () => import("@/components/telecaller/sales-pipeline-view").then((m) => ({ default: m.SalesPipelineView })),
+  { loading: () => <ViewSkeleton /> },
+)
 
 // Wraps RapidQualificationForm so the screen header can confirm *which* lead
 // is being qualified. The form supports a `lead` prop but the registry only
@@ -133,7 +137,7 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     title: "Add New Lead",
     subtitle: "Capture lead information",
     render: () => (
-      <div className="max-w-xl mx-auto"><LeadIntakeForm /></div>
+      <div className="max-w-4xl mx-auto"><LeadIntakeForm /></div>
     ),
   },
   qualification: {
@@ -180,6 +184,12 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Discount requests awaiting review",
     roles: ["manager", "admin"],
     render: () => <PendingApprovalsView />,
+  },
+  "sales-pipeline": {
+    title: "Sales Pipeline",
+    subtitle: "Leads handed over for quotation & closure",
+    roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"],
+    render: ({ openLead }) => <SalesPipelineView onOpenLead={openLead} />,
   },
 }
 

@@ -250,6 +250,19 @@ export function useCloseLead(id: string | number) {
   })
 }
 
+export function useHandover(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { salesUsername: string }) => leadsApi.handover(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      qc.invalidateQueries({ queryKey: leadKeys.salesPipeline() })
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to hand the lead over to sales"),
+  })
+}
+
 export function useMarkNotificationRead() {
   const qc = useQueryClient()
   return useMutation({

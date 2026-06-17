@@ -30,6 +30,8 @@ import {
   History,
   Lock,
   ShieldCheck,
+  ArrowRightLeft,
+  Briefcase,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -84,7 +86,7 @@ import {
   physicalMeetingDefaults,
   type PhysicalMeetingValues,
 } from "@/lib/schemas/physical-meeting"
-import { useLeadFullDetail, useMeetingSlaStatus } from "@/hooks/use-leads"
+import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers } from "@/hooks/use-leads"
 import {
   useLogAttempt,
   useFullQualify,
@@ -97,6 +99,7 @@ import {
   useConfirmDecisionTimeline,
   useUpdateTimeline,
   useHandBackLead,
+  useHandover,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -1566,6 +1569,7 @@ function MeetingsTab({ lead }: { lead: LeadDetail }) {
 function QuotesTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-4">
+      <HandToSalesCard lead={lead} />
       <QuotationListCard
         opportunityDocEntry={Number(lead.id)}
         customerCardCode={lead.customerCardCode || ""}
@@ -1576,6 +1580,98 @@ function QuotesTab({ lead }: { lead: LeadDetail }) {
       <FollowUpListCard opportunityDocEntry={Number(lead.id)} />
       <ClosureCard opportunityDocEntry={Number(lead.id)} />
     </div>
+  )
+}
+
+// ── Hand a qualified lead to a named salesperson ───────────────────────
+// Telecaller / manager / admin only. The backend gates on phone-verified +
+// full qualification, so the action may 422 if the lead isn't fully qualified —
+// the mutation surfaces that message via toast.
+function HandToSalesCard({ lead }: { lead: LeadDetail }) {
+  const { isTelecaller, isManagerOrAbove } = useRole()
+  const canHandover = isTelecaller || isManagerOrAbove
+  const handed = lead.stage === "sales_handover"
+  const closed = lead.stage === "closed_won" || lead.stage === "closed_lost"
+  const [target, setTarget] = useState("")
+
+  const { data: salesUsers = [], isLoading } = useSalesUsers(canHandover && !handed && !closed)
+  const { mutateAsync, isPending } = useHandover(lead.id)
+
+  // Salespeople and post-handover/closed leads don't see this card.
+  if (!canHandover || closed) return null
+
+  if (handed) {
+    return (
+      <Card className="border-emerald-500/20 bg-emerald-500/5">
+        <CardContent className="flex items-center gap-3 py-4">
+          <div className="flex size-9 items-center justify-center rounded-full bg-emerald-500/15">
+            <CheckCircle2 className="size-5 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">Handed over to sales</p>
+            <p className="text-xs text-muted-foreground">
+              The salesperson now owns this lead for quotation &amp; closure.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const submit = async () => {
+    if (!target) {
+      toast.error("Pick a salesperson to hand this lead to")
+      return
+    }
+    try {
+      const res = await mutateAsync({ salesUsername: target })
+      toast.success(
+        res.sapSynced
+          ? "Lead handed over to sales"
+          : "Handed over — SAP assignment will retry",
+      )
+      setTarget("")
+    } catch {
+      // useHandover already toasts the server message (e.g. "not fully qualified")
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Briefcase className="size-4 text-primary" />Hand to Sales
+        </CardTitle>
+        <CardDescription>
+          Route this qualified lead to a salesperson. Requires phone verified + full qualification.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Select value={target} onValueChange={setTarget}>
+            <SelectTrigger className="h-9 flex-1" disabled={isLoading}>
+              <SelectValue placeholder={isLoading ? "Loading salespeople…" : "Select a salesperson"} />
+            </SelectTrigger>
+            <SelectContent>
+              {salesUsers.map((u) => (
+                <SelectItem key={u.username} value={u.username}>
+                  {u.full_name || u.username}
+                  <span className="text-muted-foreground"> · {u.role.replace("_", " ")}</span>
+                  {!u.sales_person_code ? " · ⚠ no SAP code" : ""}
+                </SelectItem>
+              ))}
+              {!isLoading && salesUsers.length === 0 && (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">No active salespeople found</div>
+              )}
+            </SelectContent>
+          </Select>
+          <Button onClick={submit} disabled={isPending || !target} className="gap-1.5">
+            <ArrowRightLeft className="size-4" />
+            {isPending ? "Handing over…" : "Hand Over"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

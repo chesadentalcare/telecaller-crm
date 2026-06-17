@@ -258,6 +258,26 @@ export interface ClosureRecordRow {
   closed_at: string
 }
 
+// ─── Sales handover / pipeline ──────────────────────────────────────────
+export interface SalesUserRow {
+  username: string
+  full_name: string | null
+  role: "sale_staff" | "coordinator" | "sale_head"
+  sales_person_code: number | null
+  sap_employee_id: number | null
+}
+
+export interface SalesPipelineRow {
+  id: number
+  customer_name: string | null
+  equipment: string | null
+  budget_range: string | null
+  stage: string
+  assigned_to: string
+  handoff_from: string | null
+  handed_off_at: string | null
+}
+
 export interface DashboardAnalytics {
   today: {
     totalCalls: number
@@ -648,6 +668,21 @@ export const leadsApi = {
 
   getClosureRecord: (id: number | string) =>
     unwrap(api.get<Envelope<ClosureRecordRow | null>>(endpoints.closureRecord(String(id)))),
+
+  // ─── Sales handover / pipeline ──────────────────────────────────
+  handover: (id: number | string, body: { salesUsername: string }) =>
+    unwrap(
+      api.post<Envelope<{
+        opportunityDocEntry: number; assignedTo: string;
+        salesPersonCode: number; sapEmployeeId: number; sapSynced: boolean
+      }>>(endpoints.handover(String(id)), body),
+    ),
+
+  getSalesUsers: () =>
+    unwrap(api.get<Envelope<SalesUserRow[]>>(endpoints.salesUsers)),
+
+  getSalesPipeline: () =>
+    unwrap(api.get<Envelope<SalesPipelineRow[]>>(endpoints.salesPipeline)),
 
   // ─── SAP Items ──────────────────────────────────────────────────
   getSapItems: (q?: string) =>

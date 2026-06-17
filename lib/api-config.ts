@@ -113,6 +113,10 @@ export const endpoints = {
   // Closure (Phase 6)
   closeLead: (id: string) => `/leads/${id}/close`,
   closureRecord: (id: string) => `/leads/${id}/closure`,
+  // Sales handover (Phase 6 / Sales-track FE)
+  handover: (id: string) => `/leads/${id}/handover`,
+  salesPipeline: `/sales/pipeline`,
+  salesUsers: `/sales/users`,
   // Analytics (Phase 7)
   dashboardAnalytics: `/analytics/dashboard`,
   // Notifications (Phase 7)

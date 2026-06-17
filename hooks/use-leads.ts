@@ -38,6 +38,8 @@ export const leadKeys = {
   pendingApprovals: () => [...leadKeys.all, "pending-approvals"] as const,
   closureRecord: (id: string) => [...leadKeys.all, "closure", id] as const,
   discountLimit: () => [...leadKeys.all, "discount-limit"] as const,
+  salesPipeline: () => [...leadKeys.all, "sales-pipeline"] as const,
+  salesUsers: () => [...leadKeys.all, "sales-users"] as const,
   dashboardAnalytics: () => [...leadKeys.all, "dashboard-analytics"] as const,
   notifications: () => [...leadKeys.all, "notifications"] as const,
   notificationCount: () => [...leadKeys.all, "notification-count"] as const,
@@ -182,6 +184,25 @@ export function useDiscountLimit() {
     queryKey: leadKeys.discountLimit(),
     queryFn: () => leadsApi.getDiscountLimit(),
     staleTime: 5 * 60_000,
+  })
+}
+
+/** Leads handed over to sales (role-scoped server-side). */
+export function useSalesPipeline() {
+  return useQuery({
+    queryKey: leadKeys.salesPipeline(),
+    queryFn: () => leadsApi.getSalesPipeline(),
+    staleTime: 30_000,
+  })
+}
+
+/** Active sales-role logins — handover target picker. */
+export function useSalesUsers(enabled = true) {
+  return useQuery({
+    queryKey: leadKeys.salesUsers(),
+    queryFn: () => leadsApi.getSalesUsers(),
+    staleTime: 5 * 60_000,
+    enabled,
   })
 }
 
