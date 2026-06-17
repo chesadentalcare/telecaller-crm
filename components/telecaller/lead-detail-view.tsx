@@ -458,10 +458,9 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
       {/* Tabs — horizontally scrollable on mobile so all 5 stay readable
           instead of wrapping to an uneven 3+2 grid. Snap to grid on sm+. */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Calls</TabsTrigger>
-          <TabsTrigger value="qualification" className="shrink-0 text-xs sm:text-sm">Qualification</TabsTrigger>
+          <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Call Log</TabsTrigger>
           <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
           <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
           <TabsTrigger value="quotes"        className="shrink-0 text-xs sm:text-sm">Quotes</TabsTrigger>
@@ -472,11 +471,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         </TabsContent>
 
         <TabsContent value="calls" className="mt-4">
-          <CallsTab lead={lead} />
-        </TabsContent>
-
-        <TabsContent value="qualification" className="mt-4">
-          <QualificationTab lead={lead} onNavigate={setActiveTab} />
+          <CallsTab lead={lead} onNavigate={setActiveTab} />
         </TabsContent>
 
         <TabsContent value="drip" className="mt-4">
@@ -882,8 +877,15 @@ const OUTCOME_CONFIG: Record<CallOutcome, { label: string; color: string; icon: 
   replied:             { label: "Replied (WhatsApp)",  color: "text-success",          icon: MessageSquare },
 }
 
-// ─── Calls Tab — Gap #2: Call Attempt Logger ───────────────────────────
-function CallsTab({ lead }: { lead: LeadDetail }) {
+// ─── Call Log Tab — Gap #2 (Call Attempt Logger) + integrated Qualification ─
+function CallsTab({
+  lead,
+  onNavigate,
+}: {
+  lead: LeadDetail
+  /** Switch the parent's active tab (used by the route Next-Action CTA). */
+  onNavigate?: (tab: string) => void
+}) {
   const { mutateAsync: logAttempt } = useLogAttempt(lead.id)
 
   const { control, handleSubmit, reset, formState } = useForm<CallAttemptValues>({
@@ -910,6 +912,9 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
 
   return (
     <div className="space-y-4">
+      {/* Integrated qualification status + Update button + route CTA */}
+      <QualificationStrip lead={lead} onNavigate={onNavigate} />
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -1044,8 +1049,11 @@ function CallsTab({ lead }: { lead: LeadDetail }) {
   )
 }
 
-// ─── Qualification Tab — Gap #3: Full Qualification + Gap #10 Route Action ─
-function QualificationTab({
+// ─── Qualification Strip — integrated into the Call Log tab ────────────────
+// Compact, always-visible qualification status + an "Update Qualification"
+// button (opens the same FullQualificationDialog the old tab used) + the
+// route Next-Action CTA (Gap #10). Replaces the standalone Qualification tab.
+function QualificationStrip({
   lead,
   onNavigate,
 }: {
@@ -1055,7 +1063,7 @@ function QualificationTab({
 }) {
   const [editOpen, setEditOpen] = useState(false)
 
-  // Rapid Qualification checklist items (SOP §1–2)
+  // Rapid Qualification checklist items (SOP §1–2) — shown as scannable pills.
   const rapidFields: { label: string; filled: boolean; hint?: string }[] = [
     { label: "Phone Verified", filled: lead.phoneVerified, hint: "Verify the lead's phone number before logging calls." },
     { label: "Dentist Type", filled: !!lead.dentistType, hint: "Capture the dentist type during Rapid Qualification." },
@@ -1080,36 +1088,121 @@ function QualificationTab({
   const progressPct = Math.round((completed / fullQualFields.length) * 100)
 
   return (
-    <div className="space-y-4">
-      {/* Rapid Qualification summary (Phase 1) — with checklist icons */}
-      <Card>
+    <>
+      <Card className="overflow-hidden">
+        {/* Header — title, gate badge, Update button */}
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-sm">Rapid Qualification (Phase 1)</CardTitle>
-            <Badge variant="outline" className={cn("text-[10px]", lead.rapidQualified ? "bg-success/10 text-success border-success/30" : "")}>
-              {rapidCompleted} / {rapidFields.length} complete
-            </Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <ShieldCheck className="size-4" />
+              </div>
+              <CardTitle className="text-sm">Qualification</CardTitle>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px]",
+                  isFullQualified
+                    ? "bg-success/10 text-success border-success/30"
+                    : "bg-warning/10 text-warning border-warning/30",
+                )}
+              >
+                {isFullQualified ? "Gate passed" : "Gate pending"}
+              </Badge>
+            </div>
+            <Button
+              size="sm"
+              variant={isFullQualified ? "outline" : "default"}
+              className="gap-1.5"
+              onClick={() => setEditOpen(true)}
+            >
+              <CheckCircle2 className="size-3.5" />
+              Update Qualification
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-          {rapidFields.map((f) => (
-            <div key={f.label} className="flex items-start gap-2.5 rounded-md border bg-card px-3 py-2" title={f.hint}>
-              {f.filled
-                ? <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
-                : <XCircle className="size-4 text-destructive/60 shrink-0 mt-0.5" />
-              }
-              <div className="min-w-0">
-                <span className={cn("text-xs", f.filled ? "font-medium" : "text-muted-foreground")}>{f.label}</span>
-                {!f.filled && f.hint && (
-                  <p className="text-[10px] leading-tight text-muted-foreground/70 mt-0.5">{f.hint}</p>
-                )}
+
+        <CardContent className="space-y-4">
+          {/* Phone-verified prerequisite — the qualification gate can't pass without it */}
+          {!lead.phoneVerified && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
+              <XCircle className="size-3.5 text-destructive shrink-0" />
+              <span className="text-[11px] text-destructive">
+                Phone must be verified (header → Verify Phone) before the qualification gate can pass.
+              </span>
+            </div>
+          )}
+
+          {/* Two inline meters: Rapid (segmented dots) + Full (progress bar) */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Rapid — segmented dots */}
+            <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-medium">Rapid Qualification</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {rapidCompleted}/{rapidFields.length}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-1.5">
+                {rapidFields.map((f) => (
+                  <span
+                    key={f.label}
+                    title={f.label}
+                    className={cn(
+                      "h-2 flex-1 rounded-full transition-colors",
+                      f.filled ? "bg-success" : "bg-muted-foreground/20",
+                    )}
+                  />
+                ))}
               </div>
             </div>
-          ))}
+
+            {/* Full — progress bar */}
+            <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-medium">Full Qualification</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {completed}/{fullQualFields.length} · {progressPct}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted-foreground/15">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    isFullQualified ? "bg-success" : "bg-primary",
+                  )}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Status pills — one per checklist item, scannable at a glance */}
+          <div className="flex flex-wrap gap-1.5">
+            {rapidFields.map((f) => (
+              <span
+                key={f.label}
+                title={f.hint}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium",
+                  f.filled
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-muted-foreground/20 bg-muted/40 text-muted-foreground",
+                )}
+              >
+                {f.filled ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
+                {f.label}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            All 6 full-qualification fields are required before scheduling a physical meeting (qualification gate).
+          </p>
         </CardContent>
       </Card>
 
-      {/* Gap #10 — Route next action */}
+      {/* Gap #10 — Route next action CTA (kept from the old Qualification tab) */}
       {lead.firstCallRoute && lead.firstCallRoute !== "pending" && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -1147,54 +1240,8 @@ function QualificationTab({
         </Card>
       )}
 
-      {/* Full Qualification (Phase 2) — Gap #3 */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-sm">Full Qualification (Phase 2)</CardTitle>
-            <Badge variant="outline" className={cn("text-[10px]", isFullQualified ? "bg-success/10 text-success border-success/30" : "")}>
-              {completed} / {fullQualFields.length} fields
-            </Badge>
-          </div>
-          {/* Phone verified prerequisite */}
-          {!lead.phoneVerified && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5 mt-1">
-              <XCircle className="size-3.5 text-destructive shrink-0" />
-              <span className="text-[11px] text-destructive">Phone must be verified before qualification gate can pass</span>
-            </div>
-          )}
-          <CardDescription className="text-xs">
-            All 6 fields required before scheduling a physical meeting (qualification gate).
-          </CardDescription>
-          {/* Progress bar */}
-          <div className="flex items-center gap-3 mt-1">
-            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  isFullQualified ? "bg-success" : "bg-primary",
-                )}
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-medium text-muted-foreground">{progressPct}%</span>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {fullQualFields.map((f) => (
-            <FullQualRow key={f.key} label={f.label} value={f.value} />
-          ))}
-          <div className="flex gap-2 mt-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
-              <CheckCircle2 className="size-3.5" />
-              {isFullQualified ? "Edit Fields" : "Complete Missing Fields"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <FullQualificationDialog open={editOpen} onOpenChange={setEditOpen} lead={lead} />
-    </div>
+    </>
   )
 }
 
@@ -1412,23 +1459,6 @@ function FullQualificationDialog({
   )
 }
 
-function FullQualRow({ label, value }: { label: string; value?: string }) {
-  const isFilled = !!value
-  return (
-    <div className="flex items-center gap-3 rounded-md border bg-card px-3 py-2.5">
-      {isFilled ? (
-        <CheckCircle2 className="size-4 text-success shrink-0" />
-      ) : (
-        <div className="size-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground truncate">{value ?? "Not captured yet"}</p>
-      </div>
-    </div>
-  )
-}
-
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
 function DripTab({ lead }: { lead: LeadDetail }) {
   const [exitOpen, setExitOpen] = useState(false)
@@ -1458,7 +1488,7 @@ function DripTab({ lead }: { lead: LeadDetail }) {
           <div>
             <p className="text-sm font-medium">Not in a drip sequence</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Enter this lead into a drip track from the Qualification tab or Rapid Qualification flow.
+              Enter this lead into a drip track from the Call Log tab or Rapid Qualification flow.
             </p>
           </div>
         </CardContent>
@@ -2053,7 +2083,7 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
           <Alert className="border-warning/30 bg-warning/5">
             <AlertTriangle className="size-4 text-warning" />
             <AlertDescription className="text-xs">
-              Full Qualification (6 fields) must be complete before scheduling. Visit the Qualification tab.
+              Full Qualification (6 fields) must be complete before scheduling. Use “Update Qualification” on the Call Log tab.
             </AlertDescription>
           </Alert>
         )}
