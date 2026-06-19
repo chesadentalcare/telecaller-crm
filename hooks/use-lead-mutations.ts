@@ -65,6 +65,19 @@ export function useLogAttempt(id: string | number) {
   })
 }
 
+export function useEditAttempt(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ attemptId, outcome, notes }: { attemptId: string | number; outcome: CallOutcome; notes?: string }) =>
+      leadsApi.editAttempt(id, attemptId, { outcome, notes }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to correct the attempt"),
+  })
+}
+
 export function useRapidQualify(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

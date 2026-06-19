@@ -28,7 +28,8 @@ export const leadIntakeSchema = z
     product2Id: z.string().optional().default(""),
     interestLevel: z.string().min(1, "Pick interest level"),
     budget: z.string().min(1, "Budget is required"),
-    ourEmployee: z.string().min(1, "Pick an employee"),
+    // The sales employee is assigned later, at the handover stage — not at
+    // intake. No `ourEmployee` field here on purpose.
     expectedBy: z.string().min(1, "Expected date is required"),
   })
   // Cross-field rule: if WhatsApp isn't the same as mobile, the separate
@@ -48,7 +49,7 @@ export const leadIntakeDefaults: LeadIntakeValues = {
   state: "", city: "", pincode: "", address: "",
   equipmentInterest: "", source: "",
   category: "", product1Id: "", product2Id: "",
-  interestLevel: "", budget: "", ourEmployee: "",
+  interestLevel: "", budget: "",
   expectedBy: "",
 }
 
@@ -60,6 +61,6 @@ export const STEP_FIELDS = {
   2: ["state", "city", "pincode", "address"],
   3: [
     "equipmentInterest", "source", "category", "product1Id",
-    "interestLevel", "budget", "ourEmployee", "expectedBy",
+    "interestLevel", "budget", "expectedBy",
   ],
 } as const satisfies Record<1 | 2 | 3, ReadonlyArray<keyof LeadIntakeValues>>

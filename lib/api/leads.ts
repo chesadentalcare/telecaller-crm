@@ -82,6 +82,7 @@ export interface AttemptRow {
   attempted_by: string
   notes: string | null
   attempted_at: string
+  edited_at: string | null
 }
 
 export interface DripStateRow {
@@ -406,6 +407,18 @@ export const leadsApi = {
     id: number | string,
     body: { outcome: CallOutcome; notes?: string; attempt_type?: "call" | "retry_call" },
   ) => unwrap(api.post<Envelope<AttemptResponse>>(endpoints.leadAttempt(String(id)), body)),
+
+  editAttempt: (
+    id: number | string,
+    attemptId: number | string,
+    body: { outcome: CallOutcome; notes?: string },
+  ) =>
+    unwrap(
+      api.patch<Envelope<{ id: number; outcome: CallOutcome; notes: string | null }>>(
+        endpoints.leadAttemptEdit(String(id), String(attemptId)),
+        body,
+      ),
+    ),
 
   rapidQualify: (id: number | string, values: RapidQualificationValues) =>
     unwrap(

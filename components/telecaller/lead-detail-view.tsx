@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   ArrowRightLeft,
   Briefcase,
+  Pencil,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -73,9 +74,11 @@ import {
 import {
   callAttemptSchema,
   callAttemptDefaults,
+  CALL_OUTCOMES,
   type CallAttemptValues,
   type CallOutcome,
 } from "@/lib/schemas/call-attempt"
+import { callLogState, firstEditConflict } from "@/lib/call-log-state"
 import {
   zoomMeetingSchema,
   zoomMeetingDefaults,
@@ -89,6 +92,7 @@ import {
 import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers } from "@/hooks/use-leads"
 import {
   useLogAttempt,
+  useEditAttempt,
   useFullQualify,
   useZoomMeeting,
   usePhysicalMeeting,
@@ -137,6 +141,8 @@ type CallAttempt = {
     | "replied"
   notes?: string
   attemptedBy: string
+  /** Set when this attempt was corrected after the fact (audit marker). */
+  edited?: boolean
 }
 
 type LeadDetail = {
@@ -295,6 +301,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
       outcome: a.outcome,
       notes: a.notes ?? undefined,
       attemptedBy: a.attempted_by,
+      edited: !!a.edited_at,
     })),
   }
 }
@@ -887,6 +894,18 @@ function CallsTab({
   onNavigate?: (tab: string) => void
 }) {
   const { mutateAsync: logAttempt } = useLogAttempt(lead.id)
+  const [editTarget, setEditTarget] = useState<CallAttempt | null>(null)
+
+  // Smart Call Log — derive the disposition state from the chronological call
+  // history. attemptNumber >= 1 excludes system rows (whatsapp_recovery carries
+  // attemptNumber 0). The state machine decides which outcomes are selectable
+  // next (and whether calling is locked after a wrong number).
+  const callAttempts = [...lead.attempts]
+    .filter((a) => a.attemptNumber >= 1)
+    .sort((a, b) => a.attemptNumber - b.attemptNumber)
+  const priorOutcomes = callAttempts.map((a) => a.outcome as CallOutcome)
+  const callState = callLogState(priorOutcomes)
+  const firstAttempt = callAttempts[0]
 
   const { control, handleSubmit, reset, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
@@ -937,6 +956,15 @@ function CallsTab({
               </span>
             </div>
           )}
+          {/* Smart Call Log lock — once "Wrong number" is logged the number is a
+              dead contact; correcting Attempt #1 (below) or fixing the phone
+              re-opens calling. */}
+          {callState.locked && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+              <Lock className="size-3.5 text-destructive shrink-0 mt-0.5" />
+              <span className="text-[11px] text-destructive">{callState.lockReason}</span>
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <Controller
               control={control}
@@ -944,12 +972,15 @@ function CallsTab({
               render={({ field }) => (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Outcome</Label>
-                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                  <Select value={field.value || ""} onValueChange={field.onChange} disabled={callState.locked}>
                     <SelectTrigger><SelectValue placeholder="Select outcome" /></SelectTrigger>
                     <SelectContent>
-                      {(Object.entries(OUTCOME_CONFIG) as [CallOutcome, typeof OUTCOME_CONFIG[CallOutcome]][]).map(([key, cfg]) => (
-                        <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                      ))}
+                      {/* Only outcomes that make sense given the call history —
+                          e.g. "Wrong number" disappears once the lead's been reached. */}
+                      {callState.allowed.map((key) => {
+                        const cfg = OUTCOME_CONFIG[key]
+                        return <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                      })}
                     </SelectContent>
                   </Select>
                   {errors.outcome && <p className="text-[11px] text-destructive">{errors.outcome.message}</p>}
@@ -974,11 +1005,11 @@ function CallsTab({
               <Button
                 type="submit"
                 size="sm"
-                disabled={isSubmitting || lead.crmLocked || !lead.phoneVerified}
+                disabled={isSubmitting || lead.crmLocked || !lead.phoneVerified || callState.locked}
                 className="gap-1.5"
               >
-                {lead.crmLocked || !lead.phoneVerified ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
-                {lead.crmLocked ? "CRM Locked" : !lead.phoneVerified ? "Verify Phone First" : "Log Attempt"}
+                {lead.crmLocked || !lead.phoneVerified || callState.locked ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
+                {lead.crmLocked ? "CRM Locked" : !lead.phoneVerified ? "Verify Phone First" : callState.locked ? "Calling Locked" : "Log Attempt"}
               </Button>
             </div>
           </form>
@@ -1021,6 +1052,10 @@ function CallsTab({
               {lead.attempts.map((a) => {
                 const cfg = OUTCOME_CONFIG[a.outcome as CallOutcome]
                 const Icon = cfg.icon
+                // Only the FIRST call attempt is correctable — a mis-logged
+                // initial disposition. Later attempts stay read-only.
+                const isFirstAttempt = firstAttempt && a.id === firstAttempt.id
+                const canEdit = isFirstAttempt && !lead.crmLocked && lead.phoneVerified
                 return (
                   <li key={a.id} className="flex gap-3 text-sm">
                     <div className="flex flex-col items-center shrink-0">
@@ -1035,6 +1070,19 @@ function CallsTab({
                         <span className="text-xs text-muted-foreground">
                           · {a.attemptedAt.toLocaleDateString()} by {a.attemptedBy}
                         </span>
+                        {a.edited && (
+                          <span className="text-[10px] text-muted-foreground/80 italic">· edited</span>
+                        )}
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => setEditTarget(a)}
+                            className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
+                          >
+                            <Pencil className="size-3" />
+                            Correct
+                          </button>
+                        )}
                       </div>
                       {a.notes && <p className="text-xs text-muted-foreground mt-1">{a.notes}</p>}
                     </div>
@@ -1045,7 +1093,89 @@ function CallsTab({
           )}
         </CardContent>
       </Card>
+
+      {/* Correct a mis-logged FIRST attempt (chain-validated). */}
+      {editTarget && firstAttempt && (
+        <EditFirstAttemptDialog
+          leadId={lead.id}
+          attempt={editTarget}
+          laterOutcomes={priorOutcomes.slice(1)}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// ─── Edit First Attempt — correct an initial mis-logged disposition ────────
+// Only Attempt #1 is editable. The outcome choices are filtered to ones that
+// keep the rest of the (immutable) chain legal, so a correction can never make
+// the history self-contradictory. The backend re-checks the same rule.
+function EditFirstAttemptDialog({
+  leadId,
+  attempt,
+  laterOutcomes,
+  onClose,
+}: {
+  leadId: string
+  attempt: CallAttempt
+  laterOutcomes: CallOutcome[]
+  onClose: () => void
+}) {
+  const { mutateAsync: editAttempt, isPending } = useEditAttempt(leadId)
+  const [outcome, setOutcome] = useState<CallOutcome>(attempt.outcome as CallOutcome)
+  const [notes, setNotes] = useState(attempt.notes ?? "")
+
+  // An outcome is selectable only if setting Attempt #1 to it doesn't contradict
+  // any later attempt.
+  const selectable = CALL_OUTCOMES.filter((o) => firstEditConflict(o, laterOutcomes) === null)
+
+  const onSave = async () => {
+    try {
+      await editAttempt({ attemptId: attempt.id, outcome, notes: notes || undefined })
+      toast.success("Attempt #1 corrected")
+      onClose()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to correct the attempt")
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Correct Attempt #{attempt.attemptNumber}</DialogTitle>
+          <DialogDescription className="text-xs">
+            Only the first attempt can be corrected — fix a mis-logged outcome. Choices that would
+            clash with later attempts are hidden.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Outcome</Label>
+            <Select value={outcome} onValueChange={(v) => setOutcome(v as CallOutcome)}>
+              <SelectTrigger><SelectValue placeholder="Select outcome" /></SelectTrigger>
+              <SelectContent>
+                {selectable.map((key) => (
+                  <SelectItem key={key} value={key}>{OUTCOME_CONFIG[key].label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Notes (optional)</Label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={isPending}>Cancel</Button>
+          <Button size="sm" onClick={onSave} disabled={isPending} className="gap-1.5">
+            <Pencil className="size-3.5" />
+            {isPending ? "Saving…" : "Save correction"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

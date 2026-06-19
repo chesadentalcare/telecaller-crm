@@ -19,8 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useProducts } from "@/hooks/use-products"
-import { useSapEmployees } from "@/hooks/use-sap-employees"
 import { useSapSources } from "@/hooks/use-sap-sources"
+import { useSapStates } from "@/hooks/use-sap-states"
 import { useCreateLead } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
@@ -32,14 +32,8 @@ import {
 } from "@/lib/schemas/lead-intake"
 
 // ─── Static option lists ──────────────────────────────────────────────
-const INDIAN_STATES = [
-  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat",
-  "Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh",
-  "Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan",
-  "Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
-  "Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
-] as const
+// States are loaded dynamically from SAP Ashva's States master — see
+// useSapStates() (Ashva uses non-standard codes like Karnataka='KT').
 
 const EQUIPMENT_OPTIONS = [
   "Dental Chair","X-Ray Unit","Autoclave","Compressor","Handpiece","Scaler",
@@ -84,8 +78,8 @@ export function LeadIntakeForm() {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [createdDocEntry, setCreatedDocEntry] = useState<number | null>(null)
   const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
-  const { data: salesEmployees, isLoading: employeesLoading } = useSapEmployees()
   const { data: sapSources, isLoading: sourcesLoading } = useSapSources()
+  const { data: sapStates, isLoading: statesLoading } = useSapStates()
   const { mutateAsync: createLead } = useCreateLead()
 
   const form = useForm<LeadIntakeValues>({
@@ -113,6 +107,9 @@ export function LeadIntakeForm() {
   }
 
   const onSubmit = async (values: LeadIntakeValues) => {
+    // Only the Review step (4) may actually post. Guards against a stray
+    // Enter-key submit on an earlier step bypassing the review screen.
+    if (currentStep !== 4) return
     try {
       const res = await createLead(values)
       setCreatedDocEntry(res.opportunityDocEntry)
@@ -165,7 +162,16 @@ export function LeadIntakeForm() {
 
   return (
     <Card className="overflow-hidden p-0 shadow-sm">
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="lg:grid lg:grid-cols-[15rem_1fr]">
+      <form
+        // The form NEVER posts on its own. A native submit (Enter key, date
+        // picker, etc.) is swallowed here — the lead is created only by an
+        // explicit click on the Review step's "Add Lead to Pipeline" button
+        // (which calls handleSubmit directly). This makes auto-posting before
+        // the Review screen structurally impossible.
+        onSubmit={(e) => e.preventDefault()}
+        noValidate
+        className="lg:grid lg:grid-cols-[15rem_1fr]"
+      >
         {/* ── Desktop step rail ───────────────────────────────────── */}
         <aside className="hidden lg:flex lg:flex-col border-r bg-muted/30 p-6">
           <div className="mb-6">
@@ -268,7 +274,15 @@ export function LeadIntakeForm() {
           {/* Step body */}
           <div className="flex-1 px-5 py-6 sm:px-7">
             {currentStep === 1 && <Step1Contact control={control} register={register} errors={errors} />}
-            {currentStep === 2 && <Step2Location control={control} register={register} errors={errors} />}
+            {currentStep === 2 && (
+              <Step2Location
+                control={control}
+                register={register}
+                errors={errors}
+                states={sapStates ?? []}
+                statesLoading={statesLoading}
+              />
+            )}
             {currentStep === 3 && (
               <Step3Interest
                 control={control}
@@ -277,8 +291,6 @@ export function LeadIntakeForm() {
                 products={products}
                 productsLoading={productsLoading}
                 productsError={productsError}
-                employees={salesEmployees ?? []}
-                employeesLoading={employeesLoading}
                 sapSources={sapSources ?? []}
                 sourcesLoading={sourcesLoading}
               />
@@ -287,7 +299,6 @@ export function LeadIntakeForm() {
               <Step4Review
                 control={control}
                 products={products}
-                employees={salesEmployees ?? []}
                 jumpTo={jumpTo}
               />
             )}
@@ -305,7 +316,12 @@ export function LeadIntakeForm() {
                 <ArrowRight className="size-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting} className="gap-1.5">
+              <Button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleSubmit(onSubmit)}
+                className="gap-1.5"
+              >
                 {isSubmitting ? (
                   <><Loader2 className="size-4 animate-spin" />Adding Lead…</>
                 ) : (
@@ -481,7 +497,12 @@ function Step1Contact({ control, register, errors }: StepProps) {
 }
 
 // ─── Step 2: Location ──────────────────────────────────────────────────
-function Step2Location({ control, register, errors }: StepProps) {
+interface Step2Props extends StepProps {
+  states: { code: string; name: string }[]
+  statesLoading: boolean
+}
+
+function Step2Location({ control, register, errors, states, statesLoading }: Step2Props) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3">
@@ -506,12 +527,17 @@ function Step2Location({ control, register, errors }: StepProps) {
             control={control}
             name="state"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select value={field.value} onValueChange={field.onChange} disabled={statesLoading}>
                 <SelectTrigger className={cn(inputCls, "w-full", errors.state && "border-destructive")}>
-                  <SelectValue placeholder="Select state" />
+                  <SelectValue placeholder={statesLoading ? "Loading states…" : "Select state"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {INDIAN_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {/* Driven off SAP Ashva's States master — only states SAP will
+                      accept appear, so the create can't fail on an unknown state. */}
+                  {states.map((s) => <SelectItem key={s.code} value={s.name}>{s.name}</SelectItem>)}
+                  {!statesLoading && states.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No states returned from SAP</div>
+                  )}
                 </SelectContent>
               </Select>
             )}
@@ -577,13 +603,10 @@ interface Step3Props extends StepProps {
   sapSources: { sequenceNo: number; description: string }[]
   sourcesLoading: boolean
   productsError: string | null
-  employees: { employeeId: number; name: string; jobTitle: string | null }[]
-  employeesLoading: boolean
 }
 
 function Step3Interest({
   control, errors, products, productsLoading, productsError,
-  employees: salesEmployees, employeesLoading,
   sapSources, sourcesLoading,
 }: Step3Props) {
   // Watch product1 so product2's options exclude it. Hook is at the top of
@@ -759,58 +782,31 @@ function Step3Interest({
         />
       </Field>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="Assigned Employee" required error={errors.ourEmployee?.message}>
-          <Controller
-            control={control}
-            name="ourEmployee"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={employeesLoading}>
-                <SelectTrigger className={cn(inputCls, "w-full", errors.ourEmployee && "border-destructive")}>
-                  <SelectValue placeholder={employeesLoading ? "Loading employees…" : "Select employee"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(salesEmployees ?? []).map((e) => (
-                    <SelectItem key={e.employeeId} value={String(e.employeeId)}>
-                      {e.name}{e.jobTitle ? ` · ${e.jobTitle}` : ""}
-                    </SelectItem>
-                  ))}
-                  {!employeesLoading && salesEmployees?.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No active sales employees found</div>
-                  )}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
-
-        <Field
-          label="Planned Purchase Date"
-          htmlFor="expectedBy"
-          required
-          hint="“By when would you like the equipment installed?”"
-          error={errors.expectedBy?.message}
-        >
-          <Input
-            id="expectedBy"
-            type="date"
-            min={new Date().toISOString().split("T")[0]}
-            {...control.register("expectedBy")}
-            className={cn(inputCls, errors.expectedBy && "border-destructive focus-visible:ring-destructive")}
-          />
-        </Field>
-      </div>
+      <Field
+        label="Planned Purchase Date"
+        htmlFor="expectedBy"
+        required
+        hint="“By when would you like the equipment installed?” — the sales employee is assigned later at handover."
+        error={errors.expectedBy?.message}
+      >
+        <Input
+          id="expectedBy"
+          type="date"
+          min={new Date().toISOString().split("T")[0]}
+          {...control.register("expectedBy")}
+          className={cn(inputCls, errors.expectedBy && "border-destructive focus-visible:ring-destructive")}
+        />
+      </Field>
     </div>
   )
 }
 
 // ─── Step 4: Review ────────────────────────────────────────────────────
 function Step4Review({
-  control, products, employees, jumpTo,
+  control, products, jumpTo,
 }: {
   control: Control<LeadIntakeValues>
   products: { id: number; pname: string }[]
-  employees: { employeeId: number; name: string }[]
   jumpTo: (s: StepId) => void
 }) {
   // Watch all fields — Review is read-only so re-renders here cost nothing.
@@ -818,7 +814,6 @@ function Step4Review({
 
   const p1 = products.find((p) => String(p.id) === v.product1Id)?.pname ?? "—"
   const p2 = products.find((p) => String(p.id) === v.product2Id)?.pname
-  const emp = employees.find((e) => String(e.employeeId) === v.ourEmployee)?.name ?? "—"
   const lvl = INTEREST_LEVELS.find((l) => l.value === v.interestLevel)
   const bud = BUDGET_OPTIONS.find((b) => b.value === v.budget)
 
@@ -856,7 +851,6 @@ function Step4Review({
           ) : "—"}
         />
         <Row label="Budget" value={bud ? `${bud.label} · ${bud.tier}` : "—"} />
-        <Row label="Assigned" value={emp} />
         <Row label="Planned date" value={v.expectedBy ? new Date(v.expectedBy).toLocaleDateString() : "—"} />
       </ReviewSection>
     </div>
