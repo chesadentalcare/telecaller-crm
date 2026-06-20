@@ -70,6 +70,15 @@ export interface LeadExtensionRow {
   crm_locked_reason: string | null
   dormant_since: string | null
   archive_reason: string | null
+  // Phase 6 — routing/lifecycle columns (backend SELECT * already returns them)
+  whatsapp_opted_out: 0 | 1
+  requalify_pending: 0 | 1
+  requalify_reason: string | null
+  requalify_at: string | null
+  wrong_number_at: string | null
+  last_inbound_at: string | null
+  callback_at: string | null
+  callback_retry_count: number
   created_at: string
   updated_at: string
 }
@@ -331,6 +340,9 @@ export interface LeadDetail {
     whatsapp_message_id: string | null
   }>
   quotations: QuotationRow[]
+  // P6.6 — classified inbound WhatsApp replies (newest first). P6.7 — first-contact state.
+  inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string }>
+  firstContact?: { current_touch_index: number; call_attempts_used: number; status: string } | null
 }
 
 export interface PipelineRow {
@@ -393,6 +405,7 @@ export interface QueueCountsResponse {
 export interface AttemptResponse {
   attemptNumber: number
   triggerRecovery: boolean
+  route?: string // present when ROUTE_OUTCOMES=true (Phase 6 dispatcher)
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────
@@ -405,7 +418,15 @@ export const leadsApi = {
 
   logAttempt: (
     id: number | string,
-    body: { outcome: CallOutcome; notes?: string; attempt_type?: "call" | "retry_call" },
+    body: {
+      outcome: CallOutcome
+      notes?: string
+      attempt_type?: "call" | "retry_call"
+      // Phase 6 routing inputs (honored when ROUTE_OUTCOMES=true; additive, ignored otherwise)
+      ready_now?: boolean
+      not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
+      callback_at?: string
+    },
   ) => unwrap(api.post<Envelope<AttemptResponse>>(endpoints.leadAttempt(String(id)), body)),
 
   editAttempt: (

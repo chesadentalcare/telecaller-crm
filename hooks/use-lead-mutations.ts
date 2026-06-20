@@ -56,8 +56,14 @@ export function useLeadDetail(id: string | number | undefined) {
 export function useLogAttempt(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { outcome: CallOutcome; notes?: string; attempt_type?: "call" | "retry_call" }) =>
-      leadsApi.logAttempt(id, body),
+    mutationFn: (body: {
+      outcome: CallOutcome
+      notes?: string
+      attempt_type?: "call" | "retry_call"
+      ready_now?: boolean
+      not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
+      callback_at?: string
+    }) => leadsApi.logAttempt(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
       invalidateAllLeads(qc)

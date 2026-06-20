@@ -198,6 +198,26 @@ type LeadDetail = {
   recoveryWhatsappSentAt?: Date
   // Attempts
   attempts: CallAttempt[]
+  // Phase 6 — lifecycle / routing (all optional so the mock literal stays valid)
+  archived?: boolean
+  archiveReason?: string
+  whatsappOptedOut?: boolean
+  requalifyPending?: boolean
+  requalifyReason?: string
+  requalifyAt?: string
+  wrongNumberAt?: string
+  callbackAt?: string
+  callbackRetryCount?: number
+  lastInboundAt?: string
+  inbound?: InboundReply[]
+  firstContact?: { touchIndex: number; callAttemptsUsed: number; status: string }
+}
+
+type InboundReply = {
+  id: number
+  intent: "stop" | "meeting" | "zoom" | "vague"
+  body: string
+  receivedAt: Date
 }
 
 type ZoomMeetingSummary = {
@@ -303,6 +323,23 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
       attemptedBy: a.attempted_by,
       edited: !!a.edited_at,
     })),
+    // Phase 6 — lifecycle / routing fields
+    archived: ext.stage === "archived" || !!ext.dormant_since,
+    archiveReason: ext.archive_reason ?? undefined,
+    whatsappOptedOut: !!ext.whatsapp_opted_out,
+    requalifyPending: !!ext.requalify_pending,
+    requalifyReason: ext.requalify_reason ?? undefined,
+    requalifyAt: ext.requalify_at ?? undefined,
+    wrongNumberAt: ext.wrong_number_at ?? undefined,
+    callbackAt: ext.callback_at ?? undefined,
+    callbackRetryCount: ext.callback_retry_count ?? 0,
+    lastInboundAt: ext.last_inbound_at ?? undefined,
+    inbound: (d.inbound ?? []).map((m) => ({
+      id: m.id, intent: m.intent, body: m.body, receivedAt: new Date(m.received_at),
+    })),
+    firstContact: d.firstContact
+      ? { touchIndex: d.firstContact.current_touch_index, callAttemptsUsed: d.firstContact.call_attempts_used, status: d.firstContact.status }
+      : undefined,
   }
 }
 
