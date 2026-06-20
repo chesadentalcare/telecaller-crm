@@ -69,6 +69,18 @@ const SixMonthFunnelView = dynamic(
   () => import("@/components/telecaller/six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })),
   { loading: () => <ViewSkeleton /> },
 )
+const RequalificationView = dynamic(
+  () => import("@/components/telecaller/requalification-view").then((m) => ({ default: m.RequalificationView })),
+  { loading: () => <ViewSkeleton /> },
+)
+const ArchivedView = dynamic(
+  () => import("@/components/telecaller/archived-view").then((m) => ({ default: m.ArchivedView })),
+  { loading: () => <ViewSkeleton /> },
+)
+const CallsDueView = dynamic(
+  () => import("@/components/telecaller/calls-due-view").then((m) => ({ default: m.CallsDueView })),
+  { loading: () => <ViewSkeleton /> },
+)
 const PendingApprovalsView = dynamic(
   () => import("@/components/telecaller/pending-approvals"),
   { loading: () => <ViewSkeleton /> },
@@ -179,6 +191,23 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Long-cycle nurture pool",
     render: ({ openLead }) => <SixMonthFunnelView onOpenLead={openLead} />,
   },
+  "calls-due": {
+    title: "Calls Due",
+    subtitle: "Your call worklist",
+    roles: ["telecaller"],
+    render: ({ openLead }) => <CallsDueView onOpenLead={openLead} />,
+  },
+  requalification: {
+    title: "Re-qualification",
+    subtitle: "Re-surfaced leads needing a fresh capture",
+    roles: ["telecaller"],
+    render: ({ openLead }) => <RequalificationView onOpenLead={openLead} />,
+  },
+  archived: {
+    title: "Archived",
+    subtitle: "Filed leads (re-open on inbound)",
+    render: () => <ArchivedView />,
+  },
   approvals: {
     title: "Pending Approvals",
     subtitle: "Discount requests awaiting review",
@@ -286,7 +315,11 @@ function TelecallerDashboardInner() {
               />
             </div>
 
-            <Button size="sm" className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
+            <Button
+              size="sm"
+              className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+              onClick={() => setActiveView("calls-due")}
+            >
               <Phone className="size-4" />
               <span className="hidden sm:inline">Quick Dial</span>
             </Button>

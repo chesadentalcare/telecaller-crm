@@ -9,6 +9,8 @@ import {
   fetchDormantLeads,
   fetchReactivationLeads,
   fetchSixMonthLeads,
+  fetchRequalificationLeads,
+  fetchCallsDueLeads,
   fetchQueueCounts,
   fetchLeadById,
 } from "@/lib/repositories/leads"
@@ -26,6 +28,8 @@ export const leadKeys = {
   dormant: () => [...leadKeys.all, "dormant"] as const,
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
+  requalification: () => [...leadKeys.all, "requalification"] as const,
+  callsDue: () => [...leadKeys.all, "calls-due"] as const,
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
   fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
   queueCounts: () => [...leadKeys.all, "queue-counts"] as const,
@@ -65,6 +69,12 @@ export function useReactivationLeads() {
 }
 export function useSixMonthLeads() {
   return useQuery({ queryKey: leadKeys.sixMonth(),    queryFn: fetchSixMonthLeads })
+}
+export function useRequalificationLeads() {
+  return useQuery({ queryKey: leadKeys.requalification(), queryFn: fetchRequalificationLeads })
+}
+export function useCallsDueLeads() {
+  return useQuery({ queryKey: leadKeys.callsDue(),    queryFn: fetchCallsDueLeads })
 }
 export function useLeadById(id: string | undefined) {
   return useQuery({

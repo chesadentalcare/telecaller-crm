@@ -139,6 +139,8 @@ export const endpoints = {
   queueDormant: "/queue/dormant",
   queueReactivation: "/queue/reactivation",
   queueSixMonth: "/queue/six-month",
+  queueRequalification: "/queue/requalification",
+  queueCalling: "/queue/calling",
   queueCounts: "/queue/counts",
 } as const
 

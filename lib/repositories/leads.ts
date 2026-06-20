@@ -16,6 +16,8 @@ import type {
   DormantLead,
   ReactivationLead,
   SixMonthLead,
+  RequalificationLead,
+  CallsDueLead,
   QueueCounts,
   LeadStatus,
   DripTrack,
@@ -27,6 +29,7 @@ import type {
   NoResponseRow,
   IdleRow,
   DormantRow,
+  CallNudgeRow,
 } from "@/lib/api/leads"
 
 // ─── helpers ────────────────────────────────────────────────────────────
@@ -145,6 +148,28 @@ const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
   reason: r.reason ?? "—",
 })
 
+type RequalRow = { id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }
+const toRequalification = (r: RequalRow): RequalificationLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: placeholderPhone,
+  reason: r.reason ?? "—",
+  timeline: r.timeline ?? "—",
+  requestedAgo: humanAgo(r.requalify_at),
+  equipment: r.equipment ?? "—",
+})
+
+const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
+  id: String(r.id),
+  name: placeholderName(r.id),
+  phone: r.phone || placeholderPhone, // P6.8 — enriched phone passes through (not the placeholder)
+  reason: r.reason,
+  scheduledAt: new Date(r.scheduled_at),
+  slot: r.slot,
+  equipment: r.equipment ?? "—",
+  whatsappNumber: r.whatsapp_number ?? undefined,
+})
+
 // Tiny relative-time helper. The mock data already used strings like
 // "30 min ago", so views format these directly. Keeps the type shape stable.
 function humanAgo(iso: string): string {
@@ -193,6 +218,16 @@ export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {
 export const fetchSixMonthLeads = async (): Promise<SixMonthLead[]> => {
   const rows = await leadsApi.queues.sixMonth()
   return rows.map(toSixMonth)
+}
+
+export const fetchRequalificationLeads = async (): Promise<RequalificationLead[]> => {
+  const rows = await leadsApi.queues.requalification()
+  return rows.map(toRequalification)
+}
+
+export const fetchCallsDueLeads = async (): Promise<CallsDueLead[]> => {
+  const rows = await leadsApi.queues.calling()
+  return rows.map(toCallsDue)
 }
 
 export const fetchQueueCounts = async (): Promise<QueueCounts> => {

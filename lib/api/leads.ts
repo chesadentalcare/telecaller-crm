@@ -392,6 +392,19 @@ export interface DormantRow {
   reason: string | null
 }
 
+// P6.8 — Calls-Due worklist row (over call_nudges, with enriched phone).
+export interface CallNudgeRow {
+  id: number
+  reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
+  scheduled_at: string
+  slot: string | null
+  status: string
+  assigned_to: string
+  equipment: string | null
+  phone: string
+  whatsapp_number?: string | null
+}
+
 export interface QueueCountsResponse {
   pipeline: number
   drip: number
@@ -764,6 +777,8 @@ export const leadsApi = {
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
     reactivation: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; handed_back_at: string; handed_back_by: string; reason: string }>>>(endpoints.queueReactivation)),
     sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null }>>>(endpoints.queueSixMonth)),
+    requalification: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }>>>(endpoints.queueRequalification)),
+    calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }

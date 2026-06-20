@@ -79,12 +79,15 @@ export function BottomTabNav({
       ]
     }
     const items = [
+      { id: "calls-due",      title: "Calls Due",           icon: PhoneCall,     subtitle: "Call worklist" },
       { id: "qualification",  title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
       { id: "no-response",    title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
       { id: "idle",           title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
       { id: "dormant",        title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
       { id: "reactivation",   title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
       { id: "six-month",      title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
+      { id: "requalification", title: "Re-qualification",   icon: RotateCcw,     subtitle: "Fresh re-capture"   },
+      { id: "archived",       title: "Archived",            icon: Archive,       subtitle: "Filed leads"        },
     ]
     // Managers/admins also get quick access to the sales pipeline.
     if (isManagerOrAbove) {

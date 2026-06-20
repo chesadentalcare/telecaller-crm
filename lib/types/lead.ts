@@ -71,6 +71,23 @@ export interface SixMonthLead extends LeadBase {
   reason: string
 }
 
+// P6.9 — re-qualification work items (drip reply / changed-details / timing)
+export interface RequalificationLead extends LeadBase {
+  reason: string
+  timeline: string
+  requestedAgo: string
+  equipment: string
+}
+
+// P6.8 — Calls-Due worklist (call_nudges)
+export interface CallsDueLead extends LeadBase {
+  reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
+  scheduledAt: Date
+  slot: string | null
+  equipment: string
+  whatsappNumber?: string
+}
+
 // Counts surfaced in sidebar / bottom-tab badges
 export interface QueueCounts {
   pipeline: number
