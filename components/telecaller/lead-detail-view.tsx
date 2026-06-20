@@ -64,6 +64,7 @@ import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { NOT_INTERESTED_REASONS, type NotInterestedReason } from "@/lib/schemas/not-interested"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -944,7 +945,7 @@ function CallsTab({
   const callState = callLogState(priorOutcomes)
   const firstAttempt = callAttempts[0]
 
-  const { control, handleSubmit, reset, formState } = useForm<CallAttemptValues>({
+  const { control, handleSubmit, reset, watch, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
     // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
     // register the Select. zod catches the empty value on submit.
@@ -952,15 +953,37 @@ function CallsTab({
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
+  const outcome = watch("outcome")
+
+  // Phase 6 — conditional disposition inputs threaded into the attempt body so
+  // the server-side dispatcher (routeOutcome) can route deterministically.
+  const [readyNow, setReadyNow] = useState(false)                      // engaged → meeting vs drip
+  const [niReason, setNiReason] = useState<NotInterestedReason | "">("") // not_interested 3-way
+  const [callbackAt, setCallbackAt] = useState("")                     // call_back_requested
 
   const onSubmit = async (values: CallAttemptValues) => {
+    if (values.outcome === "not_interested" && !niReason) {
+      toast.error("Pick a reason for ‘Not interested’")
+      return
+    }
     try {
-      const res = await logAttempt({ outcome: values.outcome, notes: values.notes })
-      toast.success(`Attempt #${res.attemptNumber} logged`)
+      const body = {
+        outcome: values.outcome,
+        notes: values.notes,
+        ...(values.outcome === "engaged" ? { ready_now: readyNow } : {}),
+        ...(values.outcome === "not_interested" ? { not_interested_reason: niReason as NotInterestedReason } : {}),
+        // datetime-local ("YYYY-MM-DDTHH:mm") → mysql datetime
+        ...(values.outcome === "call_back_requested" && callbackAt
+          ? { callback_at: callbackAt.replace("T", " ") + ":00" }
+          : {}),
+      }
+      const res = await logAttempt(body)
+      toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
       if (res.triggerRecovery) {
         toast.info("4th no-response — recovery WhatsApp ready to send", { duration: 6000 })
       }
       reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
+      setReadyNow(false); setNiReason(""); setCallbackAt("")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to log attempt")
     }
@@ -1024,6 +1047,65 @@ function CallsTab({
                 </div>
               )}
             />
+
+            {/* P6.1 — ENGAGED: ready for a meeting now? (drives meeting vs drip) */}
+            {outcome === "engaged" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Ready for a physical meeting now?</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[{ v: true, l: "Yes — schedule meeting" }, { v: false, l: "No — nurture (drip)" }].map((o) => (
+                    <button
+                      key={String(o.v)}
+                      type="button"
+                      onClick={() => setReadyNow(o.v)}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-xs font-medium transition-colors",
+                        readyNow === o.v ? "border-primary bg-primary/10 text-primary" : "border-input hover:bg-muted",
+                      )}
+                    >
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* P6.2 — NOT INTERESTED: one-tap "Ask WHY" 3-way split */}
+            {outcome === "not_interested" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Why? <span className="text-destructive">*</span></Label>
+                <div className="grid gap-2">
+                  {NOT_INTERESTED_REASONS.map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setNiReason(r.value)}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors",
+                        niReason === r.value ? "border-primary bg-primary/10 text-primary" : "border-input hover:bg-muted",
+                      )}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* P6.3 — CALL BACK: schedule + per-request retry count */}
+            {outcome === "call_back_requested" && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Callback time</Label>
+                  {(lead.callbackRetryCount ?? 0) > 0 && (
+                    <Badge variant="outline" className="text-[10px]">retry {lead.callbackRetryCount}/2</Badge>
+                  )}
+                </div>
+                <Input type="datetime-local" value={callbackAt} onChange={(e) => setCallbackAt(e.target.value)} />
+                <p className="text-[10px] text-muted-foreground">Leave blank to default to the next working evening slot.</p>
+              </div>
+            )}
+
             <Controller
               control={control}
               name="notes"
