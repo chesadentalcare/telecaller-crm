@@ -89,6 +89,10 @@ const SalesPipelineView = dynamic(
   () => import("@/components/telecaller/sales-pipeline-view").then((m) => ({ default: m.SalesPipelineView })),
   { loading: () => <ViewSkeleton /> },
 )
+const FlowOversightView = dynamic(
+  () => import("@/components/telecaller/flow-oversight-view").then((m) => ({ default: m.FlowOversightView })),
+  { loading: () => <ViewSkeleton /> },
+)
 
 // Wraps RapidQualificationForm so the screen header can confirm *which* lead
 // is being qualified. The form supports a `lead` prop but the registry only
@@ -219,6 +223,12 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Leads handed over for quotation & closure",
     roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"],
     render: ({ openLead }) => <SalesPipelineView onOpenLead={openLead} />,
+  },
+  "flow-oversight": {
+    title: "Flow Oversight",
+    subtitle: "Team-wide lead-flow analytics & engine health",
+    roles: ["manager", "admin"],
+    render: () => <FlowOversightView />,
   },
 }
 

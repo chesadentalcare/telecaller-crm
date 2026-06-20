@@ -122,6 +122,8 @@ export const endpoints = {
   salesUsers: `/sales/users`,
   // Analytics (Phase 7)
   dashboardAnalytics: `/analytics/dashboard`,
+  flowOversight: `/analytics/flow-oversight`,
+  reconciliationReport: `/reports/reconciliation`,
   // Notifications (Phase 7)
   notifications: `/notifications`,
   notificationCount: `/notifications/count`,

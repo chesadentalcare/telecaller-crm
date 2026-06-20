@@ -242,6 +242,10 @@ export const fetchQueueCounts = async (): Promise<QueueCounts> => {
     dormant: c.dormant,
     reactivation: c.reactivation,
     sixMonth: c.sixMonth,
+    archived: c.archived,
+    requalification: c.requalification,
+    callsDue: c.callsDue,
+    reTouch: c.reTouch,
   }
 }
 

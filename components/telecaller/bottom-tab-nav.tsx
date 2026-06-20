@@ -14,6 +14,7 @@ import {
   RotateCcw,
   CalendarClock,
   Briefcase,
+  Activity,
 } from "lucide-react"
 import { useRole } from "@/hooks/use-role"
 import {
@@ -25,19 +26,12 @@ import {
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import type { QueueCounts } from "@/lib/types/lead"
 
 interface BottomTabNavProps {
   activeView: string
   onViewChange: (view: string) => void
-  queueCounts: {
-    pipeline: number
-    noResponse: number
-    drip: number
-    idle: number
-    dormant: number
-    reactivation: number
-    sixMonth: number
-  }
+  queueCounts: QueueCounts
 }
 
 export function BottomTabNav({
@@ -79,19 +73,20 @@ export function BottomTabNav({
       ]
     }
     const items = [
-      { id: "calls-due",      title: "Calls Due",           icon: PhoneCall,     subtitle: "Call worklist" },
+      { id: "calls-due",      title: "Calls Due",           icon: PhoneCall,     subtitle: "Call worklist",       count: queueCounts.callsDue    },
       { id: "qualification",  title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
       { id: "no-response",    title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
       { id: "idle",           title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
       { id: "dormant",        title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
       { id: "reactivation",   title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
       { id: "six-month",      title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
-      { id: "requalification", title: "Re-qualification",   icon: RotateCcw,     subtitle: "Fresh re-capture"   },
-      { id: "archived",       title: "Archived",            icon: Archive,       subtitle: "Filed leads"        },
+      { id: "requalification", title: "Re-qualification",   icon: RotateCcw,     subtitle: "Fresh re-capture",    count: queueCounts.requalification },
+      { id: "archived",       title: "Archived",            icon: Archive,       subtitle: "Filed leads",         count: queueCounts.archived    },
     ]
-    // Managers/admins also get quick access to the sales pipeline.
+    // Managers/admins also get quick access to the sales pipeline + flow oversight.
     if (isManagerOrAbove) {
       items.splice(1, 0, { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase, subtitle: "Handed-over leads" })
+      items.splice(2, 0, { id: "flow-oversight", title: "Flow Oversight", icon: Activity, subtitle: "Team analytics & health" })
     }
     return items
   }, [queueCounts, salesOnly, isManagerOrAbove])

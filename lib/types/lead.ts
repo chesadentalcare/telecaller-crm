@@ -100,4 +100,9 @@ export interface QueueCounts {
   dormant: number
   reactivation: number
   sixMonth: number
+  // P7.6 — badge counts for the four Phase-6 views
+  archived: number
+  requalification: number
+  callsDue: number
+  reTouch: number
 }

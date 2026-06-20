@@ -11,6 +11,10 @@ const EMPTY_QUEUE_COUNTS: QueueCounts = {
   dormant: 0,
   reactivation: 0,
   sixMonth: 0,
+  archived: 0,
+  requalification: 0,
+  callsDue: 0,
+  reTouch: 0,
 }
 
 // Thin wrapper kept for backwards-compat with the sidebar/bottom-tab callers.

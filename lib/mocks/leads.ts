@@ -80,4 +80,8 @@ export const MOCK_QUEUE_COUNTS: QueueCounts = {
   dormant: 2,
   reactivation: 2,
   sixMonth: 5,
+  archived: 6,
+  requalification: 1,
+  callsDue: 7,
+  reTouch: 2,
 }

@@ -316,6 +316,33 @@ export interface DashboardAnalytics {
   }>
 }
 
+// P7.3/P7.4/P7.5 — manager flow-oversight payload (team-wide).
+export interface FlowOversightAnalytics {
+  dispositions: Array<{ outcome: string; count: number }>
+  callbacks: { pending: number; exhausted: number }
+  firstContact: { active: number; reached: number; exhausted: number; cancelled: number }
+  inbound: {
+    byIntent: { stop: number; meeting: number; zoom: number; vague: number }
+    total: number
+    matched: number
+    unmatched: number
+  }
+  endStates: { archived: number; dormant: number; requalPending: number; optedOut: number; totalLeads: number }
+  nudges: { pending: number; overdue: number }
+  drip: { active: number; parked: number }
+  unmatchedInbound: Array<{ id: number; fromPhone: string; body: string | null; intent: string | null; receivedAt: string }>
+  engine: {
+    drip: { ranAt: string; processed: number; sent: number; parked: number; staleMinutes: number | null } | null
+    reconciliation: { ranAt: string; orphans: number; staleMinutes: number | null } | null
+  }
+}
+
+// P7.1 — on-demand orphan reconciliation report.
+export interface ReconciliationReport {
+  count: number
+  orphans: Array<{ id: number; name: string; assignedTo: string | null; stage: string; updatedAt: string }>
+}
+
 export interface NotificationRow {
   id: number
   recipient: string
@@ -413,6 +440,11 @@ export interface QueueCountsResponse {
   idle: number
   reactivation: number
   sixMonth: number
+  // P7.6
+  archived: number
+  requalification: number
+  callsDue: number
+  reTouch: number
 }
 
 export interface AttemptResponse {
@@ -766,6 +798,13 @@ export const leadsApi = {
   // ─── Analytics (Phase 7) ────────────────────────────────────────────
   getDashboardAnalytics: () =>
     unwrap(api.get<Envelope<DashboardAnalytics>>(endpoints.dashboardAnalytics)),
+
+  // Manager flow-oversight + on-demand orphan reconciliation (manager/admin only).
+  getFlowOversight: () =>
+    unwrap(api.get<Envelope<FlowOversightAnalytics>>(endpoints.flowOversight)),
+
+  getReconciliation: () =>
+    unwrap(api.get<Envelope<ReconciliationReport>>(endpoints.reconciliationReport)),
 
   // ─── Notifications (Phase 7) ──────────────────────────────────────
   getNotifications: (limit = 20, offset = 0) =>

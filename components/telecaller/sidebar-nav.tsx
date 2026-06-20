@@ -39,6 +39,7 @@ import {
   RotateCcw,
   CalendarClock,
   Briefcase,
+  Activity,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -50,19 +51,12 @@ import {
 import { cn } from "@/lib/utils"
 import { useRole } from "@/hooks/use-role"
 import type { UserRole } from "@/lib/auth/token"
+import type { QueueCounts } from "@/lib/types/lead"
 
 interface SidebarNavProps {
   activeView: string
   onViewChange: (view: string) => void
-  queueCounts: {
-    pipeline: number
-    noResponse: number
-    drip: number
-    idle: number
-    dormant: number
-    reactivation: number
-    sixMonth: number
-  }
+  queueCounts: QueueCounts
 }
 
 // Hoisted: identity-stable across renders, doesn't depend on props.
@@ -115,15 +109,16 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
       { id: "pipeline",      title: "Pipeline",        subtitle: "Active Leads",        icon: Inbox,         color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.pipeline,       isAction: false, roles: null },
       { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-Over Leads",   icon: Briefcase,     color: "bg-indigo-500",  textColor: "text-indigo-500",  borderColor: "border-indigo-500",  count: null,                       isAction: false, roles: ["sale_staff", "coordinator", "sale_head"] as UserRole[] },
       { id: "qualification", title: "Qualification",   subtitle: "Rapid Qualify",       icon: PhoneCall,     color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: null,                       isAction: true,  roles: ["telecaller"] as UserRole[] },
-      { id: "calls-due",     title: "Calls Due",       subtitle: "Call worklist",       icon: PhoneCall,     color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: null,                       isAction: false, roles: ["telecaller"] as UserRole[] },
+      { id: "calls-due",     title: "Calls Due",       subtitle: "Call worklist",       icon: PhoneCall,     color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.callsDue,       isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "no-response",   title: "No Response",     subtitle: "4+ Failed Calls",     icon: PhoneOff,      color: "bg-red-500",     textColor: "text-red-500",     borderColor: "border-red-500",     count: queueCounts.noResponse,     isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "drip",          title: "Drip Queue",      subtitle: "Nurture Campaign",    icon: Timer,         color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: queueCounts.drip,           isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "idle",          title: "Idle Queue",      subtitle: "No Activity 7d",      icon: Moon,          color: "bg-slate-400",   textColor: "text-slate-400",   borderColor: "border-slate-400",   count: queueCounts.idle,           isAction: false, roles: null },
       { id: "dormant",       title: "Dormant",         subtitle: "No Activity 30d+",    icon: Archive,       color: "bg-slate-600",   textColor: "text-slate-600",   borderColor: "border-slate-600",   count: queueCounts.dormant,        isAction: false, roles: null },
       { id: "reactivation",  title: "Reactivation",    subtitle: "Returned from Sales", icon: RotateCcw,     color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: queueCounts.reactivation,   isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "six-month",     title: "6+ Month Funnel", subtitle: "Long-Cycle Nurture",  icon: CalendarClock, color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: queueCounts.sixMonth,       isAction: false, roles: null },
-      { id: "requalification", title: "Re-qualification", subtitle: "Fresh re-capture",  icon: RotateCcw,     color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: null,                       isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "archived",      title: "Archived",        subtitle: "Filed leads",         icon: Archive,       color: "bg-slate-600",   textColor: "text-slate-600",   borderColor: "border-slate-600",   count: null,                       isAction: false, roles: null },
+      { id: "requalification", title: "Re-qualification", subtitle: "Fresh re-capture",  icon: RotateCcw,     color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: queueCounts.requalification, isAction: false, roles: ["telecaller"] as UserRole[] },
+      { id: "archived",      title: "Archived",        subtitle: "Filed leads",         icon: Archive,       color: "bg-slate-600",   textColor: "text-slate-600",   borderColor: "border-slate-600",   count: queueCounts.archived,       isAction: false, roles: null },
+      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,    color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: null,                       isAction: false, roles: ["manager", "admin"] as UserRole[] },
     ],
     [queueCounts],
   )

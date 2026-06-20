@@ -45,6 +45,8 @@ export const leadKeys = {
   salesPipeline: () => [...leadKeys.all, "sales-pipeline"] as const,
   salesUsers: () => [...leadKeys.all, "sales-users"] as const,
   dashboardAnalytics: () => [...leadKeys.all, "dashboard-analytics"] as const,
+  flowOversight: () => [...leadKeys.all, "flow-oversight"] as const,
+  reconciliation: () => [...leadKeys.all, "reconciliation"] as const,
   notifications: () => [...leadKeys.all, "notifications"] as const,
   notificationCount: () => [...leadKeys.all, "notification-count"] as const,
 }
@@ -221,6 +223,25 @@ export function useDashboardAnalytics() {
   return useQuery({
     queryKey: leadKeys.dashboardAnalytics(),
     queryFn: () => leadsApi.getDashboardAnalytics(),
+    staleTime: 60_000,
+  })
+}
+
+/** P7.3 — manager flow-oversight analytics (manager/admin only). */
+export function useFlowOversight() {
+  return useQuery({
+    queryKey: leadKeys.flowOversight(),
+    queryFn: () => leadsApi.getFlowOversight(),
+    staleTime: 60_000,
+    refetchInterval: 120_000, // engine-health + queue numbers drift; refresh periodically
+  })
+}
+
+/** P7.1 — on-demand orphan reconciliation report (manager/admin only). */
+export function useReconciliation() {
+  return useQuery({
+    queryKey: leadKeys.reconciliation(),
+    queryFn: () => leadsApi.getReconciliation(),
     staleTime: 60_000,
   })
 }
