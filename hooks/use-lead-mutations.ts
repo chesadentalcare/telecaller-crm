@@ -126,6 +126,18 @@ export function useRecoveryWhatsapp(id: string | number) {
   })
 }
 
+export function useRecoverNumber(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { phone: string; whatsappNumber?: string }) => leadsApi.recoverNumber(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to recover the number"),
+  })
+}
+
 export function useEnterDrip(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

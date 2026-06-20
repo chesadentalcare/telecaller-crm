@@ -514,6 +514,18 @@ export const leadsApi = {
       ),
     ),
 
+  // P6.5 — correct a wrong number; backend re-seeds first contact on the new number.
+  recoverNumber: (
+    id: number | string,
+    body: { phone: string; whatsappNumber?: string },
+  ) =>
+    unwrap(
+      api.post<Envelope<{ opportunityDocEntry: number }>>(
+        endpoints.leadRecoverNumber(String(id)),
+        body,
+      ),
+    ),
+
   enterDrip: (
     id: number | string,
     body: { timelineBucket?: string; track?: "1_month" | "3_month" | "6_plus_month" },

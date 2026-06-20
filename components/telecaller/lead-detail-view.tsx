@@ -99,6 +99,7 @@ import {
   usePhysicalMeeting,
   useExitDrip,
   useRecoveryWhatsapp,
+  useRecoverNumber,
   useVerifyPhone,
   useUploadMeetingSummary,
   useConfirmDecisionTimeline,
@@ -481,6 +482,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
           failedAttempts={noResponseCount}
           lastAttemptTime={lastAttemptTime}
           onSendWhatsApp={async () => {
+            if (lead.whatsappOptedOut) { toast.error("Lead opted out of WhatsApp — cannot send"); return } // P6.11
             try {
               const res = await sendRecovery({
                 phone: lead.phone,
@@ -587,6 +589,17 @@ function LeadDetailHeader({
                     Verified
                   </Badge>
                 )}
+                {lead.whatsappOptedOut && (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-destructive/40 text-destructive">
+                    <XCircle className="size-3" />
+                    WhatsApp opted out
+                  </Badge>
+                )}
+                {lead.archived && (
+                  <Badge variant="outline" className="text-[10px] gap-1 border-muted-foreground/40 text-muted-foreground">
+                    Archived{lead.archiveReason ? ` — ${lead.archiveReason}` : ""}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -609,8 +622,9 @@ function LeadDetailHeader({
               size="sm"
               variant="outline"
               className="gap-1.5"
-              disabled={!waNumber}
+              disabled={!waNumber || !!lead.whatsappOptedOut}
               onClick={() => {
+                if (lead.whatsappOptedOut) { toast.error("Lead opted out of WhatsApp"); return }
                 if (!waNumber) {
                   toast.error("No WhatsApp number on this lead")
                   return
@@ -922,6 +936,73 @@ const OUTCOME_CONFIG: Record<CallOutcome, { label: string; color: string; icon: 
   replied:             { label: "Replied (WhatsApp)",  color: "text-success",          icon: MessageSquare },
 }
 
+// P6.7 — automated first-contact campaign progress (6 touches / 12 days · 4 calls).
+function FirstContactStrip({ lead }: { lead: LeadDetail }) {
+  const fc = lead.firstContact
+  if (!fc || fc.status !== "active") return null
+  const TOTAL = 6
+  const CALL_LIMIT = 4
+  return (
+    <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium flex items-center gap-1.5">
+          <PhoneCall className="size-3.5 text-primary" /> First Contact — automated
+        </span>
+        <Badge variant="outline" className="text-[10px]">{fc.callAttemptsUsed}/{CALL_LIMIT} calls</Badge>
+      </div>
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-full bg-primary transition-all" style={{ width: `${Math.min(100, (fc.touchIndex / TOTAL) * 100)}%` }} />
+      </div>
+      <p className="text-[10px] text-muted-foreground">Touch {Math.min(fc.touchIndex, TOTAL)} of {TOTAL} · 6 touches / 12 days</p>
+    </div>
+  )
+}
+
+// P6.5 — wrong-number recovery within the 7-day window: correct the number and
+// re-enter first contact (server re-seeds on the new number).
+function WrongNumberRecoveryCard({ lead }: { lead: LeadDetail }) {
+  const { mutateAsync: recover, isPending } = useRecoverNumber(lead.id)
+  const [phone, setPhone] = useState("")
+  const [wa, setWa] = useState("")
+  const daysLeft = lead.wrongNumberAt
+    ? Math.max(0, 7 - Math.floor((Date.now() - new Date(lead.wrongNumberAt).getTime()) / 86_400_000))
+    : null
+  const submit = async () => {
+    if (phone.replace(/\D/g, "").length < 10) { toast.error("Enter a valid mobile number"); return }
+    try {
+      await recover({ phone, ...(wa ? { whatsappNumber: wa } : {}) })
+      toast.success("Number recovered — re-entering first contact")
+      setPhone(""); setWa("")
+    } catch (err) { toast.error(err instanceof ApiError ? err.message : "Recovery failed") }
+  }
+  return (
+    <Card className="border-warning/30">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2"><Phone className="size-4 text-warning" /> Recover number</CardTitle>
+        <CardDescription className="text-xs">
+          Wrong number logged. Add a corrected number to re-enter first contact
+          {daysLeft !== null ? ` — ${daysLeft} day${daysLeft === 1 ? "" : "s"} left in the recovery window.` : "."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs">New phone</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">WhatsApp number (optional)</Label>
+          <Input value={wa} onChange={(e) => setWa(e.target.value)} placeholder="If different from phone" />
+        </div>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={submit} disabled={isPending} className="gap-1.5">
+            <Send className="size-3.5" /> Recover &amp; restart
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Call Log Tab — Gap #2 (Call Attempt Logger) + integrated Qualification ─
 function CallsTab({
   lead,
@@ -993,6 +1074,12 @@ function CallsTab({
     <div className="space-y-4">
       {/* Integrated qualification status + Update button + route CTA */}
       <QualificationStrip lead={lead} onNavigate={onNavigate} />
+
+      {/* P6.7 — first-contact automation progress (when the campaign is active) */}
+      <FirstContactStrip lead={lead} />
+
+      {/* P6.5 — wrong-number recovery (shown when calling is locked by a wrong number) */}
+      {callState.locked && <WrongNumberRecoveryCard lead={lead} />}
 
       <Card>
         <CardHeader className="pb-3">
@@ -1133,14 +1220,21 @@ function CallsTab({
             </div>
           </form>
 
-          {lead.attempts.length + 1 >= 4 && (
-            <Alert className="border-warning/30 bg-warning/5">
-              <AlertTriangle className="size-4 text-warning" />
-              <AlertDescription className="text-xs">
-                This is attempt #{lead.attempts.length + 1}. If unsuccessful, the lead enters WhatsApp recovery and starts the 60-day dormant clock.
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* P6.4 — per-phase no-response guidance */}
+          {(() => {
+            const noResp = priorOutcomes.filter((o) => o === "no_response").length
+            if (lead.attempts.length + 1 < 3 && noResp < 2) return null
+            return (
+              <Alert className="border-warning/30 bg-warning/5">
+                <AlertTriangle className="size-4 text-warning" />
+                <AlertDescription className="text-xs">
+                  {noResp >= 3
+                    ? "4th no-response exhausts first contact — the lead will be archived. Try an alternate slot or recovery WhatsApp."
+                    : `Attempt #${lead.attempts.length + 1} (${noResp} no-response so far). Persist with spaced calls; the 4th unanswered call archives the lead.`}
+                </AlertDescription>
+              </Alert>
+            )
+          })()}
         </CardContent>
       </Card>
 
