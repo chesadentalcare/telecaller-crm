@@ -65,11 +65,11 @@ export const MOCK_REACTIVATION_LEADS: ReactivationLead[] = [
 ]
 
 export const MOCK_SIX_MONTH_LEADS: SixMonthLead[] = [
-  { id: "F-1", name: "Dr. Tanvi Bose",     phone: "9442211009", reactivateBy: "Aug 2026", source: "Reactivated",          reason: "Budget Q3"         },
-  { id: "F-2", name: "Dr. Praveen Nair",   phone: "9112233445", reactivateBy: "Jul 2026", source: "Cold-cycle drip exit", reason: "Long timeline"     },
-  { id: "F-3", name: "Dr. Vinod Menon",    phone: "9221100887", reactivateBy: "Sep 2026", source: "Reactivated",          reason: "AMC expiry"        },
-  { id: "F-4", name: "Dr. Lata Kulkarni",  phone: "9778899001", reactivateBy: "Dec 2026", source: "Reactivated",          reason: "New clinic Q4"     },
-  { id: "F-5", name: "Dr. Rakesh Pillai",  phone: "9554433221", reactivateBy: "Oct 2026", source: "Cold-cycle drip exit", reason: "Watching market"  },
+  { id: "F-1", name: "Dr. Tanvi Bose",     phone: "9442211009", reactivateBy: "Aug 2026", source: "Reactivated",          reason: "Budget Q3",       retouch: false },
+  { id: "F-2", name: "Dr. Praveen Nair",   phone: "9112233445", reactivateBy: "Jul 2026", source: "Cold-cycle drip exit", reason: "Long timeline",   retouch: false },
+  { id: "F-3", name: "Dr. Vinod Menon",    phone: "9221100887", reactivateBy: "Sep 2026", source: "Reactivated",          reason: "AMC expiry",      retouch: false },
+  { id: "F-4", name: "Dr. Lata Kulkarni",  phone: "9778899001", reactivateBy: "Dec 2026", source: "24-month re-touch",     reason: "Already purchased — re-touch", retouch: true },
+  { id: "F-5", name: "Dr. Rakesh Pillai",  phone: "9554433221", reactivateBy: "Oct 2026", source: "Cold-cycle drip exit", reason: "Watching market", retouch: false },
 ]
 
 export const MOCK_QUEUE_COUNTS: QueueCounts = {

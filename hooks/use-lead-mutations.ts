@@ -138,6 +138,20 @@ export function useRecoverNumber(id: string | number) {
   })
 }
 
+// P6.14 — manual classifier override for an inbound WhatsApp reply.
+export function useReclassifyInbound(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { inboundId: number; intent: "stop" | "meeting" | "zoom" | "vague" }) =>
+      leadsApi.reclassifyInbound(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to reclassify the reply"),
+  })
+}
+
 export function useEnterDrip(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

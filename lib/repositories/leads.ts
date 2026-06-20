@@ -128,6 +128,7 @@ type SixMonthRow = {
   reactivate_by: string | null
   reason: string | null
   source?: string | null
+  retouch?: number | boolean
 }
 
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
@@ -146,6 +147,7 @@ const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
   reactivateBy: r.reactivate_by ?? "—",
   source: r.source ?? "—",
   reason: r.reason ?? "—",
+  retouch: !!r.retouch, // MySQL boolean expr → 0/1; coerce to bool
 })
 
 type RequalRow = { id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }

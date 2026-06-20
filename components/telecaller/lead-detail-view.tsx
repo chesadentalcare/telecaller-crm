@@ -100,6 +100,7 @@ import {
   useExitDrip,
   useRecoveryWhatsapp,
   useRecoverNumber,
+  useReclassifyInbound,
   useVerifyPhone,
   useUploadMeetingSummary,
   useConfirmDecisionTimeline,
@@ -442,6 +443,8 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
 
   // Count failed call attempts (no_response only) — drives the recovery banner.
   const noResponseCount = lead.attempts.filter((a) => a.outcome === "no_response").length
+  // P6.6 — only mount the Replies tab when the lead has inbound WhatsApp replies.
+  const hasInbound = (lead.inbound?.length ?? 0) > 0
   const lastAttemptTime = lead.attempts.length > 0
     ? lead.attempts[lead.attempts.length - 1].attemptedAt
     : new Date()
@@ -502,15 +505,25 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         />
       )}
 
-      {/* Tabs — horizontally scrollable on mobile so all 5 stay readable
-          instead of wrapping to an uneven 3+2 grid. Snap to grid on sm+. */}
+      {/* Tabs — horizontally scrollable on mobile so all stay readable instead of
+          wrapping to an uneven grid. Snap to grid on sm+. P6.6 — a "Replies" tab
+          appears only when the lead has classified inbound WhatsApp replies. */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className={cn(
+          "flex w-full overflow-x-auto sm:grid [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          hasInbound ? "sm:grid-cols-6" : "sm:grid-cols-5",
+        )}>
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
           <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Call Log</TabsTrigger>
           <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
           <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
           <TabsTrigger value="quotes"        className="shrink-0 text-xs sm:text-sm">Quotes</TabsTrigger>
+          {hasInbound && (
+            <TabsTrigger value="replies" className="shrink-0 text-xs sm:text-sm gap-1">
+              Replies
+              <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[9px]">{lead.inbound!.length}</Badge>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -532,6 +545,12 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         <TabsContent value="quotes" className="mt-4">
           <QuotesTab lead={lead} />
         </TabsContent>
+
+        {hasInbound && (
+          <TabsContent value="replies" className="mt-4">
+            <InboundRepliesTab lead={lead} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )
@@ -1802,6 +1821,105 @@ function FullQualificationDialog({
   )
 }
 
+// ─── Inbound WhatsApp Replies Tab (P6.6) ───────────────────────────────
+// Classifier intent → chip styling. Same four intents the backend classifier
+// and the reclassify endpoint accept (stop|meeting|zoom|vague).
+const INTENT_CONFIG: Record<
+  InboundReply["intent"],
+  { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }
+> = {
+  meeting: { label: "Meeting request",         icon: MapPinned,     cls: "border-success/30 bg-success/10 text-success" },
+  zoom:    { label: "Changed details / Zoom",  icon: Video,         cls: "border-sky-500/30 bg-sky-500/10 text-sky-700" },
+  vague:   { label: "Unclear",                 icon: MessageSquare, cls: "border-warning/30 bg-warning/10 text-warning" },
+  stop:    { label: "Opt-out (STOP)",          icon: XCircle,       cls: "border-destructive/40 bg-destructive/10 text-destructive" },
+}
+const INBOUND_INTENTS = ["meeting", "zoom", "vague", "stop"] as const
+
+// REPLIED inbound conversation: classified WhatsApp replies as chat bubbles, each
+// with its intent chip and a one-tap manual classifier override (P6.14). Correcting
+// the intent re-routes the lead server-side (and STOP archives + opts out).
+function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
+  const { mutateAsync: reclassify, isPending } = useReclassifyInbound(lead.id)
+  const replies = [...(lead.inbound ?? [])].sort(
+    (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime(),
+  )
+
+  const onReclassify = async (inboundId: number, intent: InboundReply["intent"]) => {
+    try {
+      const res = await reclassify({ inboundId, intent })
+      if (res.unchanged) {
+        toast.info("Already classified that way")
+        return
+      }
+      toast.success(
+        intent === "stop"
+          ? "Reclassified as opt-out — lead archived"
+          : `Reclassified as ${INTENT_CONFIG[intent].label}`,
+      )
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to reclassify")
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <MessageSquare className="size-4 text-primary" /> WhatsApp Replies
+          <Badge variant="outline" className="ml-auto text-[10px]">{replies.length}</Badge>
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Inbound replies, auto-classified. Correct the intent if the classifier got it
+          wrong — the corrected intent re-routes the lead.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {lead.lastInboundAt && (
+          <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-1.5">
+            <Clock className="size-3.5 text-success shrink-0" />
+            <span className="text-[11px] text-success">
+              24h customer-care window last opened {new Date(lead.lastInboundAt).toLocaleString()}
+            </span>
+          </div>
+        )}
+        {replies.map((m) => {
+          const cfg = INTENT_CONFIG[m.intent]
+          const Icon = cfg.icon
+          return (
+            <div key={m.id} className="space-y-1.5">
+              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {m.body || <span className="italic text-muted-foreground">(no text content)</span>}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pl-1">
+                <span className="text-[10px] text-muted-foreground">{m.receivedAt.toLocaleString()}</span>
+                <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium", cfg.cls)}>
+                  <Icon className="size-3" />{cfg.label}
+                </span>
+                <Select
+                  value={m.intent}
+                  onValueChange={(v) => onReclassify(m.id, v as InboundReply["intent"])}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className="h-6 w-auto gap-1 px-2 text-[10px]" aria-label="Reclassify intent">
+                    <Pencil className="size-3" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INBOUND_INTENTS.map((o) => (
+                      <SelectItem key={o} value={o} className="text-xs">{INTENT_CONFIG[o].label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
 function DripTab({ lead }: { lead: LeadDetail }) {
   const [exitOpen, setExitOpen] = useState(false)
@@ -1818,6 +1936,18 @@ function DripTab({ lead }: { lead: LeadDetail }) {
       toast.success("Lead exited from drip")
       setExitOpen(false)
       setExitReason("")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to exit drip")
+    }
+  }
+
+  // P6.13 — one-tap "responded during the track" fast path (flowchart: a reply
+  // during a drip track exits the drip → re-qualify). Shortcut for the common
+  // case, vs. the full Manual-Exit reason picker.
+  const handleResponded = async () => {
+    try {
+      await exitDrip({ reason: "replied" })
+      toast.success("Exited drip — re-qualify this lead from the Call Log tab")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to exit drip")
     }
@@ -1851,6 +1981,32 @@ function DripTab({ lead }: { lead: LeadDetail }) {
 
   return (
     <div className="space-y-4">
+      {/* P6.13 — responded-during-track one-tap CTA */}
+      <Card className="border-success/30 bg-success/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-full bg-success/10 text-success">
+              <MessageSquare className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Customer responded during this track?</p>
+              <p className="text-xs text-muted-foreground">
+                Exit the drip and re-qualify with a fresh capture.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+            disabled={exiting || lead.crmLocked}
+            onClick={handleResponded}
+          >
+            <CheckCircle2 className="size-3.5" />
+            {exiting ? "Exiting…" : "Mark replied → re-qualify"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">

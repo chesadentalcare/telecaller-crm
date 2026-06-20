@@ -64,11 +64,14 @@ export interface ReactivationLead extends LeadBase {
   reason: string
 }
 
-// Gap #11 — long-cycle nurture pool
+// Gap #11 — long-cycle nurture pool. P6.12 — `retouch` marks the 24-month
+// re-touch pool (already-purchased leads parked for a re-touch) so the view can
+// badge them distinctly from ordinary 6+ month / reactivation leads.
 export interface SixMonthLead extends LeadBase {
   reactivateBy: string
   source: string
   reason: string
+  retouch: boolean
 }
 
 // P6.9 — re-qualification work items (drip reply / changed-details / timing)

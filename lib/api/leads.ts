@@ -539,6 +539,18 @@ export const leadsApi = {
       ),
     ),
 
+  // P6.14 — manual classifier override: correct the intent of an inbound reply.
+  reclassifyInbound: (
+    id: number | string,
+    body: { inboundId: number; intent: "stop" | "meeting" | "zoom" | "vague" },
+  ) =>
+    unwrap(
+      api.post<Envelope<{ intent: string; unchanged?: boolean }>>(
+        endpoints.leadReclassify(String(id)),
+        body,
+      ),
+    ),
+
   enterDrip: (
     id: number | string,
     body: { timelineBucket?: string; track?: "1_month" | "3_month" | "6_plus_month" },
@@ -776,7 +788,7 @@ export const leadsApi = {
     idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
     reactivation: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; handed_back_at: string; handed_back_by: string; reason: string }>>>(endpoints.queueReactivation)),
-    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null }>>>(endpoints.queueSixMonth)),
+    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null; retouch?: number | boolean }>>>(endpoints.queueSixMonth)),
     requalification: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }>>>(endpoints.queueRequalification)),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
