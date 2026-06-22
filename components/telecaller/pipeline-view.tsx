@@ -164,6 +164,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="font-mono font-medium text-primary">#{lead.id}</span>
+                              <span>•</span>
                               <span>{lead.phone}</span>
                               <span>•</span>
                               <span>{lead.city}</span>
