@@ -75,9 +75,9 @@ export function IdleQueueView() {
                     {lead.name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                    <button type="button" onClick={() => openLead(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
+                      <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
                     </div>
                   </div>
                 </div>

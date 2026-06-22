@@ -9,7 +9,7 @@ import { useDormantLeads } from "@/hooks/use-leads"
 // P6.10 — Archived end-state. Filed leads (no-response exhausted, not-interested,
 // wrong-number unrecovered, opted-out). Read-only — they re-open automatically on
 // any inbound message.
-export function ArchivedView() {
+export function ArchivedView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data: leads = [], isLoading } = useDormantLeads()
   if (isLoading) return <ViewSkeleton />
 
@@ -32,14 +32,21 @@ export function ArchivedView() {
         ) : (
           <div className="divide-y">
             {leads.map((lead) => (
-              <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
+              <div
+                key={lead.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenLead?.(lead.id)}
+                onKeyDown={(e) => { if (e.key === "Enter") onOpenLead?.(lead.id) }}
+                className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+              >
                 <div className="flex items-center gap-4">
                   <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground font-medium text-sm">
                     {lead.name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">{lead.name}</p>
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                    <p className="text-xs text-muted-foreground"><span className="font-mono text-primary">#{lead.id}</span> · {lead.phone}</p>
                   </div>
                 </div>
                 <div className="text-right">

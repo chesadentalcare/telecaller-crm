@@ -65,7 +65,7 @@ function getTrackConfig(track: string) {
   }
 }
 
-export function DripQueueView() {
+export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data, isLoading } = useDripLeads()
   // Mirror server data locally so we can tick down `nextMessageIn` every second
   // without thrashing the query cache. Re-syncs whenever the query updates.
@@ -147,9 +147,9 @@ export function DripQueueView() {
                             {lead.name.split(" ").slice(1).map((n) => n[0]).join("")}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                            <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
+                              <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
                             </div>
                           </div>
                         </div>

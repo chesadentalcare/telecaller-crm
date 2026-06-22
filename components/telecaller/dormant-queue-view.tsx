@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ViewSkeleton } from "./view-skeleton"
 import { useDormantLeads } from "@/hooks/use-leads"
 
-export function DormantQueueView() {
+export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data: leads = [], isLoading } = useDormantLeads()
   if (isLoading) return <ViewSkeleton />
 
@@ -33,8 +33,8 @@ export function DormantQueueView() {
                   {lead.name.split(" ").map((n) => n[0]).join("")}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">{lead.name}</p>
-                  <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                  <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
+                  <p className="text-xs text-muted-foreground"><span className="font-mono text-primary">#{lead.id}</span> · {lead.phone}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">

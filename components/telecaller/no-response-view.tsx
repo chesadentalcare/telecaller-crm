@@ -17,7 +17,7 @@ import type { NoResponseLead } from "@/lib/types/lead"
 // Strip everything but digits so the value is safe for tel:/wa.me links.
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`
 
-export function NoResponseView() {
+export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data: leads = [], isLoading, isError, error, refetch } = useNoResponseLeads()
   const qc = useQueryClient()
   // Tracks which lead's recovery WhatsApp is in-flight (per-row spinner state),
@@ -161,9 +161,9 @@ export function NoResponseView() {
                       {lead.name.split(" ").map((n) => n[0]).join("")}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{lead.name}</p>
+                      <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
+                        <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
                       </div>
                     </div>
                   </div>

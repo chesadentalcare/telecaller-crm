@@ -168,12 +168,12 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   drip: {
     title: "Drip Queue",
     subtitle: "Leads in nurture campaigns",
-    render: () => <DripQueueView />,
+    render: ({ openLead }) => <DripQueueView onOpenLead={openLead} />,
   },
   "no-response": {
     title: "No Response",
     subtitle: "Leads with failed contact attempts",
-    render: () => <NoResponseView />,
+    render: ({ openLead }) => <NoResponseView onOpenLead={openLead} />,
   },
   idle: {
     title: "Idle Queue",
@@ -183,7 +183,7 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   dormant: {
     title: "Dormant",
     subtitle: "Inactive leads for archival",
-    render: () => <DormantQueueView />,
+    render: ({ openLead }) => <DormantQueueView onOpenLead={openLead} />,
   },
   reactivation: {
     title: "Reactivation Inbox",
@@ -210,7 +210,7 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   archived: {
     title: "Archived",
     subtitle: "Filed leads (re-open on inbound)",
-    render: () => <ArchivedView />,
+    render: ({ openLead }) => <ArchivedView onOpenLead={openLead} />,
   },
   approvals: {
     title: "Pending Approvals",
@@ -257,7 +257,7 @@ function TelecallerDashboardInner() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const queueCounts = useQueueCounts()
-  const { role, hasRole } = useRole()
+  const { role, hasRole, isManagerOrAbove } = useRole()
 
   // Stable callback identity so memoized children don't re-render needlessly.
   const setActiveView = useMemo(
@@ -287,10 +287,13 @@ function TelecallerDashboardInner() {
   )
 
   const requested = VIEW_REGISTRY[activeView]
-  // Role-gated views (e.g. manager-only approvals) fall back to home when the
-  // current user lacks the required role, so a deep-link can't expose them.
+  // Role-gated views fall back to home when the user lacks the required role, so
+  // a deep-link can't expose them. Managers/admins can view everything (the
+  // sidebar already shows them every item) — without this, opening a
+  // telecaller-only view (e.g. Calls Due) as an admin silently showed the Home
+  // dashboard instead.
   const view =
-    requested && (!requested.roles || (role !== null && hasRole(...requested.roles)))
+    requested && (!requested.roles || isManagerOrAbove || (role !== null && hasRole(...requested.roles)))
       ? requested
       : FALLBACK_VIEW
   const pageInfo = { title: view.title, subtitle: view.subtitle }
