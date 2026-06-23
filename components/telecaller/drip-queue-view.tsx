@@ -8,11 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table"
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { LeadQueueRow } from "./lead-queue-row"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -120,65 +118,53 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="text-xs font-semibold text-muted-foreground w-[220px]">Lead</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Track</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground w-[180px]">Progress</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">
-                    <div className="flex items-center gap-1"><Timer className="size-3" />Next Message</div>
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Last Engaged</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads.map((lead) => {
-                  const trackConfig = getTrackConfig(lead.track)
-                  const isUrgent = lead.nextMessageIn < 3600
-                  const progress = (lead.messagesSent / lead.totalMessages) * 100
-                  return (
-                    <TableRow key={lead.id} className="group hover:bg-muted/50">
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
-                            {lead.name.split(" ").slice(1).map((n) => n[0]).join("")}
-                          </div>
-                          <div>
-                            <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] font-medium ${trackConfig.className}`}>{trackConfig.label}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
+          {filteredLeads.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">No active drip campaigns</p>
+          ) : (
+            <div className="divide-y">
+              {filteredLeads.map((lead) => {
+                const trackConfig = getTrackConfig(lead.track)
+                const isUrgent = lead.nextMessageIn < 3600
+                const progress = (lead.messagesSent / lead.totalMessages) * 100
+                return (
+                  <LeadQueueRow
+                    key={lead.id}
+                    id={lead.id}
+                    name={lead.name}
+                    phone={lead.phone}
+                    equipment={lead.equipment}
+                    replied={lead.replied}
+                    onOpen={onOpenLead}
+                    badge={
+                      <Badge variant="outline" className={`text-[10px] font-medium ${trackConfig.className}`}>{trackConfig.label}</Badge>
+                    }
+                    meta={
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Progress value={progress} className="h-1.5 w-16" />
-                          <span className="text-xs text-muted-foreground font-medium">{lead.messagesSent}/{lead.totalMessages}</span>
+                          <span className="font-medium">Stage {lead.messagesSent}/{lead.totalMessages}</span>
+                          <span>•</span>
+                          <span className={`inline-flex items-center gap-1 ${isUrgent ? "text-warning font-medium" : ""}`}>
+                            <Timer className="size-3" />next {formatCountdown(lead.nextMessageIn)}
+                          </span>
+                          <span>•</span>
+                          <span>engaged {formatDate(lead.lastEngagement)}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className={`flex items-center gap-1.5 ${isUrgent ? "text-warning font-medium" : "text-foreground"}`}>
-                          <Timer className={`size-3.5 ${isUrgent ? "text-warning" : "text-muted-foreground"}`} />
-                          <span className="text-sm font-mono">{formatCountdown(lead.nextMessageIn)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell><span className="text-xs text-muted-foreground">{formatDate(lead.lastEngagement)}</span></TableCell>
-                      <TableCell className="text-right">
-                        <DripRowActions lead={lead} />
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        {lead.projection && (
+                          <div className="inline-flex items-center gap-1 text-[11px] text-foreground/80">
+                            <Calendar className="size-3 text-primary" />
+                            Projected completion {new Date(lead.projection.projectedCompletionAt).toLocaleDateString()}
+                            <span className="text-muted-foreground">· {lead.projection.stageLabel}</span>
+                          </div>
+                        )}
+                      </div>
+                    }
+                    actions={<DripRowActions lead={lead} />}
+                  />
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -213,7 +199,7 @@ function DripRowActions({ lead }: { lead: DripLead }) {
 
   return (
     <>
-      <div className="flex items-center justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-end gap-1">
         {waNumber ? (
           <Button asChild size="sm" variant="outline" className="h-9 md:h-7 px-2.5 gap-1.5">
             <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">

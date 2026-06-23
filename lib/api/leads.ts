@@ -27,6 +27,22 @@ interface Envelope<T> {
 const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
   p.then((res) => res.data)
 
+// Issue 3 — reply-indicator columns the queue endpoints attach to each row.
+export interface ReplyRowFields {
+  has_unread_reply?: 0 | 1 | boolean
+  last_inbound_at?: string | null
+  last_inbound_body?: string | null
+  last_inbound_intent?: "stop" | "meeting" | "zoom" | "vague" | null
+}
+
+// Issue 4 — projected nurture closure returned by drip endpoints.
+export interface DripProjectionPayload {
+  projectedCompletionAt: string
+  stageIndex: number
+  totalStages: number
+  stageLabel: string
+}
+
 // ─── Row shapes returned by the backend ─────────────────────────────────
 export interface CreateLeadResponse {
   opportunityDocEntry: number
@@ -105,6 +121,8 @@ export interface DripStateRow {
   status: "active" | "exited_replied" | "exited_meeting_booked" | "exited_completed" | "exited_manual"
   exited_at: string | null
   exit_reason: string | null
+  // Issue 4 — projected completion + current stage (null when not active).
+  projection?: DripProjectionPayload | null
 }
 
 export interface MeetingRow {
@@ -372,7 +390,7 @@ export interface LeadDetail {
   firstContact?: { current_touch_index: number; call_attempts_used: number; status: string } | null
 }
 
-export interface PipelineRow {
+export interface PipelineRow extends ReplyRowFields {
   id: number
   equipment: string | null
   source: string | null
@@ -388,27 +406,34 @@ export interface PipelineRow {
   last_attempt_time: string | null
 }
 
-export interface NoResponseRow {
+export interface NoResponseRow extends ReplyRowFields {
   id: number
   equipment: string | null
+  customer_name: string | null
+  phone: string | null
   attempts: number
   last_attempt: string
 }
 
-export interface DripQueueRow {
+export interface DripQueueRow extends ReplyRowFields {
   id: number
   track: "1_month" | "3_month" | "6_plus_month"
   messages_sent: number
+  started_at: string | null
   next_message_at: string | null
   last_engagement: string | null
   equipment: string | null
   customer_name: string | null
   phone: string | null
+  // Issue 4 — projected completion + current stage for the queue row.
+  projection?: DripProjectionPayload | null
 }
 
-export interface IdleRow {
+export interface IdleRow extends ReplyRowFields {
   id: number
   equipment: string | null
+  customer_name: string | null
+  phone: string | null
   idle_days: number
   last_activity: string
 }
@@ -420,7 +445,7 @@ export interface DormantRow {
 }
 
 // P6.8 — Calls-Due worklist row (over call_nudges, with enriched phone).
-export interface CallNudgeRow {
+export interface CallNudgeRow extends ReplyRowFields {
   id: number
   reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
   scheduled_at: string
@@ -428,6 +453,7 @@ export interface CallNudgeRow {
   status: string
   assigned_to: string
   equipment: string | null
+  customer_name?: string | null
   phone: string
   whatsapp_number?: string | null
 }
@@ -588,10 +614,16 @@ export const leadsApi = {
     body: { timelineBucket?: string; track?: "1_month" | "3_month" | "6_plus_month" },
   ) =>
     unwrap(
-      api.post<Envelope<{ opportunityDocEntry: number; track: string }>>(
+      api.post<Envelope<{ opportunityDocEntry: number; track: string; projection: DripProjectionPayload | null }>>(
         endpoints.dripEnter(String(id)),
         body,
       ),
+    ),
+
+  // Issue 3 — mark a lead's inbound replies as read (clears the "Replied" badge).
+  ackReplies: (id: number | string) =>
+    unwrap(
+      api.post<Envelope<{ acknowledged: number }>>(endpoints.leadAckReplies(String(id))),
     ),
 
   exitDrip: (id: number | string, body: { reason: string; status?: string }) =>

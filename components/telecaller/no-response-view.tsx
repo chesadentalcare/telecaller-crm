@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { PhoneOff, RefreshCw, Phone, AlertTriangle } from "lucide-react"
+import { PhoneOff, RefreshCw, Phone, AlertTriangle, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
@@ -161,10 +161,20 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
                       {lead.name.split(" ").map((n) => n[0]).join("")}
                     </div>
                     <div>
-                      <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
+                        {lead.replied?.hasUnread && (
+                          <Badge className="gap-1 bg-success/15 text-success border-success/30 text-[10px]">
+                            <MessageSquare className="size-3" />Replied
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
                       </div>
+                      {lead.replied?.body && (
+                        <p className="text-xs italic text-foreground/80 bg-muted/60 rounded px-2 py-1 mt-1 max-w-md line-clamp-2">“{lead.replied.body}”</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

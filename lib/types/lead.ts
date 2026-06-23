@@ -8,10 +8,32 @@ export type LeadStatus = "new" | "contacted" | "qualified" | "meeting-scheduled"
 export type DripTrack = "1-month" | "3-month" | "6-month"
 export type InterestLevel = "hot" | "warm" | "cold" | "just_exploring"
 
+// Issue 3 — inbound-reply indicator carried on every queue lead so a list row can
+// show a "Replied" badge + the latest message snippet. `hasUnread` is true while the
+// rep hasn't opened the lead's Replies tab (clears via POST /leads/:id/replies/ack).
+export type ReplyIntent = "stop" | "meeting" | "zoom" | "vague"
+export interface ReplyIndicator {
+  hasUnread: boolean
+  body: string | null
+  intent: ReplyIntent | null
+  at?: string | null
+}
+
+// Issue 4 — projected nurture closure derived from the drip track cadence.
+export interface DripProjection {
+  projectedCompletionAt: string   // ISO date
+  stageIndex: number              // 0-based index of the current/next touch
+  totalStages: number
+  stageLabel: string
+}
+
 export interface LeadBase {
   id: string
   name: string
   phone: string
+  // Issue 3 — present on queues that surface inbound replies (pipeline/drip/
+  // no-response/idle/calls-due). Undefined elsewhere.
+  replied?: ReplyIndicator
 }
 
 // Pipeline tab — the active call queue
@@ -35,6 +57,8 @@ export interface DripLead extends LeadBase {
   messagesSent: number
   totalMessages: number
   equipment: string
+  // Issue 4 — projected nurture completion + current stage label.
+  projection?: DripProjection
 }
 
 // 4+ failed call attempts

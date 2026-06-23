@@ -1,0 +1,96 @@
+"use client"
+
+// Issue 1 — one consolidated row/card per lead, shared by every queue view so a
+// lead is never split across a 4+ column table. Layout:
+//   line 1: avatar · name · #id · (Replied badge)
+//   line 2: phone · equipment
+//   line 3: `meta` — the queue-specific status line (track / attempts / idle days…)
+//   reply snippet (Issue 3) when the lead has an inbound reply
+//   right:  `badge` (status) + `actions` (call / WhatsApp / row menu)
+//
+// The queue view owns the per-queue bits (`meta`, `badge`, `actions`); this
+// component owns identity + the cross-cutting reply indicator.
+
+import type { ReactNode } from "react"
+import { MessageSquare } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import type { ReplyIndicator } from "@/lib/types/lead"
+
+const INTENT_LABEL: Record<string, string> = {
+  meeting: "wants a meeting",
+  zoom: "wants Zoom / changed details",
+  stop: "asked to stop",
+  vague: "needs a reply",
+}
+
+export interface LeadQueueRowProps {
+  id: string
+  name: string
+  phone?: string
+  equipment?: string
+  /** Queue-specific status line (track, attempts, idle days, …). */
+  meta?: ReactNode
+  /** Right-aligned status badge shown before the actions. */
+  badge?: ReactNode
+  /** Inbound-reply indicator (Issue 3). */
+  replied?: ReplyIndicator
+  /** Row actions (call, WhatsApp, menu). */
+  actions?: ReactNode
+  onOpen?: (id: string) => void
+}
+
+export function LeadQueueRow({
+  id, name, phone, equipment, meta, badge, replied, actions, onOpen,
+}: LeadQueueRowProps) {
+  const initials =
+    name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
+
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs shrink-0">
+          {initials}
+        </div>
+        <div className="min-w-0 space-y-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => onOpen?.(id)}
+              className="text-sm font-medium text-foreground hover:underline text-left truncate"
+            >
+              {name}
+            </button>
+            <span className="font-mono text-xs text-primary">#{id}</span>
+            {replied?.hasUnread && (
+              <Badge className="gap-1 bg-success/15 text-success border-success/30 text-[10px]">
+                <MessageSquare className="size-3" />Replied
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+            {phone && phone !== "—" && (
+              <>
+                <span>{phone}</span>
+                <span>•</span>
+              </>
+            )}
+            <span className="truncate">{equipment || "—"}</span>
+          </div>
+          {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
+          {replied?.body && (
+            <p className="text-xs italic text-foreground/80 bg-muted/60 rounded px-2 py-1 mt-1 max-w-md line-clamp-2">
+              “{replied.body}”
+              {replied.intent && (
+                <span className="not-italic text-muted-foreground"> · {INTENT_LABEL[replied.intent] ?? replied.intent}</span>
+              )}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {badge}
+        {actions}
+      </div>
+    </div>
+  )
+}

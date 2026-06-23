@@ -152,6 +152,19 @@ export function useReclassifyInbound(id: string | number) {
   })
 }
 
+// Issue 3 — mark a lead's inbound replies as read; clears the "Replied" badge on
+// the queues. Silent (no toast): it fires automatically when the Replies tab opens.
+export function useAckReplies(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.ackReplies(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(id)) })
+      invalidateAllLeads(qc)
+    },
+  })
+}
+
 export function useEnterDrip(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

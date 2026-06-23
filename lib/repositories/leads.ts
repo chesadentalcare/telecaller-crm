@@ -30,7 +30,9 @@ import type {
   IdleRow,
   DormantRow,
   CallNudgeRow,
+  ReplyRowFields,
 } from "@/lib/api/leads"
+import type { ReplyIndicator, DripProjection } from "@/lib/types/lead"
 
 // ─── helpers ────────────────────────────────────────────────────────────
 const placeholderName = (id: number | string) => `Lead #${id}`
@@ -53,6 +55,22 @@ const trackBackToFront = (t: string): DripTrack => {
   return "6-month"
 }
 
+// Issue 3 — fold the backend reply columns into a ReplyIndicator, or undefined
+// when the lead has never received an inbound reply (so rows stay clean).
+const toReplied = (r: ReplyRowFields): ReplyIndicator | undefined => {
+  if (!r.last_inbound_at && !r.last_inbound_body) return undefined
+  return {
+    hasUnread: !!r.has_unread_reply,
+    body: r.last_inbound_body ?? null,
+    intent: r.last_inbound_intent ?? null,
+    at: r.last_inbound_at ?? null,
+  }
+}
+
+// Issue 4 — pass the backend projection straight through (shapes match).
+const toProjection = (p?: { projectedCompletionAt: string; stageIndex: number; totalStages: number; stageLabel: string } | null): DripProjection | undefined =>
+  p ? { ...p } : undefined
+
 // ─── mappers ────────────────────────────────────────────────────────────
 const toPipeline = (r: PipelineRow): PipelineLead => ({
   id: String(r.id),
@@ -67,6 +85,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   createdAt: new Date(r.created_at),
   lastAttemptTime: parseDate(r.last_attempt_time),
   value: r.budget_range || undefined,
+  replied: toReplied(r),
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {
@@ -82,25 +101,29 @@ const toDrip = (r: DripQueueRow): DripLead => {
     messagesSent: r.messages_sent,
     totalMessages: r.track === "1_month" ? 9 : r.track === "3_month" ? 19 : 13,
     equipment: r.equipment ?? "—",
+    replied: toReplied(r),
+    projection: toProjection(r.projection),
   }
 }
 
 const toNoResponse = (r: NoResponseRow): NoResponseLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
   attempts: r.attempts,
   lastAttempt: humanAgo(r.last_attempt),
   equipment: r.equipment ?? "—",
+  replied: toReplied(r),
 })
 
 const toIdle = (r: IdleRow): IdleLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
   idleDays: r.idle_days,
   lastActivity: humanAgo(r.last_activity),
   equipment: r.equipment ?? "—",
+  replied: toReplied(r),
 })
 
 const toDormant = (r: DormantRow): DormantLead => ({
@@ -163,13 +186,14 @@ const toRequalification = (r: RequalRow): RequalificationLead => ({
 
 const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
+  name: r.customer_name || placeholderName(r.id),
   phone: r.phone || placeholderPhone, // P6.8 — enriched phone passes through (not the placeholder)
   reason: r.reason,
   scheduledAt: new Date(r.scheduled_at),
   slot: r.slot,
   equipment: r.equipment ?? "—",
   whatsappNumber: r.whatsapp_number ?? undefined,
+  replied: toReplied(r),
 })
 
 // Tiny relative-time helper. The mock data already used strings like

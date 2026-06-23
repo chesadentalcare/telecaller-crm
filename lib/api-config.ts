@@ -88,6 +88,7 @@ export const endpoints = {
   leadRecoveryWhatsapp: (id: string) => `/leads/${id}/recovery-whatsapp`,
   leadRecoverNumber: (id: string) => `/leads/${id}/recover-number`,
   leadReclassify: (id: string) => `/leads/${id}/reclassify`,
+  leadAckReplies: (id: string) => `/leads/${id}/replies/ack`,
   leadTimeline: (id: string) => `/leads/${id}/timeline`,
   leadHandBack: (id: string) => `/leads/${id}/hand-back`,
   // Meeting SLAs (Phase 3)

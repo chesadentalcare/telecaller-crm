@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   ArrowLeft,
   Phone,
@@ -101,6 +101,7 @@ import {
   useRecoveryWhatsapp,
   useRecoverNumber,
   useReclassifyInbound,
+  useAckReplies,
   useVerifyPhone,
   useUploadMeetingSummary,
   useConfirmDecisionTimeline,
@@ -112,6 +113,7 @@ import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
 import { useProducts } from "@/hooks/use-products"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
+import type { DripProjection } from "@/lib/types/lead"
 
 // Some backend errors (e.g. the SAP CheckSession 500) return a body with no
 // `message` key, so ApiError.message falls back to the bare statusText
@@ -190,6 +192,8 @@ type LeadDetail = {
   dripMessageIndex?: number
   dripTotalMessages?: number
   dripNextMessageAt?: Date
+  // Issue 4 — projected nurture completion + current stage (from the backend).
+  dripProjection?: DripProjection
   // CRM lock (SOP §4B — quote SLA breach)
   crmLocked: boolean
   crmLockedReason?: string
@@ -312,6 +316,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTotalMessages:
       d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
+    dripProjection: d.drip?.projection ?? undefined,
     crmLocked: !!ext.crm_locked,
     crmLockedReason: ext.crm_locked_reason ?? undefined,
     latestPhysicalMeetingId: latestPhysicalMeeting?.id,
@@ -1840,9 +1845,17 @@ const INBOUND_INTENTS = ["meeting", "zoom", "vague", "stop"] as const
 // the intent re-routes the lead server-side (and STOP archives + opts out).
 function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutateAsync: reclassify, isPending } = useReclassifyInbound(lead.id)
+  const { mutate: ackReplies } = useAckReplies(lead.id)
   const replies = [...(lead.inbound ?? [])].sort(
     (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime(),
   )
+
+  // Issue 3 — opening the Replies tab means the rep has read them: clear the
+  // "Replied" unread badge across the queues. Fire once per lead when the tab mounts.
+  useEffect(() => {
+    if (replies.length) ackReplies()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead.id])
 
   const onReclassify = async (inboundId: number, intent: InboundReply["intent"]) => {
     try {
@@ -1918,6 +1931,60 @@ function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
       </CardContent>
     </Card>
   )
+}
+
+// Issue 4 — the full end-to-end nurture sequence per track (day offset + channel +
+// label), mirroring the backend DRIP_CONTENT/TRACK_CADENCE plan. Rendered as a
+// timeline so the rep can see every stage (sent / next / upcoming), not just the
+// next message.
+const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp"; label: string }[]> = {
+  "1_month": [
+    { day: 0, channel: "call", label: "Anchor call — warm re-open" },
+    { day: 1, channel: "whatsapp", label: "Recap + brochure" },
+    { day: 2, channel: "call", label: "Nudge call — handle the objection" },
+    { day: 3, channel: "whatsapp", label: "Social proof — nearby clinic / model" },
+    { day: 6, channel: "call", label: "Decision call — offer a meeting" },
+    { day: 9, channel: "whatsapp", label: "Offer — financing / demo slot" },
+    { day: 12, channel: "call", label: "Last-value call — final objection" },
+    { day: 15, channel: "whatsapp", label: "Soft close — hold a demo slot" },
+    { day: 17, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+  ],
+  "3_month": [
+    { day: 0, channel: "call", label: "Anchor call — confirm 3-month timeline" },
+    { day: 5, channel: "whatsapp", label: "Education — product deep-dive" },
+    { day: 10, channel: "whatsapp", label: "Education — ROI" },
+    { day: 15, channel: "whatsapp", label: "Education — clinic story" },
+    { day: 20, channel: "whatsapp", label: "Education — comparison guide" },
+    { day: 25, channel: "call", label: "Check-in call — timeline / budget" },
+    { day: 30, channel: "whatsapp", label: "Nurture — comparison" },
+    { day: 35, channel: "whatsapp", label: "Nurture — demo invite" },
+    { day: 40, channel: "whatsapp", label: "Nurture — feature spotlight" },
+    { day: 45, channel: "whatsapp", label: "Nurture — financing" },
+    { day: 50, channel: "call", label: "Mid-cycle call — objections / Zoom" },
+    { day: 55, channel: "whatsapp", label: "Nurture — seasonal offer" },
+    { day: 60, channel: "whatsapp", label: "Nurture — case study" },
+    { day: 65, channel: "whatsapp", label: "Nurture — event invite" },
+    { day: 70, channel: "whatsapp", label: "Nurture — reminder" },
+    { day: 75, channel: "whatsapp", label: "Nurture — value recap" },
+    { day: 80, channel: "call", label: "Pre-close call — lock a visit" },
+    { day: 85, channel: "whatsapp", label: "Soft close" },
+    { day: 90, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+  ],
+  "6_plus_month": [
+    { day: 0, channel: "whatsapp", label: "Seeded re-open — low pressure" },
+    { day: 14, channel: "whatsapp", label: "Education — long-horizon value" },
+    { day: 28, channel: "whatsapp", label: "Education — no ask" },
+    { day: 42, channel: "call", label: "Anchor call — confirm still 6m+" },
+    { day: 56, channel: "whatsapp", label: "Nurture — new models" },
+    { day: 70, channel: "whatsapp", label: "Nurture — events" },
+    { day: 84, channel: "whatsapp", label: "Nurture — clinic features" },
+    { day: 98, channel: "whatsapp", label: "Nurture — case study" },
+    { day: 112, channel: "call", label: "Anchor call — timeline firming up?" },
+    { day: 126, channel: "whatsapp", label: "Nurture — seasonal offer" },
+    { day: 140, channel: "whatsapp", label: "Nurture — financing" },
+    { day: 154, channel: "whatsapp", label: "Nurture — reminder" },
+    { day: 168, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+  ],
 }
 
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
@@ -2038,6 +2105,58 @@ function DripTab({ lead }: { lead: LeadDetail }) {
               Next message: {lead.dripNextMessageAt.toLocaleString()}
             </div>
           )}
+
+          {/* Issue 4 — predicted closure, recomputed at every stage. */}
+          {lead.dripProjection && (
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 space-y-0.5">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Calendar className="size-4" />
+                Projected closing date: {new Date(lead.dripProjection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Currently at stage {lead.dripProjection.stageIndex + 1} of {lead.dripProjection.totalStages} — {lead.dripProjection.stageLabel}. The predicted date updates as each stage sends.
+              </p>
+            </div>
+          )}
+
+          {/* Issue 4 — the entire nurture sequence end-to-end. */}
+          {lead.dripTrack && DRIP_SEQUENCE[lead.dripTrack] && (
+            <div>
+              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                <Timer className="size-3.5 text-muted-foreground" />Full nurture sequence
+              </p>
+              <ol className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                {DRIP_SEQUENCE[lead.dripTrack].map((t, i) => {
+                  const idx = lead.dripMessageIndex ?? 0
+                  const state = i < idx ? "done" : i === idx ? "current" : "upcoming"
+                  const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
+                  return (
+                    <li
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-2 rounded px-2 py-1 text-xs",
+                        state === "current" && "bg-primary/10 ring-1 ring-primary/30",
+                        state === "upcoming" && "opacity-60",
+                      )}
+                    >
+                      {state === "done" ? (
+                        <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                      ) : state === "current" ? (
+                        <Clock className="size-3.5 text-primary shrink-0" />
+                      ) : (
+                        <ChannelIcon className="size-3.5 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="font-mono text-[10px] text-muted-foreground w-12 shrink-0">Day {t.day}</span>
+                      <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
+                      <span className={cn("truncate", state === "current" && "font-medium text-foreground")}>{t.label}</span>
+                      {state === "current" && <Badge className="ml-auto text-[9px] bg-primary/15 text-primary border-primary/30 shrink-0">Next</Badge>}
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2">
             <Dialog open={exitOpen} onOpenChange={setExitOpen}>
               <DialogTrigger asChild>

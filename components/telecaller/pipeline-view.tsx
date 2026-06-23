@@ -6,11 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table"
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { LeadQueueRow } from "./lead-queue-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
@@ -122,94 +120,71 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="text-xs font-semibold text-muted-foreground w-[250px]">Lead</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Equipment</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Source</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Value</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Status</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground">Added</TableHead>
-                  <TableHead className="text-xs font-semibold text-muted-foreground text-right w-[140px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads.map((lead) => {
-                  const statusConfig = getStatusConfig(lead.status)
-                  return (
-                    <TableRow
-                      key={lead.id}
-                      className="group hover:bg-muted/50 cursor-pointer"
-                      onClick={() => onOpenLead?.(lead.id)}
-                    >
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="relative flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs">
-                            {lead.name.split(" ").slice(1).map((n) => n[0]).join("")}
-                            {lead.phoneVerified ? (
-                              <ShieldCheck className="absolute -bottom-0.5 -right-0.5 size-3.5 text-success bg-background rounded-full" />
-                            ) : (
-                              <ShieldAlert className="absolute -bottom-0.5 -right-0.5 size-3.5 text-destructive bg-background rounded-full" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-medium text-foreground">{lead.name}</p>
-                              {!lead.phoneVerified && (
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-destructive/40 text-destructive">
-                                  Unverified
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <span className="font-mono font-medium text-primary">#{lead.id}</span>
-                              <span>•</span>
-                              <span>{lead.phone}</span>
-                              <span>•</span>
-                              <span>{lead.city}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-foreground">{lead.equipment}</TableCell>
-                      <TableCell><span className="text-xs text-muted-foreground">{lead.source}</span></TableCell>
-                      <TableCell><span className="text-sm font-medium text-foreground">{lead.value}</span></TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-[10px] font-medium ${statusConfig.className}`}>
-                          {statusConfig.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><span className="text-xs text-muted-foreground">{formatTime(lead.createdAt)}</span></TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button size="sm" className="h-9 md:h-7 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
-                            <Phone className="size-3" />Call
+          {filteredLeads.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">No leads in this view</p>
+          ) : (
+            <div className="divide-y">
+              {filteredLeads.map((lead) => {
+                const statusConfig = getStatusConfig(lead.status)
+                const tel = lead.phone.replace(/\D/g, "")
+                return (
+                  <LeadQueueRow
+                    key={lead.id}
+                    id={lead.id}
+                    name={lead.name}
+                    phone={lead.phone}
+                    equipment={lead.equipment}
+                    replied={lead.replied}
+                    onOpen={onOpenLead}
+                    meta={
+                      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        {lead.value && <><span className="font-medium text-foreground">{lead.value}</span><span>•</span></>}
+                        <span>{lead.source}</span>
+                        <span>•</span>
+                        <span>added {formatTime(lead.createdAt)}</span>
+                        {lead.phoneVerified ? (
+                          <span className="inline-flex items-center gap-0.5 text-success"><ShieldCheck className="size-3" />verified</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 text-destructive"><ShieldAlert className="size-3" />unverified</span>
+                        )}
+                      </span>
+                    }
+                    badge={
+                      <Badge variant="outline" className={`text-[10px] font-medium ${statusConfig.className}`}>
+                        {statusConfig.label}
+                      </Badge>
+                    }
+                    actions={
+                      <div className="flex items-center gap-1">
+                        {tel.length >= 10 ? (
+                          <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                            <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
                           </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem className="text-xs"><MessageSquare className="mr-2 size-3.5" />WhatsApp</DropdownMenuItem>
-                              <DropdownMenuItem className="text-xs"><Calendar className="mr-2 size-3.5" />Schedule</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-xs" onClick={() => onOpenLead?.(lead.id)}>
-                                <ChevronRight className="mr-2 size-3.5" />View Details
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        ) : (
+                          <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem className="text-xs"><MessageSquare className="mr-2 size-3.5" />WhatsApp</DropdownMenuItem>
+                            <DropdownMenuItem className="text-xs"><Calendar className="mr-2 size-3.5" />Schedule</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-xs" onClick={() => onOpenLead?.(lead.id)}>
+                              <ChevronRight className="mr-2 size-3.5" />View Details
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    }
+                  />
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

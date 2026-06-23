@@ -113,7 +113,12 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
       // the no-extra-clicks UX matches the SOP.
       if (values.routeSelection === "drip") {
         try {
-          await enterDrip({ timelineBucket: values.timeline })
+          // Issue 4 — confirm entry with the projected closure timeline.
+          const res = await enterDrip({ timelineBucket: values.timeline })
+          if (res?.projection) {
+            const date = new Date(res.projection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+            toast.success(`Lead entered drip — projected close ${date} (${res.projection.totalStages}-touch nurture)`)
+          }
         } catch (err) {
           // Non-fatal: rapid-qualify succeeded; drip entry can be retried.
           toast.warning("Qualification saved, but drip entry failed — retry from the Drip tab")
