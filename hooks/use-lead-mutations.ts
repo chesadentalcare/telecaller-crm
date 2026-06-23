@@ -60,6 +60,7 @@ export function useLogAttempt(id: string | number) {
       outcome: CallOutcome
       notes?: string
       attempt_type?: "call" | "retry_call"
+      predicted_closing_date: string
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       callback_at?: string

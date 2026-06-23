@@ -477,6 +477,8 @@ export interface AttemptResponse {
   attemptNumber: number
   triggerRecovery: boolean
   route?: string // present when ROUTE_OUTCOMES=true (Phase 6 dispatcher)
+  predictedClosingDate?: string
+  predictedCloseSynced?: boolean // did the SAP PredictedClosingDate push succeed
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────
@@ -493,6 +495,8 @@ export const leadsApi = {
       outcome: CallOutcome
       notes?: string
       attempt_type?: "call" | "retry_call"
+      // Mandatory predicted close (YYYY-MM-DD) — pushed to SAP PredictedClosingDate.
+      predicted_closing_date: string
       // Phase 6 routing inputs (honored when ROUTE_OUTCOMES=true; additive, ignored otherwise)
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
