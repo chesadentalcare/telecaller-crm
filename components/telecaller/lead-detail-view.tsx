@@ -1075,6 +1075,8 @@ function CallsTab({
       const body = {
         outcome: values.outcome,
         notes: values.notes,
+        // Mandatory predicted close — pushed to SAP PredictedClosingDate server-side.
+        predicted_closing_date: values.predictedClosingDate,
         ...(values.outcome === "engaged" ? { ready_now: readyNow } : {}),
         ...(values.outcome === "not_interested" ? { not_interested_reason: niReason as NotInterestedReason } : {}),
         // datetime-local ("YYYY-MM-DDTHH:mm") → mysql datetime
@@ -1084,6 +1086,9 @@ function CallsTab({
       }
       const res = await logAttempt(body)
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
+      if (res.predictedCloseSynced === false) {
+        toast.warning("Predicted close saved, but the SAP push failed — it will need a re-sync.")
+      }
       if (res.triggerRecovery) {
         toast.info("4th no-response — recovery WhatsApp ready to send", { duration: 6000 })
       }
@@ -1216,6 +1221,31 @@ function CallsTab({
                 <p className="text-[10px] text-muted-foreground">Leave blank to default to the next working evening slot.</p>
               </div>
             )}
+
+            {/* Mandatory predicted closing date — required for every attempt; pushed
+                to SAP PredictedClosingDate on submit. */}
+            <Controller
+              control={control}
+              name="predictedClosingDate"
+              render={({ field }) => (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Predicted closing date <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    disabled={callState.locked}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Required — synced to SAP as the opportunity&apos;s predicted close.</p>
+                  {errors.predictedClosingDate && (
+                    <p className="text-[11px] text-destructive">{errors.predictedClosingDate.message}</p>
+                  )}
+                </div>
+              )}
+            />
 
             <Controller
               control={control}
