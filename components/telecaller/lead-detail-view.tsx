@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from "react"
 import {
   ArrowLeft,
+  BookOpen,
+  CalendarClock,
   IndianRupee,
   Phone,
   Mail,
@@ -70,6 +72,9 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RapidQualificationForm } from "./rapid-qualification-form"
 import { EditLeadForm } from "./edit-lead-form"
+import { OutcomeExplainerDialog } from "./outcome-explainer-dialog"
+import { MeetingChooserDialog, type EngagedCallValues } from "./meeting-chooser-dialog"
+import { resolveFlow, fillTokens, type OutcomeFlow, type OutcomeContext } from "@/lib/outcome-flows"
 import {
   callAttemptSchema,
   callAttemptDefaults,
@@ -107,6 +112,7 @@ import {
   useHandover,
   useUpdateZoomOutcome,
   useSendDesignerFeeLink,
+  useEnterDrip,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -147,6 +153,10 @@ type CallAttempt = {
   attemptedBy: string
   /** Set when this attempt was corrected after the fact (audit marker). */
   edited?: boolean
+  /** not_interested 3-way reason (when outcome is not_interested). */
+  notInterestedReason?: "genuine_no" | "timing_budget" | "already_purchased"
+  /** call / retry_call / whatsapp_recovery. */
+  attemptType?: "call" | "whatsapp_recovery" | "retry_call"
 }
 
 type LeadDetail = {
@@ -170,6 +180,8 @@ type LeadDetail = {
   // Amendment 2: false when stage/predicted-close are the MySQL last-known cache
   // (live SAP read failed). Drives the "SAP cached" header indicator.
   sapLive?: boolean
+  /** SAP-native predicted closing date (live-read, cached on outage). 'YYYY-MM-DD'. */
+  predictedClosingDate?: string
   createdAt: Date
   lastActivityAt: Date
   idleDays: number
@@ -183,7 +195,7 @@ type LeadDetail = {
   practiceType?: string
   timelineBucket?: string
   budgetRange?: string
-  firstCallRoute?: "online_meeting" | "physical_meeting" | "drip_info" | "pending"
+  firstCallRoute?: "online_meeting" | "physical_meeting" | "drip_info" | "pending" | "not_interested" | "nurture"
   // Full qual
   decisionMaker?: string
   competitors?: string
@@ -289,6 +301,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     source: ext.source || "—",
     stage: ext.stage,
     sapLive: d.sapLive ?? true,
+    predictedClosingDate: ext.predicted_closing_date ?? undefined,
     status: (
       ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
         ? "meeting-scheduled"
@@ -335,6 +348,8 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       notes: a.notes ?? undefined,
       attemptedBy: a.attempted_by,
       edited: !!a.edited_at,
+      notInterestedReason: a.not_interested_reason ?? undefined,
+      attemptType: a.attempt_type,
     })),
     // Phase 6 — lifecycle / routing fields
     archived: ext.stage === "archived" || !!ext.dormant_since,
@@ -819,6 +834,17 @@ function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <InfoRow icon={ChevronRight} label="Stage" value={lead.stage} />
+          {/* SAP-native predicted closing date (live-read; "cached" when SAP was unreachable). */}
+          <InfoRow
+            icon={CalendarClock}
+            label="Predicted close (SAP)"
+            value={
+              lead.predictedClosingDate
+                ? `${new Date(lead.predictedClosingDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}${lead.sapLive === false ? " · cached" : ""}`
+                : undefined
+            }
+            emptyText="Not set in SAP"
+          />
           <InfoRow icon={Calendar} label="Created" value={lead.createdAt.toLocaleDateString()} />
           <InfoRow icon={Clock} label="Last activity" value={`${lead.idleDays} days ago`} />
           {lead.firstCallRoute && (
@@ -1023,6 +1049,28 @@ const OUTCOME_CONFIG: Record<CallOutcome, { label: string; color: string; icon: 
   replied:             { label: "Replied (WhatsApp)",  color: "text-success",          icon: MessageSquare },
 }
 
+const NI_REASON_LABEL: Record<string, string> = {
+  genuine_no: "Genuine no",
+  timing_budget: "Timing / budget",
+  already_purchased: "Already purchased",
+}
+const ATTEMPT_TYPE_LABEL: Record<string, string> = {
+  retry_call: "Retry call",
+  whatsapp_recovery: "Recovery WhatsApp",
+}
+
+// What a logged outcome actually did, for the Call History detail. Engaged can't know
+// ready_now from the stored row, so it gets an outcome-level summary; every other outcome
+// resolves the precise flow (including the not-interested reason) from the registry.
+function attemptEffect(a: CallAttempt): { summary: string; flow: OutcomeFlow | null; ctx: OutcomeContext; reasonLabel?: string } {
+  const ctx: OutcomeContext = { readyNow: false, niReason: a.notInterestedReason, attemptNumber: a.attemptNumber }
+  const flow = resolveFlow(a.outcome as CallOutcome, ctx)
+  const summary = a.outcome === "engaged"
+    ? "Customer reached — routed to a meeting or nurture."
+    : flow?.whatThisDoes ?? ""
+  return { summary, flow, ctx, reasonLabel: a.notInterestedReason ? NI_REASON_LABEL[a.notInterestedReason] : undefined }
+}
+
 // P6.7 — automated first-contact campaign progress (6 touches / 12 days · 4 calls).
 function FirstContactStrip({ lead }: { lead: LeadDetail }) {
   const fc = lead.firstContact
@@ -1130,11 +1178,64 @@ export function CallsTab({
   const [niReason, setNiReason] = useState<NotInterestedReason | "">("") // not_interested 3-way
   const [callbackAt, setCallbackAt] = useState("")                     // call_back_requested
 
+  // ── Outcome-driven layer ──────────────────────────────────────────────────
+  // resolveFlow is the single source of truth used by BOTH the contextual preview
+  // and the "Learn about this outcome" modal, so they can't drift from the behaviour.
+  const attemptNumber = priorOutcomes.length + 1
+  const flowCtx: OutcomeContext = { readyNow, niReason: niReason || undefined, attemptNumber }
+  const flow = resolveFlow((outcome || "") as CallOutcome | "", flowCtx)
+  // Both meeting types require full qualification (qualificationGate) before booking.
+  const isFullyQualified = [
+    lead.decisionMaker, lead.timelineBucket, lead.budgetRange,
+    lead.competitors, lead.fundingMethod, lead.dentistType && lead.practiceType,
+  ].every(Boolean)
+
+  const [explainerOpen, setExplainerOpen] = useState(false)
+  const [meetingOpen, setMeetingOpen] = useState(false)
+  const [engagedCallValues, setEngagedCallValues] = useState<EngagedCallValues>({ predictedClosingDate: "", notes: "" })
+  const [lastResult, setLastResult] = useState<{
+    flow: OutcomeFlow; projectionLabel?: string; triggerRecovery?: boolean; routedServerSide?: boolean
+  } | null>(null)
+  // Call-history "what happens" explainer (per historical attempt).
+  const [historyDetail, setHistoryDetail] = useState<{ flow: OutcomeFlow; ctx: OutcomeContext } | null>(null)
+
+  const { mutateAsync: enterDrip } = useEnterDrip(lead.id)
+  const { mutateAsync: sendRecovery, isPending: sendingRecovery } = useRecoveryWhatsapp(lead.id)
+
+  const resetForm = () => {
+    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
+    setReadyNow(false); setNiReason(""); setCallbackAt("")
+  }
+
+  const sendRecoveryWhatsApp = async () => {
+    try {
+      await sendRecovery({
+        phone: lead.phone.replace(/\D/g, ""),
+        dentistName: lead.name,
+        equipmentInterest: lead.equipment,
+      })
+      toast.success("Recovery WhatsApp sent")
+      setLastResult(null)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to send recovery WhatsApp")
+    }
+  }
+
   const onSubmit = async (values: CallAttemptValues) => {
     if (values.outcome === "not_interested" && !niReason) {
       toast.error("Pick a reason for ‘Not interested’")
       return
     }
+    const submittedFlow = resolveFlow(values.outcome, { readyNow, niReason: niReason || undefined, attemptNumber })
+
+    // ENGAGED + ready: meeting details are MANDATORY before the call logs. Open the
+    // chooser — it books the meeting AND logs the engaged attempt together.
+    if (submittedFlow?.guidedAction === "open-meeting-modal") {
+      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "" })
+      setMeetingOpen(true)
+      return
+    }
+
     try {
       const body = {
         outcome: values.outcome,
@@ -1150,15 +1251,35 @@ export function CallsTab({
           : {}),
       }
       const res = await logAttempt(body)
+      const routedServerSide = !!res.route
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
       if (res.predictedCloseSynced === false) {
         toast.warning("Predicted close saved, but the SAP push failed — it will need a re-sync.")
       }
-      if (res.triggerRecovery) {
-        toast.info("4th no-response — recovery WhatsApp ready to send", { duration: 6000 })
+
+      let projectionLabel: string | undefined
+      // NURTURE: make the drip actually happen and capture the projected timeline. If
+      // the server already entered it (routing on, route==='drip'), don't re-enter.
+      if (submittedFlow?.guidedAction === "enter-drip" && res.route !== "drip") {
+        if (!lead.timelineBucket) {
+          toast.warning("Set a timeline in Qualification to enter the nurture drip.")
+        } else {
+          try {
+            const drip = await enterDrip({ timelineBucket: lead.timelineBucket })
+            if (drip?.projection) {
+              const date = new Date(drip.projection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+              projectionLabel = `Stage 1 of ${drip.projection.totalStages} · projected close ${date}`
+            }
+          } catch {
+            toast.warning("Logged, but drip entry needs full qualification — retry from the Drip tab.")
+          }
+        }
       }
-      reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
-      setReadyNow(false); setNiReason(""); setCallbackAt("")
+
+      if (submittedFlow) {
+        setLastResult({ flow: submittedFlow, projectionLabel, triggerRecovery: !!res.triggerRecovery, routedServerSide })
+      }
+      resetForm()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to log attempt")
     }
@@ -1228,6 +1349,39 @@ export function CallsTab({
                 </div>
               )}
             />
+
+            {/* Outcome-driven contextual preview — what this outcome will do, + a
+                "Learn about this outcome" link to the full FE/BE flowchart. Reads the
+                same registry the guided submit uses. */}
+            {flow && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground">{flow.title}</p>
+                    <p className="text-[11px] text-muted-foreground">{flow.whatThisDoes}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0 h-7 gap-1 text-[11px] text-primary"
+                    onClick={() => setExplainerOpen(true)}
+                  >
+                    <BookOpen className="size-3.5" />
+                    Learn about this outcome
+                  </Button>
+                </div>
+                {flow.thresholds.length > 0 && (
+                  <ul className="space-y-0.5">
+                    {flow.thresholds.map((t, i) => (
+                      <li key={i} className="flex gap-1.5 text-[10px] text-muted-foreground">
+                        <span>•</span><span>{fillTokens(t, flowCtx)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {/* P6.1 — ENGAGED: ready for a meeting now? (drives meeting vs drip) */}
             {outcome === "engaged" && (
@@ -1348,10 +1502,63 @@ export function CallsTab({
                 className="gap-1.5"
               >
                 {lead.crmLocked || !lead.phoneVerified || callState.locked ? <Lock className="size-3.5" /> : <Send className="size-3.5" />}
-                {lead.crmLocked ? "CRM Locked" : !lead.phoneVerified ? "Verify Phone First" : callState.locked ? "Calling Locked" : "Log Attempt"}
+                {lead.crmLocked ? "CRM Locked" : !lead.phoneVerified ? "Verify Phone First" : callState.locked ? "Calling Locked"
+                  : flow?.guidedAction === "open-meeting-modal" ? "Schedule meeting & log"
+                  : flow?.guidedAction === "enter-drip" ? "Enter nurture & log"
+                  : "Log Attempt"}
               </Button>
             </div>
           </form>
+
+          {/* Outcome-driven post-log result — shows what actually happened + next step. */}
+          {lastResult && (
+            <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium">{lastResult.flow.title}</p>
+                  <p className="text-[11px] text-muted-foreground">{lastResult.flow.whatThisDoes}</p>
+                </div>
+                <Button type="button" size="icon" variant="ghost" className="size-6 shrink-0" onClick={() => setLastResult(null)}>
+                  <XCircle className="size-3.5" />
+                </Button>
+              </div>
+              {lastResult.projectionLabel && (
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-foreground">
+                  <Timer className="size-3.5 text-primary" />
+                  <span>Entered nurture — {lastResult.projectionLabel}</span>
+                  <Button type="button" size="sm" variant="link" className="h-auto p-0 text-[11px]" onClick={() => onNavigate?.("drip")}>View drip</Button>
+                </div>
+              )}
+              {lastResult.triggerRecovery && (
+                <Button type="button" size="sm" onClick={sendRecoveryWhatsApp} disabled={sendingRecovery} className="gap-1.5">
+                  <MessageSquare className="size-3.5" />
+                  {sendingRecovery ? "Sending…" : "Send recovery WhatsApp"}
+                </Button>
+              )}
+              {!lastResult.routedServerSide && lastResult.flow.guidedAction === "none" && lastResult.flow.nodes.some((n) => n.gated === "ROUTE_OUTCOMES") && (
+                <p className="text-[10px] text-muted-foreground">The downstream routing for this outcome activates at go-live.</p>
+              )}
+            </div>
+          )}
+
+          {/* Engaged → meeting: the atomic chooser (books meeting + logs the call together). */}
+          <MeetingChooserDialog
+            open={meetingOpen}
+            onOpenChange={setMeetingOpen}
+            leadId={lead.id}
+            address={lead.address}
+            isFullyQualified={isFullyQualified}
+            callValues={engagedCallValues}
+            onLogged={resetForm}
+          />
+
+          {/* "Learn about this outcome" — full FE/BE flowchart for the selected outcome. */}
+          <OutcomeExplainerDialog
+            open={explainerOpen}
+            onOpenChange={setExplainerOpen}
+            flow={flow}
+            ctx={flowCtx}
+          />
 
           {/* P6.4 — per-phase no-response guidance */}
           {(() => {
@@ -1402,6 +1609,9 @@ export function CallsTab({
                 // initial disposition. Later attempts stay read-only.
                 const isFirstAttempt = firstAttempt && a.id === firstAttempt.id
                 const canEdit = isFirstAttempt && !lead.crmLocked && lead.phoneVerified
+                // Full call-log detail: what this outcome did + its reason + type.
+                const effect = attemptEffect(a)
+                const typeLabel = a.attemptType && a.attemptType !== "call" ? ATTEMPT_TYPE_LABEL[a.attemptType] : null
                 return (
                   <li key={a.id} className="flex gap-3 text-sm">
                     <div className="flex flex-col items-center shrink-0">
@@ -1411,11 +1621,14 @@ export function CallsTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className="font-medium">Attempt #{a.attemptNumber}</span>
-                        <span className={cn("text-xs", cfg.color)}>· {cfg.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          · {a.attemptedAt.toLocaleDateString()} by {a.attemptedBy}
-                        </span>
+                        <span className="font-medium">{a.attemptNumber > 0 ? `Attempt #${a.attemptNumber}` : "Activity"}</span>
+                        <span className={cn("text-xs font-medium", cfg.color)}>· {cfg.label}</span>
+                        {effect.reasonLabel && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1 border-destructive/30 text-destructive">{effect.reasonLabel}</Badge>
+                        )}
+                        {typeLabel && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{typeLabel}</Badge>
+                        )}
                         {a.edited && (
                           <span className="text-[10px] text-muted-foreground/80 italic">· edited</span>
                         )}
@@ -1430,7 +1643,32 @@ export function CallsTab({
                           </button>
                         )}
                       </div>
-                      {a.notes && <p className="text-xs text-muted-foreground mt-1">{a.notes}</p>}
+                      {/* Full timestamp + who logged it */}
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {a.attemptedAt.toLocaleString()} · by {a.attemptedBy}
+                      </p>
+                      {/* What this outcome did (with a Learn link to the full flow) */}
+                      {effect.summary && (
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md bg-muted/40 px-2 py-1">
+                          <span className="text-[11px] text-foreground">{effect.summary}</span>
+                          {effect.flow && (
+                            <button
+                              type="button"
+                              onClick={() => setHistoryDetail({ flow: effect.flow!, ctx: effect.ctx })}
+                              className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                            >
+                              <BookOpen className="size-3" />
+                              Learn
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {/* Rep's notes for this call */}
+                      {a.notes && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-medium text-foreground/70">Notes: </span>{a.notes}
+                        </p>
+                      )}
                     </div>
                   </li>
                 )
@@ -1439,6 +1677,14 @@ export function CallsTab({
           )}
         </CardContent>
       </Card>
+
+      {/* "What happens" explainer for a historical attempt (Call History → Learn). */}
+      <OutcomeExplainerDialog
+        open={!!historyDetail}
+        onOpenChange={(o) => { if (!o) setHistoryDetail(null) }}
+        flow={historyDetail?.flow ?? null}
+        ctx={historyDetail?.ctx ?? { readyNow: false, attemptNumber: 1 }}
+      />
 
       {/* Correct a mis-logged FIRST attempt (chain-validated). */}
       {editTarget && firstAttempt && (

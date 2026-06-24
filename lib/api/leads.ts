@@ -81,7 +81,11 @@ export interface LeadExtensionRow {
   stage: string
   handed_off_at: string | null
   handoff_from: string | null
-  first_call_route: "online_meeting" | "physical_meeting" | "drip_info" | "pending"
+  first_call_route: "online_meeting" | "physical_meeting" | "drip_info" | "pending" | "not_interested" | "nurture"
+  // Amendment 2 (decision #1): SAP-native, overlaid live by getLeadDetail (predicted
+  // close + closing %); cached column values when SAP is unreachable.
+  predicted_closing_date: string | null
+  closing_percentage: number | null
   crm_locked: 0 | 1
   crm_locked_reason: string | null
   dormant_since: string | null
@@ -104,6 +108,7 @@ export interface AttemptRow {
   attempt_type: "call" | "whatsapp_recovery" | "retry_call"
   attempt_number: number
   outcome: CallOutcome
+  not_interested_reason: "genuine_no" | "timing_budget" | "already_purchased" | null
   attempted_by: string
   notes: string | null
   attempted_at: string

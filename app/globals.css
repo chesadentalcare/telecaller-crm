@@ -135,3 +135,38 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Professional thin scrollbars for modals. The default OS scrollbar is chunky and
+   sits over the dialog's rounded edge, which looks unprofessional. This makes any
+   scrollable dialog (and anything with .thin-scrollbar) use a slim, inset, rounded
+   thumb that only shows on hover/scroll — clean and unobtrusive. */
+[data-slot='dialog-content'],
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 28%, transparent) transparent;
+}
+[data-slot='dialog-content']::-webkit-scrollbar,
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+[data-slot='dialog-content']::-webkit-scrollbar-track,
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-slot='dialog-content']::-webkit-scrollbar-thumb,
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--muted-foreground) 26%, transparent);
+  border-radius: 9999px;
+  /* transparent border + padding-box clip insets the thumb off the rounded corner */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+[data-slot='dialog-content']:hover::-webkit-scrollbar-thumb,
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--muted-foreground) 42%, transparent);
+}
+[data-slot='dialog-content']::-webkit-scrollbar-corner,
+.thin-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
