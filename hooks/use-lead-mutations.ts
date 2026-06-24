@@ -120,6 +120,22 @@ export function usePhysicalMeeting(id: string | number) {
   })
 }
 
+// Amendment 2 (Theme 8) — edit a Zoom meeting's outcome + send the design-fee link.
+export function useUpdateZoomOutcome(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { outcome_notes?: string; design_fee_discussed?: boolean; design_fee_paid?: boolean; design_fee_declined?: boolean }) =>
+      leadsApi.updateZoomOutcome(meetingId, body),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+export function useSendDesignerFeeLink(meetingId: string | number) {
+  return useMutation({
+    mutationFn: () => leadsApi.sendDesignerFeeLink(meetingId),
+  })
+}
+
 export function useRecoveryWhatsapp(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

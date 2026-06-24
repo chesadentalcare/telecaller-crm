@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import {
   ArrowLeft,
+  IndianRupee,
   Phone,
   Mail,
   MapPin,
@@ -104,6 +105,8 @@ import {
   useUpdateTimeline,
   useHandBackLead,
   useHandover,
+  useUpdateZoomOutcome,
+  useSendDesignerFeeLink,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -2468,18 +2471,75 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
           <div className="mt-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Scheduled Zoom meetings</p>
             {persistedZoomMeetings.map((m) => (
-              <ZoomLinkPanel
-                key={m.id}
-                title={new Date(m.meetingAt).toLocaleString()}
-                joinUrl={m.joinUrl}
-                startUrl={m.startUrl}
-                passcode={m.passcode}
-              />
+              <div key={m.id} className="space-y-2">
+                <ZoomLinkPanel
+                  title={new Date(m.meetingAt).toLocaleString()}
+                  joinUrl={m.joinUrl}
+                  startUrl={m.startUrl}
+                  passcode={m.passcode}
+                />
+                <ZoomOutcomePanel meetingId={m.id} locked={lead.crmLocked} />
+              </div>
             ))}
           </div>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+// Amendment 2 (Theme 8) — edit the Zoom call-log outcome post-meeting + send the
+// ₹5,000 designer-fee payment link. The link goes through the pluggable payment SEAM
+// (no real provider wired yet — the button records a placeholder and tells the rep
+// provider integration isn't enabled). Editing the outcome does NOT re-fire the stage
+// transition or meeting notifications (it's a pure edit of the call-log row).
+function ZoomOutcomePanel({ meetingId, locked }: { meetingId: number; locked?: boolean }) {
+  const [notes, setNotes] = useState("")
+  const { mutateAsync: saveOutcome, isPending: saving } = useUpdateZoomOutcome(meetingId)
+  const { mutateAsync: sendLink, isPending: sending } = useSendDesignerFeeLink(meetingId)
+
+  const onSaveOutcome = async () => {
+    try {
+      await saveOutcome({ outcome_notes: notes })
+      toast.success("Zoom outcome saved")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save outcome")
+    }
+  }
+
+  const onSendLink = async () => {
+    try {
+      const res = await sendLink()
+      toast[res.enabled ? "success" : "info"](
+        res.enabled
+          ? `Design-fee link (₹${res.amount}) sent`
+          : `Payment provider not enabled yet — recorded a ₹${res.amount} placeholder (ref ${res.ref}).`,
+      )
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to send design-fee link")
+    }
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+      <p className="text-[11px] font-medium text-muted-foreground">Post-meeting outcome &amp; design fee</p>
+      <Textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Outcome of the Zoom (e.g. layout shared, fee discussed)…"
+        className="text-xs min-h-[60px]"
+        disabled={locked}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" onClick={onSaveOutcome} disabled={saving || locked} className="gap-1.5">
+          {saving ? "Saving…" : "Save outcome"}
+        </Button>
+        <Button size="sm" onClick={onSendLink} disabled={sending || locked} className="gap-1.5">
+          <IndianRupee className="size-3.5" />
+          {sending ? "Sending…" : "Send ₹5,000 design-fee link"}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -2561,7 +2621,8 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
 
   const { control, handleSubmit, reset, getValues, formState } = useForm<PhysicalMeetingValues>({
     resolver: zodResolver(physicalMeetingSchema),
-    defaultValues: physicalMeetingDefaults,
+    // Amendment 2 — prefill the address from the lead so the rep reconfirms (edits if needed).
+    defaultValues: { ...physicalMeetingDefaults, address: lead.address ?? "" },
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
@@ -2571,13 +2632,15 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
   const isFullyQualified = fullQualFields.every((v) => !!v)
 
   const { mutateAsync: schedulePhysical } = usePhysicalMeeting(lead.id)
+  // The rep names the sales employee on this same screen (Amendment 2 Theme 7).
+  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(scheduleOpen)
 
   const onSubmit = async (values: PhysicalMeetingValues) => {
     try {
       const res = await schedulePhysical(values)
-      // Backend's round-robin / territory picker decides the salesperson and
-      // fires the lead.handoff_to_sales event — we just show what it picked.
+      // Booking fires the automatic handover to the NAMED sales employee.
       setAssignedSalesperson(res.assignedSalesperson)
+      if (res.sapSynced === false) toast.warning("Booked, but the SAP ownership assignment failed — it will need a re-sync.")
       setScheduleOpen(false)
       setHandoffOpen(true)
     } catch (err) {
@@ -2657,6 +2720,47 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
                     </div>
                   )}
                 />
+                {/* Amendment 2 (Theme 7) — name the sales employee on this screen. */}
+                <Controller
+                  control={control}
+                  name="salesUsername"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Assign sales employee</Label>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="h-9" disabled={salesLoading}>
+                          <SelectValue placeholder={salesLoading ? "Loading…" : "Select a salesperson"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {salesUsers.map((u) => (
+                            <SelectItem key={u.username} value={u.username} disabled={!u.sales_person_code}>
+                              {u.full_name || u.username}
+                              <span className="text-muted-foreground"> · {u.role.replace("_", " ")}</span>
+                              {!u.sales_person_code ? " · ⚠ no SAP code" : ""}
+                            </SelectItem>
+                          ))}
+                          {!salesLoading && salesUsers.length === 0 && (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">No active salespeople found</div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      {errors.salesUsername && <p className="text-[11px] text-destructive">{errors.salesUsername.message}</p>}
+                    </div>
+                  )}
+                />
+                {/* Amendment 2 (Theme 7) — reconfirm the address (prefilled, editable). */}
+                <Controller
+                  control={control}
+                  name="address"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Reconfirm address</Label>
+                      <Input {...field} placeholder="Lead's confirmed address" />
+                      <p className="text-[10px] text-muted-foreground">Confirm or correct — written back to the lead &amp; SAP.</p>
+                      {errors.address && <p className="text-[11px] text-destructive">{errors.address.message}</p>}
+                    </div>
+                  )}
+                />
                 <Controller
                   control={control}
                   name="extraEmails"
@@ -2676,8 +2780,8 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
                 <Alert className="bg-primary/5 border-primary/30">
                   <AlertTriangle className="size-4 text-primary" />
                   <AlertDescription className="text-xs">
-                    Confirming will fire <code className="text-[10px]">lead.handoff_to_sales</code> and
-                    reassign this lead to a salesperson via round-robin.
+                    Confirming fires <code className="text-[10px]">lead.handoff_to_sales</code> and
+                    assigns this lead to the named sales employee in SAP.
                   </AlertDescription>
                 </Alert>
               </div>

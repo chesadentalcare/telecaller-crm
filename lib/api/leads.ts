@@ -587,12 +587,30 @@ export const leadsApi = {
   physicalMeeting: (id: number | string, values: PhysicalMeetingValues) =>
     unwrap(
       api.post<
-        Envelope<{ meetingId: number; assignedSalesperson: string; event: string }>
+        Envelope<{ meetingId: number; assignedSalesperson: string; sapSynced: boolean; event: string }>
       >(endpoints.leadPhysicalMeeting(String(id)), {
         meetingAt: values.meetingAt,
         location: values.location,
+        // Amendment 2 — named sales employee + reconfirmed address fire the handover.
+        salesUsername: values.salesUsername,
+        address: values.address,
         extraEmails: values.extraEmails || undefined,
       }),
+    ),
+
+  // Amendment 2 (Theme 8) — edit the Zoom call-log outcome post-meeting (no stage re-trigger).
+  updateZoomOutcome: (
+    meetingId: number | string,
+    body: { outcome_notes?: string; design_fee_discussed?: boolean; design_fee_paid?: boolean; design_fee_declined?: boolean },
+  ) => unwrap(api.put<Envelope<{ meetingId: number }>>(endpoints.meetingZoomOutcome(String(meetingId)), body)),
+
+  // Amendment 2 (Theme 8) — send the ₹5,000 designer-fee payment link (stubbed seam).
+  sendDesignerFeeLink: (meetingId: number | string) =>
+    unwrap(
+      api.post<Envelope<{ meetingId: number; amount: number; url: string | null; ref: string | null; provider: string; enabled: boolean }>>(
+        endpoints.meetingDesignFeeLink(String(meetingId)),
+        {},
+      ),
     ),
 
   recoveryWhatsapp: (

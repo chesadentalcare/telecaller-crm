@@ -97,6 +97,9 @@ export const endpoints = {
   meetingSummaryUpload: (meetingId: string) => `/meetings/${meetingId}/summary`,
   meetingSlaStatus: (meetingId: string) => `/meetings/${meetingId}/sla`,
   meetingConfirmTimeline: (meetingId: string) => `/meetings/${meetingId}/confirm-timeline`,
+  // Amendment 2 (Theme 8) — edit the Zoom outcome + send the (stubbed) design-fee link.
+  meetingZoomOutcome: (meetingId: string) => `/meetings/${meetingId}/zoom-outcome`,
+  meetingDesignFeeLink: (meetingId: string) => `/meetings/${meetingId}/design-fee-link`,
   // Quotations (Phase 4)
   quotations: `/quotations`,
   quotationDetail: (id: string) => `/quotations/${id}`,
