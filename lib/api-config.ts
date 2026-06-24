@@ -78,6 +78,8 @@ export const endpoints = {
   // Lead lifecycle (Track 1 — see Track1_Telecaller_Dashboard_7Day_Plan.docx §4.2)
   leads: "/leads",
   leadDetail: (id: string) => `/leads/${id}`,
+  // Amendment 2 — full-field lead edit (PATCH).
+  leadUpdate: (id: string) => `/leads/${id}`,
   leadVerifyPhone: (id: string) => `/leads/${id}/verify-phone`,
   leadAttempt: (id: string) => `/leads/${id}/attempt`,
   leadAttemptEdit: (id: string, attemptId: string) => `/leads/${id}/attempts/${attemptId}`,

@@ -68,6 +68,7 @@ import { NOT_INTERESTED_REASONS, type NotInterestedReason } from "@/lib/schemas/
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RapidQualificationForm } from "./rapid-qualification-form"
+import { EditLeadForm } from "./edit-lead-form"
 import {
   callAttemptSchema,
   callAttemptDefaults,
@@ -237,7 +238,9 @@ type ZoomMeetingSummary = {
 // The view's LeadDetail type is the rich, UI-friendly shape. The backend
 // enriches extension with SAP BP data (phone, email, city, cardName) before
 // returning — so these fields are real values, not placeholders.
-function mapDetail(d: ApiLeadDetail): LeadDetail {
+// Exported so the cockpit panel (calls-due inline surface, Amendment 2 Theme 1) can
+// reuse the exact same mapping + tab components instead of duplicating them.
+export function mapDetail(d: ApiLeadDetail): LeadDetail {
   const ext = d.extension
   const id = String(ext.opportunity_doc_entry)
   const lastActivity =
@@ -572,6 +575,7 @@ function LeadDetailHeader({
   onCall?: () => void
 }) {
   const verifyPhone = useVerifyPhone(lead.id)
+  const [editOpen, setEditOpen] = useState(false)
 
   const hasPhone = lead.phone !== "—"
   const waNumber = (lead.whatsappNumber || (hasPhone ? lead.phone : "")).replace(/\D/g, "")
@@ -683,9 +687,43 @@ function LeadDetailHeader({
                 {verifyPhone.isPending ? "Verifying…" : "Verify Phone"}
               </Button>
             )}
+            {/* Amendment 2 (Theme 1) — full-field edit, identical to the cockpit's Edit tab. */}
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
           </div>
         </div>
       </CardContent>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit lead</DialogTitle>
+            <DialogDescription>Edit any field. Contact changes write through to SAP; a phone change resets verification.</DialogDescription>
+          </DialogHeader>
+          <EditLeadForm
+            leadId={lead.id}
+            initial={{
+              name: lead.name,
+              phone: lead.phone === "—" ? "" : lead.phone,
+              whatsappNumber: lead.whatsappNumber ?? "",
+              email: lead.email ?? "",
+              city: lead.city === "—" ? "" : lead.city,
+              state: lead.state ?? "",
+              pincode: lead.pincode ?? "",
+              address: lead.address ?? "",
+              equipment: lead.equipment === "—" ? "" : lead.equipment,
+              source: lead.source === "—" ? "" : lead.source,
+              category: lead.category ?? "",
+              interestLevel: lead.interestLevel ?? "",
+              budgetRange: lead.budgetRange ?? "",
+              purchaseType: lead.purchaseType ?? "",
+            }}
+            onSaved={() => setEditOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
@@ -1037,7 +1075,8 @@ function WrongNumberRecoveryCard({ lead }: { lead: LeadDetail }) {
 }
 
 // ─── Call Log Tab — Gap #2 (Call Attempt Logger) + integrated Qualification ─
-function CallsTab({
+// Exported for the cockpit panel (Amendment 2 Theme 1).
+export function CallsTab({
   lead,
   onNavigate,
 }: {
@@ -1858,7 +1897,7 @@ const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp";
 }
 
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
-function DripTab({ lead }: { lead: LeadDetail }) {
+export function DripTab({ lead }: { lead: LeadDetail }) {
   const [exitOpen, setExitOpen] = useState(false)
   const [exitReason, setExitReason] = useState("")
   const { mutateAsync: exitDrip, isPending: exiting } = useExitDrip(lead.id)
@@ -2074,7 +2113,7 @@ function DripTab({ lead }: { lead: LeadDetail }) {
 }
 
 // ─── Meetings Tab — Gap #4 Zoom Form + Gap #5 Physical Meeting + Handoff ──
-function MeetingsTab({ lead }: { lead: LeadDetail }) {
+export function MeetingsTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <ZoomMeetingCard lead={lead} />

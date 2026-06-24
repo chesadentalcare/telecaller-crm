@@ -17,6 +17,7 @@ import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
 import type { QualificationValues } from "@/lib/schemas/qualification"
+import type { LeadEditValues } from "@/lib/schemas/lead-edit"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
@@ -90,6 +91,15 @@ export function useQualify(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (values: QualificationValues) => leadsApi.qualify(id, values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+// Amendment 2 — full-field lead edit from the cockpit.
+export function useUpdateLead(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (values: Partial<LeadEditValues>) => leadsApi.update(id, values),
     onSuccess: () => invalidateAllLeads(qc),
   })
 }

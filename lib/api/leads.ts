@@ -11,6 +11,7 @@ import { api } from "./client"
 import { endpoints } from "@/lib/api-config"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
 import type { QualificationValues } from "@/lib/schemas/qualification"
+import type { LeadEditValues } from "@/lib/schemas/lead-edit"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
@@ -516,6 +517,16 @@ export const leadsApi = {
     unwrap(
       api.patch<Envelope<{ id: number; outcome: CallOutcome; notes: string | null }>>(
         endpoints.leadAttemptEdit(String(id), String(attemptId)),
+        body,
+      ),
+    ),
+
+  // Amendment 2 — full-field lead edit (PATCH). Sends only changed fields; backend
+  // writes MySQL + SAP BusinessPartner (awaited) and reports sapSynced.
+  update: (id: number | string, body: Partial<LeadEditValues>) =>
+    unwrap(
+      api.patch<Envelope<{ opportunityDocEntry: number; phoneReset: boolean; sapSynced: boolean; sapReason?: string }>>(
+        endpoints.leadUpdate(String(id)),
         body,
       ),
     ),
