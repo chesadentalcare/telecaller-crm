@@ -168,6 +168,9 @@ type LeadDetail = {
   source: string
   stage: string
   status: "new" | "contacted" | "qualified" | "meeting-scheduled" | "drip" | "dormant"
+  // Amendment 2: false when stage/predicted-close are the MySQL last-known cache
+  // (live SAP read failed). Drives the "SAP cached" header indicator.
+  sapLive?: boolean
   createdAt: Date
   lastActivityAt: Date
   idleDays: number
@@ -284,6 +287,7 @@ function mapDetail(d: ApiLeadDetail): LeadDetail {
     purchaseType: ext.purchase_type ?? undefined,
     source: ext.source || "—",
     stage: ext.stage,
+    sapLive: d.sapLive ?? true,
     status: (
       ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
         ? "meeting-scheduled"
@@ -606,6 +610,16 @@ function LeadDetailHeader({
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
+                {lead.sapLive === false && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 border-amber-500/40 text-amber-700 bg-amber-500/10"
+                    title="SAP is unreachable — stage and predicted close shown from the last-known cache."
+                  >
+                    <AlertTriangle className="size-3" />
+                    SAP cached
+                  </Badge>
+                )}
                 <Badge variant="outline" className="text-[10px] bg-primary/5">Source: {lead.source}</Badge>
                 {lead.phoneVerified && (
                   <Badge className="text-[10px] gap-1 bg-success/10 text-success border-success/30">
