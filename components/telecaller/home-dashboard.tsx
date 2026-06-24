@@ -44,6 +44,7 @@ import { HomeHeroBanner, type HeroBannerStats } from "./home-hero-banner"
 // ─── Stage label / color mappings for charts ────────────────────────
 const STAGE_COLORS: Record<string, string> = {
   new_lead: "#3b82f6",
+  unqualified: "#94a3b8",
   qualified: "#8b5cf6",
   rapid_qualified: "#6366f1",
   full_qualified: "#a855f7",
@@ -52,6 +53,7 @@ const STAGE_COLORS: Record<string, string> = {
   quotation_sent: "#06b6d4",
   follow_up: "#10b981",
   drip: "#64748b",
+  requalification: "#eab308",
   no_response: "#ef4444",
   idle: "#9ca3af",
   dormant: "#6b7280",
@@ -62,6 +64,7 @@ const STAGE_COLORS: Record<string, string> = {
 
 const STAGE_LABELS: Record<string, string> = {
   new_lead: "New Lead",
+  unqualified: "Unqualified",
   qualified: "Qualified",
   rapid_qualified: "Rapid Qualified",
   full_qualified: "Full Qualified",
@@ -70,6 +73,7 @@ const STAGE_LABELS: Record<string, string> = {
   quotation_sent: "Quote Sent",
   follow_up: "Follow Up",
   drip: "Drip",
+  requalification: "Re-qualification",
   no_response: "No Response",
   idle: "Idle",
   dormant: "Dormant",

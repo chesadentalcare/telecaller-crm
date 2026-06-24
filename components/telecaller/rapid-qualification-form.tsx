@@ -6,59 +6,35 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import {
   ClipboardList, Phone, Video, MapPin, Droplets, CheckCircle2,
-  User, Building2, Clock, IndianRupee, Swords, ShoppingCart,
+  User, Building2, Clock, IndianRupee, Swords, ShoppingCart, UserCheck, Landmark,
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import {
-  rapidQualificationSchema,
-  rapidQualificationDefaults,
-  type RapidQualificationValues,
-} from "@/lib/schemas/rapid-qualification"
-import { useRapidQualify, useEnterDrip } from "@/hooks/use-lead-mutations"
+  qualificationSchema,
+  qualificationDefaults,
+  type QualificationValues,
+  DENTIST_TYPES, PRACTICE_TYPES, TIMELINE_OPTIONS, BUDGET_RANGES,
+  COMPETITOR_OPTIONS, FUNDING_METHODS, PURCHASE_TYPES,
+} from "@/lib/schemas/qualification"
+import { useQualify, useEnterDrip } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 
-const DENTIST_TYPES = [
-  { value: "general_practitioner",          label: "General Practitioner" },
-  { value: "orthodontist",                   label: "Orthodontist" },
-  { value: "endodontist",                    label: "Endodontist" },
-  { value: "prosthodontist_implantologist",  label: "Prosthodontist / Implantologist" },
-  { value: "oral_maxillofacial_surgeon",     label: "Oral / Maxillofacial Surgeon" },
-  { value: "other",                          label: "Other" },
-] as const
-
-const PRACTICE_TYPES = [
-  { value: "solo_practice",          label: "Solo Practice" },
-  { value: "group_clinic",           label: "Group Clinic" },
-  { value: "multi_specialty_clinic", label: "Multi-Specialty Clinic" },
-  { value: "chain_corporate",        label: "Chain / Corporate" },
-  { value: "hospital_or_academic",   label: "Hospital / Academic" },
-  { value: "other",                  label: "Other" },
-] as const
-
-// SOP §3: 3-tier timeline aligned to 1 Month / 3 Months / 6+ Months
-const TIMELINE_OPTIONS = [
-  { value: "1_month",        label: "1 Month",   desc: "Buying soon"  },
-  { value: "3_months",       label: "3 Months",  desc: "Near term"    },
-  { value: "6_plus_months",  label: "6+ Months", desc: "Long cycle"   },
-] as const
-
-const BUDGET_RANGES = [
-  { value: "<5L",    label: "Under ₹5L"    },
-  { value: "5-10L",  label: "₹5L – ₹10L"  },
-  { value: "10-25L", label: "₹10L – ₹25L" },
-  { value: "25L+",   label: "₹25L+"        },
-] as const
+// Amendment 2 (Theme 3): the ONE qualification bar. The old rapid/full split is gone —
+// this single form captures the union of every qualification field (all mandatory) and
+// lands the lead at the single 'qualified' stage via PUT /leads/:id/qualify.
+// (Component kept named `RapidQualificationForm` so existing call sites are unchanged.)
 
 const ROUTE_OPTIONS = [
-  { id: "online-meeting",   label: "Online Meeting",   desc: "Schedule video demo",  icon: Video,  color: "text-primary", bgColor: "bg-primary/10", borderColor: "border-primary" },
-  { id: "physical-meeting", label: "Physical Meeting", desc: "In-person clinic demo", icon: MapPin, color: "text-success", bgColor: "bg-success/10", borderColor: "border-success" },
-  { id: "drip",             label: "Add to Drip",      desc: "Nurture over time",     icon: Droplets, color: "text-chart-3", bgColor: "bg-chart-3/10", borderColor: "border-chart-3" },
+  { id: "online_meeting", label: "Online Meeting", desc: "Schedule video demo", icon: Video, color: "text-primary", bgColor: "bg-primary/10", borderColor: "border-primary" },
+  { id: "physical_meeting", label: "Physical Meeting", desc: "In-person clinic demo", icon: MapPin, color: "text-success", bgColor: "bg-success/10", borderColor: "border-success" },
+  { id: "drip_info", label: "Add to Drip", desc: "Nurture over time", icon: Droplets, color: "text-chart-3", bgColor: "bg-chart-3/10", borderColor: "border-chart-3" },
 ] as const
 
 interface LeadInfo {
@@ -70,62 +46,58 @@ interface LeadInfo {
 interface RapidQualificationFormProps {
   lead?: LeadInfo
   leadId?: string | number
+  /** Pre-fill from the lead's current values (gap-fill an already-partly-qualified lead). */
+  defaults?: Partial<QualificationValues>
+  /** Re-qualification: start blank + show the >= 6-month close note. */
+  requalify?: boolean
+  /** Called after a successful qualify (e.g. close a dialog / refresh). */
+  onQualified?: () => void
 }
 
-// Maps the form's frontend-friendly route ids onto the backend's enum.
-const ROUTE_TO_BACKEND: Record<string, "online_meeting" | "physical_meeting" | "drip_info"> = {
-  "online-meeting": "online_meeting",
-  "physical-meeting": "physical_meeting",
-  drip: "drip_info",
-}
-
-export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormProps) {
+export function RapidQualificationForm({ lead, leadId, defaults, requalify, onQualified }: RapidQualificationFormProps) {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [lastRoute, setLastRoute] = useState<string>("")
 
-  const { mutateAsync: rapidQualify } = useRapidQualify(leadId ?? "")
+  const { mutateAsync: qualify } = useQualify(leadId ?? "")
   const { mutateAsync: enterDrip } = useEnterDrip(leadId ?? "")
 
-  const { control, handleSubmit, reset, formState } = useForm<RapidQualificationValues>({
-    resolver: zodResolver(rapidQualificationSchema),
-    defaultValues: rapidQualificationDefaults,
+  const { control, handleSubmit, reset, formState } = useForm<QualificationValues>({
+    resolver: zodResolver(qualificationSchema),
+    // Re-qualification clears everything ("never carry stale data forward"); otherwise
+    // pre-fill so the rep only fills the gaps.
+    defaultValues: requalify ? qualificationDefaults : { ...qualificationDefaults, ...defaults },
     mode: "onChange",
   })
   const { isValid, isSubmitting } = formState
 
-  const onSubmit = async (values: RapidQualificationValues) => {
+  const onSubmit = async (values: QualificationValues) => {
     if (!leadId) {
       toast.error("Open this form from a lead's detail view")
       return
     }
     try {
-      // Only send phoneVerified when the telecaller actually flipped it on.
-      // Sending a defined `false` would defeat the backend COALESCE guard and
-      // silently un-verify a lead that was already verified elsewhere; omitting
-      // the field lets the backend preserve the existing phone_verified state.
-      const { phoneVerified, ...rest } = values
-      await rapidQualify({
-        ...rest,
-        ...(phoneVerified ? { phoneVerified: true } : {}),
-        routeSelection: ROUTE_TO_BACKEND[values.routeSelection] || values.routeSelection,
-      } as RapidQualificationValues)
-      // If telecaller picked drip, also enter the drip track immediately so
-      // the no-extra-clicks UX matches the SOP.
-      if (values.routeSelection === "drip") {
+      const res = await qualify(values)
+      if (res?.sapSynced === false) {
+        toast.warning("Qualification saved, but the SAP sync failed — it will need a re-sync.")
+      }
+      // Drip route → enter the nurture track immediately (no extra clicks).
+      if (values.route === "drip_info") {
         try {
-          // Issue 4 — confirm entry with the projected closure timeline.
-          const res = await enterDrip({ timelineBucket: values.timeline })
-          if (res?.projection) {
-            const date = new Date(res.projection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
-            toast.success(`Lead entered drip — projected close ${date} (${res.projection.totalStages}-touch nurture)`)
+          const drip = await enterDrip({ timelineBucket: values.timeline })
+          if (drip?.projection) {
+            const date = new Date(drip.projection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+            toast.success(`Lead entered drip — projected close ${date} (${drip.projection.totalStages}-touch nurture)`)
           }
-        } catch (err) {
-          // Non-fatal: rapid-qualify succeeded; drip entry can be retried.
+        } catch {
           toast.warning("Qualification saved, but drip entry failed — retry from the Drip tab")
         }
+      } else if (res?.predictedClosingDate) {
+        const date = new Date(res.predictedClosingDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+        toast.success(`Lead qualified — projected close ${date}`)
       }
-      setLastRoute(values.routeSelection)
+      setLastRoute(values.route)
       setSubmitSuccess(true)
+      onQualified?.()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to save qualification")
     }
@@ -140,16 +112,16 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
           </div>
           <h3 className="text-lg font-semibold text-foreground mb-1">Lead Qualified!</h3>
           <p className="text-sm text-muted-foreground text-center">
-            {lastRoute === "drip"
+            {lastRoute === "drip_info"
               ? "Lead has been added to the drip queue."
-              : `${lastRoute === "online-meeting" ? "Online" : "Physical"} meeting to be scheduled.`}
+              : `${lastRoute === "online_meeting" ? "Online" : "Physical"} meeting to be scheduled.`}
           </p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => {
               setSubmitSuccess(false)
-              reset(rapidQualificationDefaults)
+              reset(qualificationDefaults)
             }}
           >
             Qualify Another Lead
@@ -167,9 +139,11 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
             <ClipboardList className="size-5 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-base">Rapid Qualification</CardTitle>
+            <CardTitle className="text-base">{requalify ? "Re-Qualification" : "Qualification"}</CardTitle>
             <CardDescription className="text-xs">
-              {lead ? `Qualifying: ${lead.name}` : "Qualify lead for next steps"}
+              {requalify
+                ? "Fresh capture — old qualification was cleared. Projected close ≥ 6 months."
+                : lead ? `Qualifying: ${lead.name}` : "Qualify lead for next steps"}
             </CardDescription>
           </div>
         </div>
@@ -197,6 +171,21 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
               </div>
             )}
           />
+
+          {/* Decision maker (new in the union bar) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <UserCheck className="size-3 text-muted-foreground" />
+              Decision Maker
+            </Label>
+            <Controller
+              control={control}
+              name="decisionMaker"
+              render={({ field }) => (
+                <Input className="h-9" placeholder="Name / role of the decision maker" {...field} />
+              )}
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -247,7 +236,7 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
               control={control}
               name="timeline"
               render={({ field }) => (
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {TIMELINE_OPTIONS.map((opt) => {
                     const active = field.value === opt.value
                     return (
@@ -272,23 +261,44 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-              <IndianRupee className="size-3 text-muted-foreground" />
-              Budget Range
-            </Label>
-            <Controller
-              control={control}
-              name="budgetRange"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select budget range" /></SelectTrigger>
-                  <SelectContent>
-                    {BUDGET_RANGES.map((r) => <SelectItem key={r.value} value={r.value} className="text-sm">{r.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <IndianRupee className="size-3 text-muted-foreground" />
+                Budget Range
+              </Label>
+              <Controller
+                control={control}
+                name="budgetRange"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select budget" /></SelectTrigger>
+                    <SelectContent>
+                      {BUDGET_RANGES.map((r) => <SelectItem key={r.value} value={r.value} className="text-sm">{r.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <Landmark className="size-3 text-muted-foreground" />
+                Funding Method
+              </Label>
+              <Controller
+                control={control}
+                name="fundingMethod"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select funding" /></SelectTrigger>
+                    <SelectContent>
+                      {FUNDING_METHODS.map((f) => <SelectItem key={f.value} value={f.value} className="text-sm">{f.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -299,14 +309,12 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
               </Label>
               <Controller
                 control={control}
-                name="competitorEvaluated"
+                name="competitors"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Select competitor" /></SelectTrigger>
                     <SelectContent>
-                      {["None", "Planmeca", "Sirona / Dentsply", "A-dec", "KaVo", "Belmont", "Local / Unbranded", "Other"].map((c) => (
-                        <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>
-                      ))}
+                      {COMPETITOR_OPTIONS.map((c) => <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
@@ -320,19 +328,12 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
               </Label>
               <Controller
                 control={control}
-                name="purchaseTypeClass"
+                name="purchaseType"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Select type" /></SelectTrigger>
                     <SelectContent>
-                      {[
-                        { value: "new_setup", label: "New Setup" },
-                        { value: "upgrade", label: "Upgrade" },
-                        { value: "replacement", label: "Replacement" },
-                        { value: "expansion", label: "Expansion" },
-                      ].map((t) => (
-                        <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>
-                      ))}
+                      {PURCHASE_TYPES.map((t) => <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
@@ -344,7 +345,7 @@ export function RapidQualificationForm({ lead, leadId }: RapidQualificationFormP
             <Label className="text-xs font-medium text-foreground">Next Step Route</Label>
             <Controller
               control={control}
-              name="routeSelection"
+              name="route"
               render={({ field }) => (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {ROUTE_OPTIONS.map((route) => {

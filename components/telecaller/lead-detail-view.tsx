@@ -67,11 +67,7 @@ import { cn } from "@/lib/utils"
 import { NOT_INTERESTED_REASONS, type NotInterestedReason } from "@/lib/schemas/not-interested"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import {
-  fullQualificationSchema,
-  fullQualificationDefaults,
-  type FullQualificationValues,
-} from "@/lib/schemas/full-qualification"
+import { RapidQualificationForm } from "./rapid-qualification-form"
 import {
   callAttemptSchema,
   callAttemptDefaults,
@@ -94,7 +90,6 @@ import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers } from "@/hooks/u
 import {
   useLogAttempt,
   useEditAttempt,
-  useFullQualify,
   useZoomMeeting,
   usePhysicalMeeting,
   useExitDrip,
@@ -1089,8 +1084,9 @@ function CallsTab({
       const body = {
         outcome: values.outcome,
         notes: values.notes,
-        // Mandatory predicted close — pushed to SAP PredictedClosingDate server-side.
-        predicted_closing_date: values.predictedClosingDate,
+        // Amendment 2 (Theme 4): only send a predicted close when one was entered —
+        // not-interested outcomes may omit it (the server no longer forces a date there).
+        ...(values.predictedClosingDate ? { predicted_closing_date: values.predictedClosingDate } : {}),
         ...(values.outcome === "engaged" ? { ready_now: readyNow } : {}),
         ...(values.outcome === "not_interested" ? { not_interested_reason: niReason as NotInterestedReason } : {}),
         // datetime-local ("YYYY-MM-DDTHH:mm") → mysql datetime
@@ -1236,30 +1232,44 @@ function CallsTab({
               </div>
             )}
 
-            {/* Mandatory predicted closing date — required for every attempt; pushed
-                to SAP PredictedClosingDate on submit. */}
-            <Controller
-              control={control}
-              name="predictedClosingDate"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    Predicted closing date <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="date"
-                    min={new Date().toISOString().slice(0, 10)}
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    disabled={callState.locked}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Required — synced to SAP as the opportunity&apos;s predicted close.</p>
-                  {errors.predictedClosingDate && (
-                    <p className="text-[11px] text-destructive">{errors.predictedClosingDate.message}</p>
-                  )}
-                </div>
-              )}
-            />
+            {/* Predicted closing date — Amendment 2 (Theme 4): required on every outcome
+                EXCEPT "not interested". For not-interested it is hidden entirely on the
+                genuine-no / already-purchased reasons, and OPTIONAL on timing/budget
+                (the only path that may carry a non-forced date). Pushed to SAP on submit. */}
+            {(outcome !== "not_interested" || niReason === "timing_budget") && (
+              <Controller
+                control={control}
+                name="predictedClosingDate"
+                render={({ field }) => {
+                  const optional = outcome === "not_interested" // timing/budget path
+                  return (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">
+                        Predicted closing date{" "}
+                        {optional
+                          ? <span className="text-muted-foreground">(optional)</span>
+                          : <span className="text-destructive">*</span>}
+                      </Label>
+                      <Input
+                        type="date"
+                        min={new Date().toISOString().slice(0, 10)}
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        disabled={callState.locked}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {optional
+                          ? "Optional for a timing/budget lead — if set, it syncs to SAP."
+                          : "Required — synced to SAP as the opportunity’s predicted close."}
+                      </p>
+                      {errors.predictedClosingDate && (
+                        <p className="text-[11px] text-destructive">{errors.predictedClosingDate.message}</p>
+                      )}
+                    </div>
+                  )
+                }}
+              />
+            )}
 
             <Controller
               control={control}
@@ -1474,34 +1484,30 @@ function QualificationStrip({
 }) {
   const [editOpen, setEditOpen] = useState(false)
 
-  // Rapid Qualification checklist items (SOP §1–2) — shown as scannable pills.
-  const rapidFields: { label: string; filled: boolean; hint?: string }[] = [
+  // Amendment 2 (Theme 3): ONE qualification bar — the union of every field, all
+  // required. The old rapid/full two-meter split is gone; this is a single meter +
+  // a single Qualified / Unqualified badge.
+  const qualFields: { label: string; filled: boolean; hint?: string }[] = [
     { label: "Phone Verified", filled: lead.phoneVerified, hint: "Verify the lead's phone number before logging calls." },
-    { label: "Dentist Type", filled: !!lead.dentistType, hint: "Capture the dentist type during Rapid Qualification." },
-    { label: "Practice Type", filled: !!lead.practiceType, hint: "Capture the practice type during Rapid Qualification." },
-    { label: "Timeline", filled: !!lead.timelineBucket, hint: "Set the purchase timeline (1 / 3 / 6+ months)." },
-    { label: "Budget Range", filled: !!lead.budgetRange, hint: "Record the budget band for this lead." },
-    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending", hint: "Set automatically when you book an Online or Physical meeting (Meetings tab) or enter Drip (Drip tab). Stays “pending” until then." },
+    { label: "Decision Maker", filled: !!lead.decisionMaker, hint: "Who signs off on the purchase." },
+    { label: "Dentist Type", filled: !!lead.dentistType, hint: "Type of dental practitioner." },
+    { label: "Practice Type", filled: !!lead.practiceType, hint: "Solo / group / chain etc." },
+    { label: "Timeline", filled: !!lead.timelineBucket, hint: "Purchase timeline (1 / 3 / 6+ months)." },
+    { label: "Budget Range", filled: !!lead.budgetRange, hint: "Budget band for this lead." },
+    { label: "Competitor", filled: !!lead.competitors, hint: "Competitor evaluated (or None)." },
+    { label: "Funding Method", filled: !!lead.fundingMethod, hint: "Cash / loan / not sure." },
+    { label: "Purchase Type", filled: !!lead.purchaseType, hint: "New setup / upgrade / replacement / expansion." },
+    { label: "Route Decided", filled: !!lead.firstCallRoute && lead.firstCallRoute !== "pending", hint: "The next-step route chosen at qualification." },
   ]
-  const rapidCompleted = rapidFields.filter((f) => f.filled).length
-
-  // Phase 2 (Full) field completeness — SOP §2 qualification gate (all 6 required)
-  const fullQualFields = [
-    { key: "decisionMaker", label: "Decision Maker", value: lead.decisionMaker },
-    { key: "timelineBucket", label: "Timeline (ClosingDate)", value: lead.timelineBucket },
-    { key: "budgetRange", label: "Budget Range", value: lead.budgetRange },
-    { key: "competitors", label: "Competitor Evaluated", value: lead.competitors },
-    { key: "fundingMethod", label: "Funding Method", value: lead.fundingMethod },
-    { key: "dentistType", label: "Dentist + Practice Type", value: lead.dentistType && lead.practiceType ? `${lead.dentistType} · ${lead.practiceType}` : undefined },
-  ]
-  const completed = fullQualFields.filter((f) => !!f.value).length
-  const isFullQualified = completed === fullQualFields.length
-  const progressPct = Math.round((completed / fullQualFields.length) * 100)
+  const completed = qualFields.filter((f) => f.filled).length
+  const isQualified = completed === qualFields.length
+  const progressPct = Math.round((completed / qualFields.length) * 100)
+  const isRequalify = !!lead.requalifyPending
 
   return (
     <>
       <Card className="overflow-hidden">
-        {/* Header — title, gate badge, Update button */}
+        {/* Header — title, qualified/unqualified badge, Update button */}
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -1513,84 +1519,64 @@ function QualificationStrip({
                 variant="outline"
                 className={cn(
                   "text-[10px]",
-                  isFullQualified
+                  isQualified
                     ? "bg-success/10 text-success border-success/30"
                     : "bg-warning/10 text-warning border-warning/30",
                 )}
               >
-                {isFullQualified ? "Gate passed" : "Gate pending"}
+                {isQualified ? "Qualified" : "Unqualified"}
               </Badge>
+              {isRequalify && (
+                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 border-amber-500/30">
+                  Re-qualification pending
+                </Badge>
+              )}
             </div>
             <Button
               size="sm"
-              variant={isFullQualified ? "outline" : "default"}
+              variant={isQualified ? "outline" : "default"}
               className="gap-1.5"
               onClick={() => setEditOpen(true)}
             >
               <CheckCircle2 className="size-3.5" />
-              Update Qualification
+              {isRequalify ? "Re-Qualify" : "Update Qualification"}
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Phone-verified prerequisite — the qualification gate can't pass without it */}
+          {/* Phone-verified prerequisite — qualification can't complete without it */}
           {!lead.phoneVerified && (
             <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5">
               <XCircle className="size-3.5 text-destructive shrink-0" />
               <span className="text-[11px] text-destructive">
-                Phone must be verified (header → Verify Phone) before the qualification gate can pass.
+                Phone must be verified (header → Verify Phone) before qualification can complete.
               </span>
             </div>
           )}
 
-          {/* Two inline meters: Rapid (segmented dots) + Full (progress bar) */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Rapid — segmented dots */}
-            <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs font-medium">Rapid Qualification</span>
-                <span className="text-[11px] text-muted-foreground">
-                  {rapidCompleted}/{rapidFields.length}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-1.5">
-                {rapidFields.map((f) => (
-                  <span
-                    key={f.label}
-                    title={f.label}
-                    className={cn(
-                      "h-2 flex-1 rounded-full transition-colors",
-                      f.filled ? "bg-success" : "bg-muted-foreground/20",
-                    )}
-                  />
-                ))}
-              </div>
+          {/* Single qualification meter */}
+          <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs font-medium">Qualification</span>
+              <span className="text-[11px] text-muted-foreground">
+                {completed}/{qualFields.length} · {progressPct}%
+              </span>
             </div>
-
-            {/* Full — progress bar */}
-            <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs font-medium">Full Qualification</span>
-                <span className="text-[11px] text-muted-foreground">
-                  {completed}/{fullQualFields.length} · {progressPct}%
-                </span>
-              </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted-foreground/15">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    isFullQualified ? "bg-success" : "bg-primary",
-                  )}
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted-foreground/15">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  isQualified ? "bg-success" : "bg-primary",
+                )}
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           </div>
 
-          {/* Status pills — one per checklist item, scannable at a glance */}
+          {/* Status pills — one per field, scannable at a glance */}
           <div className="flex flex-wrap gap-1.5">
-            {rapidFields.map((f) => (
+            {qualFields.map((f) => (
               <span
                 key={f.label}
                 title={f.hint}
@@ -1608,7 +1594,9 @@ function QualificationStrip({
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            All 6 full-qualification fields are required before scheduling a physical meeting (qualification gate).
+            {isRequalify
+              ? "Re-qualification clears the old answers — re-capture fresh. Projected close is set ≥ 6 months out."
+              : "All qualification fields are required before scheduling a physical meeting."}
           </p>
         </CardContent>
       </Card>
@@ -1651,21 +1639,24 @@ function QualificationStrip({
         </Card>
       )}
 
-      <FullQualificationDialog open={editOpen} onOpenChange={setEditOpen} lead={lead} />
+      <QualificationDialog open={editOpen} onOpenChange={setEditOpen} lead={lead} />
     </>
   )
 }
 
-// SOP §3: 3-tier timeline options. Urgency rank is used to enforce the
-// "salespeople cannot downgrade" rule on the frontend (backend enforces too).
+// SOP §3: 3-tier timeline options. Urgency rank enforces the "salespeople cannot
+// downgrade" rule on the frontend (backend enforces too). Used by the timeline editor.
 const TIMELINE_OPTIONS = [
   { value: "1_month",       label: "1 Month",   urgency: 3 },
   { value: "3_months",      label: "3 Months",  urgency: 2 },
   { value: "6_plus_months", label: "6+ Months", urgency: 1 },
 ] as const
 
-// Full Qualification edit dialog — Gap B + Timeline editing (Gap C)
-function FullQualificationDialog({
+// Amendment 2 (Theme 3) — single qualification dialog. Wraps the ONE union
+// qualification bar (RapidQualificationForm). On a re-qualification-pending lead it
+// opens BLANK (re-qual clears the old answers); otherwise it pre-fills from the lead so
+// the rep only fills the gaps. Backend floors a re-qual's predicted close at >= 6 months.
+function QualificationDialog({
   open,
   onOpenChange,
   lead,
@@ -1674,197 +1665,32 @@ function FullQualificationDialog({
   onOpenChange: (v: boolean) => void
   lead: LeadDetail
 }) {
-  const { isSalesperson } = useRole()
-  const { control, handleSubmit, reset, formState } = useForm<FullQualificationValues>({
-    resolver: zodResolver(fullQualificationSchema),
-    defaultValues: {
-      ...fullQualificationDefaults,
-      decisionMaker: lead.decisionMaker ?? "",
-      timelineBucket: lead.timelineBucket ?? "",
-      budgetRange: lead.budgetRange ?? "",
-      competitors: lead.competitors ?? "",
-      fundingMethod: lead.fundingMethod ?? "",
-      dentistType: lead.dentistType ?? "",
-      practiceType: lead.practiceType ?? "",
-    },
-    mode: "onChange",
-  })
-  const { errors, isSubmitting } = formState
-
-  const { mutateAsync: fullQualify } = useFullQualify(lead.id)
-
-  const onSubmit = async (values: FullQualificationValues) => {
-    try {
-      await fullQualify(values)
-      toast.success("Full qualification saved — physical meeting gate unlocked")
-      onOpenChange(false)
-      reset()
-    } catch (err) {
-      toast.error(readApiError(err, "Failed to save qualification"))
-    }
-  }
-
+  const isRequalify = !!lead.requalifyPending
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Full Qualification (Phase 2)</DialogTitle>
-          <DialogDescription>
-            All 6 fields are required before scheduling a physical meeting.
-          </DialogDescription>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{isRequalify ? "Re-Qualification" : "Qualification"}</DialogTitle>
+          <DialogDescription>Single qualification bar — all fields required.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div className="space-y-3 py-2">
-            <Controller
-              control={control}
-              name="decisionMaker"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Decision Maker</Label>
-                  <Input {...field} placeholder="Self / Partner / Spouse / Practice Manager" />
-                  {errors.decisionMaker && <p className="text-[11px] text-destructive">{errors.decisionMaker.message}</p>}
-                </div>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="timelineBucket"
-              render={({ field }) => {
-                // Salespeople can only escalate (higher urgency), never downgrade.
-                const currentUrgency = TIMELINE_OPTIONS.find((o) => o.value === lead.timelineBucket)?.urgency ?? 0
-                return (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Timeline / Closing Date</Label>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger><SelectValue placeholder="Select timeline" /></SelectTrigger>
-                      <SelectContent>
-                        {TIMELINE_OPTIONS.map((opt) => {
-                          const blocked = isSalesperson && opt.urgency < currentUrgency
-                          return (
-                            <SelectItem key={opt.value} value={opt.value} disabled={blocked}>
-                              {opt.label}{blocked ? " (cannot downgrade)" : ""}
-                            </SelectItem>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground">
-                      {isSalesperson
-                        ? "Sales can only escalate timeline urgency (shorter)."
-                        : "Telecaller/manager can move timeline in any direction."}
-                    </p>
-                    {errors.timelineBucket && <p className="text-[11px] text-destructive">{errors.timelineBucket.message}</p>}
-                  </div>
-                )
-              }}
-            />
-
-            <Controller
-              control={control}
-              name="budgetRange"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Budget Range</Label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select budget" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="<5L">Under ₹5L</SelectItem>
-                      <SelectItem value="5-10L">₹5L - ₹10L</SelectItem>
-                      <SelectItem value="10-25L">₹10L - ₹25L</SelectItem>
-                      <SelectItem value="25L+">₹25L+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.budgetRange && <p className="text-[11px] text-destructive">{errors.budgetRange.message}</p>}
-                </div>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="competitors"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Competitors being considered</Label>
-                  <Input {...field} placeholder="e.g., Carestream, Vatech, Planmeca" />
-                  <p className="text-[10px] text-muted-foreground">
-                    Writes to SAP <code>OPR3 Competitors</code>.
-                  </p>
-                  {errors.competitors && <p className="text-[11px] text-destructive">{errors.competitors.message}</p>}
-                </div>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="fundingMethod"
-              render={({ field }) => (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Funding Method</Label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue placeholder="Select funding" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="loan">Loan</SelectItem>
-                      <SelectItem value="not_sure">Not sure yet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.fundingMethod && <p className="text-[11px] text-destructive">{errors.fundingMethod.message}</p>}
-                </div>
-              )}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Controller
-                control={control}
-                name="dentistType"
-                render={({ field }) => (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dentist Type</Label>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general_practitioner">General Practitioner</SelectItem>
-                        <SelectItem value="orthodontist">Orthodontist</SelectItem>
-                        <SelectItem value="endodontist">Endodontist</SelectItem>
-                        <SelectItem value="prosthodontist_implantologist">Prosthodontist / Implantologist</SelectItem>
-                        <SelectItem value="oral_maxillofacial_surgeon">Oral/Maxillofacial Surgeon</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.dentistType && <p className="text-[11px] text-destructive">{errors.dentistType.message}</p>}
-                  </div>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="practiceType"
-                render={({ field }) => (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Practice Type</Label>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="solo_practice">Solo Practice</SelectItem>
-                        <SelectItem value="group_clinic">Group Clinic</SelectItem>
-                        <SelectItem value="multi_specialty_clinic">Multi-Specialty Clinic</SelectItem>
-                        <SelectItem value="chain_corporate">Chain / Corporate</SelectItem>
-                        <SelectItem value="hospital_or_academic">Hospital / Academic</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.practiceType && <p className="text-[11px] text-destructive">{errors.practiceType.message}</p>}
-                  </div>
-                )}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>Save Qualification</Button>
-          </DialogFooter>
-        </form>
+        <RapidQualificationForm
+          leadId={lead.id}
+          lead={{ name: lead.name, phone: lead.phone, equipment: lead.equipment }}
+          requalify={isRequalify}
+          defaults={{
+            phoneVerified: lead.phoneVerified ? true : undefined,
+            decisionMaker: lead.decisionMaker ?? "",
+            dentistType: lead.dentistType ?? "",
+            practiceType: lead.practiceType ?? "",
+            timeline: lead.timelineBucket ?? "",
+            budgetRange: lead.budgetRange ?? "",
+            competitors: lead.competitors ?? "",
+            fundingMethod: lead.fundingMethod ?? "",
+            purchaseType: lead.purchaseType ?? "",
+            route: lead.firstCallRoute && lead.firstCallRoute !== "pending" ? lead.firstCallRoute : "",
+          }}
+          onQualified={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )

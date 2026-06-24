@@ -81,8 +81,8 @@ export const endpoints = {
   leadVerifyPhone: (id: string) => `/leads/${id}/verify-phone`,
   leadAttempt: (id: string) => `/leads/${id}/attempt`,
   leadAttemptEdit: (id: string, attemptId: string) => `/leads/${id}/attempts/${attemptId}`,
-  leadRapidQualify: (id: string) => `/leads/${id}/rapid-qualify`,
-  leadFullQualify: (id: string) => `/leads/${id}/full-qualify`,
+  // Amendment 2 — single qualification bar (rapid+full collapsed).
+  leadQualify: (id: string) => `/leads/${id}/qualify`,
   leadZoomMeeting: (id: string) => `/leads/${id}/zoom-meeting`,
   leadPhysicalMeeting: (id: string) => `/leads/${id}/physical-meeting/schedule`,
   leadRecoveryWhatsapp: (id: string) => `/leads/${id}/recovery-whatsapp`,

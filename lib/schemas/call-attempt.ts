@@ -13,16 +13,30 @@ export const CALL_OUTCOMES = [
 
 export type CallOutcome = (typeof CALL_OUTCOMES)[number]
 
-export const callAttemptSchema = z.object({
-  outcome: z.enum(CALL_OUTCOMES, { message: "Please select an outcome" }),
-  // Mandatory on every attempt — the rep commits to a predicted close that is
-  // pushed to SAP. 'YYYY-MM-DD' from <input type="date">.
-  predictedClosingDate: z
-    .string()
-    .min(1, "Predicted closing date is required")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date"),
-  notes: z.string().optional().default(""),
-})
+export const callAttemptSchema = z
+  .object({
+    outcome: z.enum(CALL_OUTCOMES, { message: "Please select an outcome" }),
+    // Amendment 2 (Theme 4): the predicted close is required on EVERY outcome EXCEPT
+    // "not interested" (a not-interested lead must not be forced to commit a date).
+    // When present it must be 'YYYY-MM-DD'. The required-ness is enforced in the
+    // superRefine below so it can depend on the chosen outcome.
+    predictedClosingDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
+      .or(z.literal(""))
+      .optional()
+      .default(""),
+    notes: z.string().optional().default(""),
+  })
+  .superRefine((val, ctx) => {
+    if (val.outcome !== "not_interested" && !val.predictedClosingDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["predictedClosingDate"],
+        message: "Predicted closing date is required",
+      })
+    }
+  })
 
 export type CallAttemptValues = z.infer<typeof callAttemptSchema>
 

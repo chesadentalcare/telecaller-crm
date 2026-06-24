@@ -10,8 +10,7 @@
 import { api } from "./client"
 import { endpoints } from "@/lib/api-config"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
-import type { RapidQualificationValues } from "@/lib/schemas/rapid-qualification"
-import type { FullQualificationValues } from "@/lib/schemas/full-qualification"
+import type { QualificationValues } from "@/lib/schemas/qualification"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
@@ -499,8 +498,9 @@ export const leadsApi = {
       outcome: CallOutcome
       notes?: string
       attempt_type?: "call" | "retry_call"
-      // Mandatory predicted close (YYYY-MM-DD) — pushed to SAP PredictedClosingDate.
-      predicted_closing_date: string
+      // Predicted close (YYYY-MM-DD) — pushed to SAP. Amendment 2 (Theme 4): optional;
+      // not-interested outcomes may omit it (the server no longer forces a date there).
+      predicted_closing_date?: string
       // Phase 6 routing inputs (honored when ROUTE_OUTCOMES=true; additive, ignored otherwise)
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
@@ -520,18 +520,20 @@ export const leadsApi = {
       ),
     ),
 
-  rapidQualify: (id: number | string, values: RapidQualificationValues) =>
+  // Amendment 2 — single qualification bar. Backend commits the MySQL capture and
+  // reports `sapSynced` for the awaited SAP write (predicted close + competitors + stage).
+  qualify: (id: number | string, values: QualificationValues) =>
     unwrap(
-      api.post<Envelope<{ opportunityDocEntry: number; route: string }>>(
-        endpoints.leadRapidQualify(String(id)),
-        values,
-      ),
-    ),
-
-  fullQualify: (id: number | string, values: FullQualificationValues) =>
-    unwrap(
-      api.put<Envelope<{ opportunityDocEntry: number }>>(
-        endpoints.leadFullQualify(String(id)),
+      api.put<Envelope<{
+        opportunityDocEntry: number
+        stage: string
+        route: string
+        predictedClosingDate: string
+        wasRequalification: boolean
+        sapSynced: boolean
+        sapReason?: string
+      }>>(
+        endpoints.leadQualify(String(id)),
         values,
       ),
     ),

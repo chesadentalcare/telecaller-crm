@@ -16,8 +16,7 @@ import { leadsApi } from "@/lib/api/leads"
 import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
-import type { RapidQualificationValues } from "@/lib/schemas/rapid-qualification"
-import type { FullQualificationValues } from "@/lib/schemas/full-qualification"
+import type { QualificationValues } from "@/lib/schemas/qualification"
 import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
@@ -60,7 +59,8 @@ export function useLogAttempt(id: string | number) {
       outcome: CallOutcome
       notes?: string
       attempt_type?: "call" | "retry_call"
-      predicted_closing_date: string
+      // Amendment 2 (Theme 4): optional — not-interested outcomes may omit it.
+      predicted_closing_date?: string
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       callback_at?: string
@@ -85,18 +85,11 @@ export function useEditAttempt(id: string | number) {
   })
 }
 
-export function useRapidQualify(id: string | number) {
+// Amendment 2 — single qualification bar (replaces useRapidQualify + useFullQualify).
+export function useQualify(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (values: RapidQualificationValues) => leadsApi.rapidQualify(id, values),
-    onSuccess: () => invalidateAllLeads(qc),
-  })
-}
-
-export function useFullQualify(id: string | number) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (values: FullQualificationValues) => leadsApi.fullQualify(id, values),
+    mutationFn: (values: QualificationValues) => leadsApi.qualify(id, values),
     onSuccess: () => invalidateAllLeads(qc),
   })
 }
