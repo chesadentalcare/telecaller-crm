@@ -475,6 +475,8 @@ export interface QueueCountsResponse {
   requalification: number
   callsDue: number
   reTouch: number
+  // Amendment 2 (Theme 6) — brand-new leads with zero activity past 24h.
+  neglected: number
 }
 
 export interface AttemptResponse {

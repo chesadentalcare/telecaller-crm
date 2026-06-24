@@ -270,6 +270,7 @@ export const fetchQueueCounts = async (): Promise<QueueCounts> => {
     requalification: c.requalification,
     callsDue: c.callsDue,
     reTouch: c.reTouch,
+    neglected: c.neglected ?? 0,
   }
 }
 

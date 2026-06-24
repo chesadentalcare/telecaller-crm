@@ -84,4 +84,5 @@ export const MOCK_QUEUE_COUNTS: QueueCounts = {
   requalification: 1,
   callsDue: 7,
   reTouch: 2,
+  neglected: 1,
 }

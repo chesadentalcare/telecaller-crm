@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Bell, CheckCheck, Clock, AlertTriangle, FileText, MessageSquare, Shield,
+  Bell, CheckCheck, Clock, AlertTriangle, FileText, MessageSquare, Shield, ArrowRightLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,9 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
   lead_closed: CheckCheck,
   quote_delivered: FileText,
   quote_read: MessageSquare,
+  // Amendment 2 (Theme 6) — brand-new lead with zero activity past 24h.
+  new_lead_neglected: AlertTriangle,
+  lead_handover: ArrowRightLeft,
   system: Bell,
 }
 
@@ -38,6 +41,8 @@ const TYPE_COLORS: Record<string, string> = {
   lead_closed: "text-green-600",
   quote_delivered: "text-blue-600",
   quote_read: "text-amber-600",
+  new_lead_neglected: "text-red-600",
+  lead_handover: "text-blue-600",
   system: "text-muted-foreground",
 }
 

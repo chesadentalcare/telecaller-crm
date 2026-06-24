@@ -15,6 +15,7 @@ const EMPTY_QUEUE_COUNTS: QueueCounts = {
   requalification: 0,
   callsDue: 0,
   reTouch: 0,
+  neglected: 0,
 }
 
 // Thin wrapper kept for backwards-compat with the sidebar/bottom-tab callers.

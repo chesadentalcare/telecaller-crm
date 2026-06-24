@@ -828,6 +828,19 @@ function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
               value={lead.firstCallRoute.replace("_", " ")}
             />
           )}
+          {/* Amendment 2 (Theme 4): make the nurture drip visible in the Overview —
+              including not-interested (timing/budget) leads parked in the 6-month funnel. */}
+          {lead.inDrip && (
+            <InfoRow
+              icon={Timer}
+              label="Nurture drip"
+              value={
+                lead.dripProjection
+                  ? `Stage ${lead.dripProjection.stageIndex + 1}/${lead.dripProjection.totalStages} · projected close ${new Date(lead.dripProjection.projectedCompletionAt).toLocaleDateString()}`
+                  : "Active"
+              }
+            />
+          )}
         </CardContent>
       </Card>
     </>
