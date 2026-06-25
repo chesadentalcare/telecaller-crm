@@ -180,7 +180,7 @@ function UpcomingDripCallsDialog({
                   {/* Full call schedule — every remaining call anchor with its date */}
                   <ol className="mt-2.5 space-y-2 border-l border-dashed border-muted-foreground/30 pl-4">
                     {lead.calls.map((c) => {
-                      const due = isDueToday(c.at)
+                      const due = c.dueNow
                       return (
                         <li key={c.touchIndex} className="relative">
                           <span className={`absolute -left-[1.3rem] top-0.5 flex size-4 items-center justify-center rounded-full border ${due ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/40 bg-background"}`}>
