@@ -11,7 +11,7 @@ import {
   fetchSixMonthLeads,
   fetchRequalificationLeads,
   fetchCallsDueLeads,
-  fetchUpcomingDripCalls,
+  fetchUpcomingCalls,
   fetchQueueCounts,
   fetchLeadById,
 } from "@/lib/repositories/leads"
@@ -80,8 +80,8 @@ export function useRequalificationLeads() {
 export function useCallsDueLeads() {
   return useQuery({ queryKey: leadKeys.callsDue(),    queryFn: fetchCallsDueLeads })
 }
-export function useUpcomingDripCalls() {
-  return useQuery({ queryKey: leadKeys.dripCalls(),   queryFn: fetchUpcomingDripCalls })
+export function useUpcomingCalls() {
+  return useQuery({ queryKey: leadKeys.dripCalls(),   queryFn: fetchUpcomingCalls })
 }
 export function useLeadById(id: string | undefined) {
   return useQuery({

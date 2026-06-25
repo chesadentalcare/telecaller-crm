@@ -469,7 +469,17 @@ export interface CallNudgeRow extends ReplyRowFields {
   whatsapp_number?: string | null
 }
 
-// Upcoming drip CALL anchors — the FULL call schedule per active drip lead.
+// Upcoming calls (future-dated, beyond today). Two parts: real scheduled call_nudges
+// (callbacks etc.) and the projected forward drip-call timeline per active drip lead.
+export interface ScheduledCallRow {
+  id: number
+  reason: "callback" | "first_contact" | "requalification" | "drip_anchor"
+  scheduled_at: string
+  customer_name: string | null
+  phone: string
+  whatsapp_number: string | null
+  equipment: string | null
+}
 export interface DripCallRow {
   id: number
   customer_name: string | null
@@ -483,8 +493,11 @@ export interface DripCallRow {
     label: string
     drip_day: number | null
     touch_index: number
-    due_now: boolean
   }[]
+}
+export interface UpcomingCallsResponse {
+  scheduled: ScheduledCallRow[]
+  drip: DripCallRow[]
 }
 
 export interface QueueCountsResponse {
@@ -935,7 +948,7 @@ export const leadsApi = {
     sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null; retouch?: number | boolean }>>>(endpoints.queueSixMonth)),
     requalification: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }>>>(endpoints.queueRequalification)),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
-    dripCalls:    () => unwrap(api.get<Envelope<DripCallRow[]>>(endpoints.queueDripCalls)),
+    dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }

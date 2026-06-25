@@ -19,6 +19,8 @@ import type {
   RequalificationLead,
   CallsDueLead,
   UpcomingDripCall,
+  ScheduledCall,
+  UpcomingCalls,
   QueueCounts,
   LeadStatus,
   DripTrack,
@@ -32,6 +34,7 @@ import type {
   DormantRow,
   CallNudgeRow,
   DripCallRow,
+  ScheduledCallRow,
   ReplyRowFields,
 } from "@/lib/api/leads"
 import type { ReplyIndicator, DripProjection } from "@/lib/types/lead"
@@ -216,8 +219,17 @@ const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
     label: c.label,
     dripDay: c.drip_day,
     touchIndex: c.touch_index,
-    dueNow: c.due_now,
   })),
+  whatsappNumber: r.whatsapp_number ?? undefined,
+})
+
+const toScheduledCall = (r: ScheduledCallRow): ScheduledCall => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  reason: r.reason,
+  scheduledAt: new Date(r.scheduled_at),
+  equipment: r.equipment ?? "—",
   whatsappNumber: r.whatsapp_number ?? undefined,
 })
 
@@ -281,9 +293,12 @@ export const fetchCallsDueLeads = async (): Promise<CallsDueLead[]> => {
   return rows.map(toCallsDue)
 }
 
-export const fetchUpcomingDripCalls = async (): Promise<UpcomingDripCall[]> => {
-  const rows = await leadsApi.queues.dripCalls()
-  return rows.map(toDripCall)
+export const fetchUpcomingCalls = async (): Promise<UpcomingCalls> => {
+  const res = await leadsApi.queues.dripCalls()
+  return {
+    scheduled: (res.scheduled ?? []).map(toScheduledCall),
+    drip: (res.drip ?? []).map(toDripCall),
+  }
 }
 
 export const fetchQueueCounts = async (): Promise<QueueCounts> => {
