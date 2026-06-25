@@ -150,6 +150,7 @@ export const endpoints = {
   queueSixMonth: "/queue/six-month",
   queueRequalification: "/queue/requalification",
   queueCalling: "/queue/calling",
+  queueDripCalls: "/queue/drip-calls",
   queueCounts: "/queue/counts",
 } as const
 

@@ -467,6 +467,20 @@ export interface CallNudgeRow extends ReplyRowFields {
   whatsapp_number?: string | null
 }
 
+// Upcoming drip CALL anchors — the forward schedule (next call per active drip lead).
+export interface DripCallRow {
+  id: number
+  customer_name: string | null
+  phone: string
+  whatsapp_number: string | null
+  equipment: string | null
+  track: "1_month" | "3_month" | "6_plus_month"
+  messages_sent: number
+  next_call_at: string
+  call_label: string
+  drip_day: number | null
+}
+
 export interface QueueCountsResponse {
   pipeline: number
   drip: number
@@ -915,6 +929,7 @@ export const leadsApi = {
     sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null; retouch?: number | boolean }>>>(endpoints.queueSixMonth)),
     requalification: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }>>>(endpoints.queueRequalification)),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
+    dripCalls:    () => unwrap(api.get<Envelope<DripCallRow[]>>(endpoints.queueDripCalls)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }

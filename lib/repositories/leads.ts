@@ -18,6 +18,7 @@ import type {
   SixMonthLead,
   RequalificationLead,
   CallsDueLead,
+  UpcomingDripCall,
   QueueCounts,
   LeadStatus,
   DripTrack,
@@ -30,6 +31,7 @@ import type {
   IdleRow,
   DormantRow,
   CallNudgeRow,
+  DripCallRow,
   ReplyRowFields,
 } from "@/lib/api/leads"
 import type { ReplyIndicator, DripProjection } from "@/lib/types/lead"
@@ -196,6 +198,19 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   replied: toReplied(r),
 })
 
+const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
+  track: r.track,
+  messagesSent: r.messages_sent,
+  nextCallAt: new Date(r.next_call_at),
+  callLabel: r.call_label,
+  dripDay: r.drip_day,
+  whatsappNumber: r.whatsapp_number ?? undefined,
+})
+
 // Tiny relative-time helper. The mock data already used strings like
 // "30 min ago", so views format these directly. Keeps the type shape stable.
 function humanAgo(iso: string): string {
@@ -254,6 +269,11 @@ export const fetchRequalificationLeads = async (): Promise<RequalificationLead[]
 export const fetchCallsDueLeads = async (): Promise<CallsDueLead[]> => {
   const rows = await leadsApi.queues.calling()
   return rows.map(toCallsDue)
+}
+
+export const fetchUpcomingDripCalls = async (): Promise<UpcomingDripCall[]> => {
+  const rows = await leadsApi.queues.dripCalls()
+  return rows.map(toDripCall)
 }
 
 export const fetchQueueCounts = async (): Promise<QueueCounts> => {

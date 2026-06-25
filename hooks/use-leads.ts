@@ -11,6 +11,7 @@ import {
   fetchSixMonthLeads,
   fetchRequalificationLeads,
   fetchCallsDueLeads,
+  fetchUpcomingDripCalls,
   fetchQueueCounts,
   fetchLeadById,
 } from "@/lib/repositories/leads"
@@ -30,6 +31,7 @@ export const leadKeys = {
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   requalification: () => [...leadKeys.all, "requalification"] as const,
   callsDue: () => [...leadKeys.all, "calls-due"] as const,
+  dripCalls: () => [...leadKeys.all, "drip-calls"] as const,
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
   fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
   queueCounts: () => [...leadKeys.all, "queue-counts"] as const,
@@ -77,6 +79,9 @@ export function useRequalificationLeads() {
 }
 export function useCallsDueLeads() {
   return useQuery({ queryKey: leadKeys.callsDue(),    queryFn: fetchCallsDueLeads })
+}
+export function useUpcomingDripCalls() {
+  return useQuery({ queryKey: leadKeys.dripCalls(),   queryFn: fetchUpcomingDripCalls })
 }
 export function useLeadById(id: string | undefined) {
   return useQuery({
