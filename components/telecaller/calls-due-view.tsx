@@ -64,7 +64,11 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
                     equipment={lead.equipment}
                     replied={lead.replied}
                     onOpen={() => toggle(lead.id)}
-                    meta={<span>Scheduled {lead.scheduledAt.toLocaleString()}</span>}
+                    meta={
+                      lead.reason === "callback"
+                        ? <span className="font-medium text-foreground">📞 Callback at {lead.scheduledAt.toLocaleString()}</span>
+                        : <span>Scheduled {lead.scheduledAt.toLocaleString()}</span>
+                    }
                     badge={<Badge variant="outline" className="text-[10px]">{REASON_LABEL[lead.reason] ?? lead.reason}</Badge>}
                     actions={
                       <div className="flex items-center gap-1.5">
