@@ -409,6 +409,8 @@ export interface PipelineRow extends ReplyRowFields {
   assigned_to: string
   phone_verified: 0 | 1
   customer_name: string | null
+  phone: string | null
+  city: string | null
   created_at: string
   updated_at: string
   failed_attempts: number

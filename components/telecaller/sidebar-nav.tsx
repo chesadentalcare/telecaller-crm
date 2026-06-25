@@ -31,6 +31,7 @@ import {
   Briefcase,
   Activity,
   ClipboardCheck,
+  AlertTriangle,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -200,7 +201,20 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
                         <stage.icon className="size-4" />
                       </div>
                       <div className="flex flex-col items-start gap-0 group-data-[collapsible=icon]:hidden">
-                        <span className="text-sm font-medium">{stage.title}</span>
+                        <span className="flex items-center gap-1 text-sm font-medium">
+                          {stage.title}
+                          {/* Amendment 2 (Theme 6) — pointed neglect alarm: brand-new leads
+                              with zero activity past 24h. Red so it reads as "act now". */}
+                          {stage.id === "pipeline" && queueCounts.neglected > 0 && (
+                            <span
+                              title="Brand-new leads with no activity (24h+) — call them"
+                              className="inline-flex items-center gap-0.5 rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+                            >
+                              <AlertTriangle className="size-2.5" />
+                              {queueCounts.neglected}
+                            </span>
+                          )}
+                        </span>
                         <span className="text-[10px] text-sidebar-foreground/60">{stage.subtitle}</span>
                       </div>
                       {stage.isAction && (

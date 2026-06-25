@@ -1162,11 +1162,19 @@ export function CallsTab({
   const callState = callLogState(priorOutcomes)
   const firstAttempt = callAttempts[0]
 
+  // The lead's CURRENT predicted close (live-read from SAP, overlaid by the backend).
+  // We pre-fill the new-attempt date field with it so the rep sees the previous value
+  // as the default and adjusts from there, instead of starting blank. <input type=date>
+  // wants 'YYYY-MM-DD'.
+  const currentPredictedClose = lead.predictedClosingDate
+    ? String(lead.predictedClosingDate).slice(0, 10)
+    : ""
+
   const { control, handleSubmit, reset, watch, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
     // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
     // register the Select. zod catches the empty value on submit.
-    defaultValues: { ...callAttemptDefaults, outcome: "" as CallOutcome },
+    defaultValues: { ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: currentPredictedClose },
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
@@ -1206,7 +1214,7 @@ export function CallsTab({
   const { mutateAsync: sendRecovery, isPending: sendingRecovery } = useRecoveryWhatsapp(lead.id)
 
   const resetForm = () => {
-    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome })
+    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: currentPredictedClose })
     setReadyNow(false); setNiReason(""); setCallbackAt("")
   }
 
@@ -1472,6 +1480,23 @@ export function CallsTab({
                           ? <span className="text-muted-foreground">(optional)</span>
                           : <span className="text-destructive">*</span>}
                       </Label>
+                      {/* Live SAP context — the lead's CURRENT predicted close, so the rep
+                          knows what the field is pre-filled to and what it's changing from. */}
+                      <div className="flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-[11px]">
+                        <CalendarClock className="size-3 text-primary shrink-0" />
+                        <span className="text-muted-foreground">Current (SAP):</span>
+                        <span className="font-medium text-foreground">
+                          {currentPredictedClose
+                            ? new Date(currentPredictedClose).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+                            : "Not set"}
+                        </span>
+                        {currentPredictedClose && lead.sapLive === false && (
+                          <span className="text-muted-foreground">· cached</span>
+                        )}
+                        {field.value && field.value !== currentPredictedClose && (
+                          <span className="ml-auto text-primary">→ changing</span>
+                        )}
+                      </div>
                       <Input
                         type="date"
                         min={new Date().toISOString().slice(0, 10)}

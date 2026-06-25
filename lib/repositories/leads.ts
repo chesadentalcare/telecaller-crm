@@ -46,7 +46,13 @@ const parseDate = (s: string | null | undefined): Date | undefined =>
 const stageToStatus = (stage: string): LeadStatus => {
   if (stage === "physical_meeting_scheduled" || stage === "zoom_meeting_done")
     return "meeting-scheduled"
-  if (stage === "full_qualified" || stage === "rapid_qualified") return "qualified"
+  // Amendment 2 (Theme 2): the collapsed single-bar stage is `qualified`; the older
+  // rapid/full names still map here for legacy rows.
+  if (stage === "qualified" || stage === "full_qualified" || stage === "rapid_qualified")
+    return "qualified"
+  // Amendment 2 (Theme 2): a manually-exited lead is reset to `unqualified` and must
+  // be visible AS unqualified in the pipeline (not silently shown as "Contacted").
+  if (stage === "unqualified") return "unqualified"
   if (stage === "new") return "new"
   return "contacted"
 }
@@ -77,10 +83,10 @@ const toProjection = (p?: { projectedCompletionAt: string; stageIndex: number; t
 const toPipeline = (r: PipelineRow): PipelineLead => ({
   id: String(r.id),
   name: r.customer_name || placeholderName(r.id),
-  phone: placeholderPhone,
+  phone: r.phone || placeholderPhone,
   equipment: r.equipment ?? "—",
   source: r.source || "—",
-  city: "—",
+  city: r.city || "—",
   status: stageToStatus(r.stage),
   phoneVerified: !!r.phone_verified,
   failedAttempts: Number(r.failed_attempts) || 0,

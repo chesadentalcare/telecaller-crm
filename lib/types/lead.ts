@@ -4,7 +4,7 @@
 // As real fields land (SAP cardCode, BP type, owner ID, addresses), extend
 // LeadBase first — narrower types pick up new fields automatically.
 
-export type LeadStatus = "new" | "contacted" | "qualified" | "meeting-scheduled"
+export type LeadStatus = "new" | "contacted" | "qualified" | "unqualified" | "meeting-scheduled"
 export type DripTrack = "1-month" | "3-month" | "6-month"
 export type InterestLevel = "hot" | "warm" | "cold" | "just_exploring"
 

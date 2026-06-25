@@ -23,6 +23,7 @@ function getStatusConfig(status: PipelineLead["status"]) {
     case "new":               return { label: "New",         className: "bg-primary/10 text-primary border-primary/20" }
     case "contacted":         return { label: "Contacted",   className: "bg-chart-3/10 text-chart-3 border-chart-3/20" }
     case "qualified":         return { label: "Qualified",   className: "bg-chart-2/10 text-chart-2 border-chart-2/20" }
+    case "unqualified":       return { label: "Unqualified", className: "bg-warning/10 text-warning border-warning/30" }
     case "meeting-scheduled": return { label: "Meeting Set", className: "bg-success/10 text-success border-success/20" }
   }
 }
@@ -108,6 +109,9 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                   <TabsTrigger value="new" className="text-xs px-3 h-6">New</TabsTrigger>
                   <TabsTrigger value="contacted" className="text-xs px-3 h-6">Contacted</TabsTrigger>
                   <TabsTrigger value="qualified" className="text-xs px-3 h-6">Qualified</TabsTrigger>
+                  {leads.some((l) => l.status === "unqualified") && (
+                    <TabsTrigger value="unqualified" className="text-xs px-3 h-6">Unqualified</TabsTrigger>
+                  )}
                 </TabsList>
               </Tabs>
               <Button variant="outline" size="sm" className="h-8 gap-1.5">
