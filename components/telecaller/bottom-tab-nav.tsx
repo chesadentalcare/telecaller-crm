@@ -4,17 +4,12 @@ import { useMemo, useState } from "react"
 import {
   LayoutDashboard,
   Inbox,
-  Timer,
   MoreHorizontal,
   UserPlus,
   PhoneCall,
-  PhoneOff,
-  Moon,
-  Archive,
-  RotateCcw,
-  CalendarClock,
   Briefcase,
   Activity,
+  ClipboardCheck,
 } from "lucide-react"
 import { useRole } from "@/hooks/use-role"
 import {
@@ -44,9 +39,12 @@ export function BottomTabNav({
   // A pure sales role (sale_staff/coordinator/sale_head) — not a telecaller and
   // not a manager/admin. Their bottom nav is sales-centric, not intake-centric.
   const salesOnly = isSalesperson && !isManagerOrAbove && !isTelecaller
+  // A pure telecaller — worklist-first, no manager surfaces.
+  const teleOnly = isTelecaller && !isManagerOrAbove
 
-  // Both arrays depend on queueCounts + role. Memoize so the per-render array
-  // identity doesn't bust child memoization.
+  // Lean nav (Amendment): the status buckets (drip / no-response / idle / 6-month /
+  // re-qualify / reactivation / archived) are now segments INSIDE Pipeline, so the
+  // bottom bar only carries the primary work surfaces.
   const primaryTabs = useMemo(
     () =>
       salesOnly
@@ -55,41 +53,35 @@ export function BottomTabNav({
             { id: "sales-pipeline", title: "Sales",    icon: Briefcase },
             { id: "pipeline",       title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
           ]
+        : teleOnly
+        ? [
+            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDue },
+            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipeline },
+            { id: "new-lead",  title: "Add Lead",  icon: UserPlus },
+            { id: "home",      title: "Home",      icon: LayoutDashboard },
+          ]
         : [
-            { id: "home",     title: "Home",     icon: LayoutDashboard },
-            { id: "pipeline", title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
-            { id: "new-lead", title: "Add Lead", icon: UserPlus },
-            { id: "drip",     title: "Drip",     icon: Timer, count: queueCounts.drip },
+            // Manager / admin
+            { id: "home",      title: "Home",      icon: LayoutDashboard },
+            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDue },
+            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipeline },
           ],
-    [queueCounts, salesOnly],
+    [queueCounts, salesOnly, teleOnly],
   )
 
-  const moreItems = useMemo(() => {
-    if (salesOnly) {
-      return [
-        { id: "idle",      title: "Idle Queue",      icon: Moon,          subtitle: "No activity 7d",     count: queueCounts.idle    },
-        { id: "dormant",   title: "Dormant",         icon: Archive,       subtitle: "No activity 30d+",   count: queueCounts.dormant },
-        { id: "six-month", title: "6+ Month Funnel", icon: CalendarClock, subtitle: "Long-cycle nurture", count: queueCounts.sixMonth },
-      ]
-    }
-    const items = [
-      { id: "calls-due",      title: "Calls Due",           icon: PhoneCall,     subtitle: "Call worklist",       count: queueCounts.callsDue    },
-      { id: "qualification",  title: "Rapid Qualification", icon: PhoneCall,     subtitle: "Qualify a lead" },
-      { id: "no-response",    title: "No Response",         icon: PhoneOff,      subtitle: "4+ failed calls",     count: queueCounts.noResponse  },
-      { id: "idle",           title: "Idle Queue",          icon: Moon,          subtitle: "No activity 7d",      count: queueCounts.idle        },
-      { id: "dormant",        title: "Dormant",             icon: Archive,       subtitle: "No activity 30d+",    count: queueCounts.dormant     },
-      { id: "reactivation",   title: "Reactivation Inbox",  icon: RotateCcw,     subtitle: "Returned from sales", count: queueCounts.reactivation },
-      { id: "six-month",      title: "6+ Month Funnel",     icon: CalendarClock, subtitle: "Long-cycle nurture",  count: queueCounts.sixMonth    },
-      { id: "requalification", title: "Re-qualification",   icon: RotateCcw,     subtitle: "Fresh re-capture",    count: queueCounts.requalification },
-      { id: "archived",       title: "Archived",            icon: Archive,       subtitle: "Filed leads",         count: queueCounts.archived    },
-    ]
-    // Managers/admins also get quick access to the sales pipeline + flow oversight.
-    if (isManagerOrAbove) {
-      items.splice(1, 0, { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase, subtitle: "Handed-over leads" })
-      items.splice(2, 0, { id: "flow-oversight", title: "Flow Oversight", icon: Activity, subtitle: "Team analytics & health" })
-    }
-    return items
-  }, [queueCounts, salesOnly, isManagerOrAbove])
+  // Only manager/admin keep an overflow sheet (their oversight surfaces). For
+  // telecaller/sales everything lives in the primary tabs + Pipeline segments.
+  const moreItems = useMemo(
+    () =>
+      isManagerOrAbove
+        ? [
+            { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase,      subtitle: "Handed-over leads" },
+            { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       subtitle: "Team analytics & health" },
+            { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, subtitle: "Discount requests" },
+          ]
+        : [],
+    [isManagerOrAbove],
+  )
 
   const isMoreActive = moreItems.some((i) => i.id === activeView)
 
@@ -133,7 +125,8 @@ export function BottomTabNav({
         )
       })}
 
-      {/* More — opens a bottom sheet with overflow items */}
+      {/* More — opens a bottom sheet with overflow items (manager/admin only) */}
+      {moreItems.length > 0 && (
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetTrigger asChild>
           <button
@@ -175,17 +168,13 @@ export function BottomTabNav({
                       <p className="text-xs text-muted-foreground">{item.subtitle}</p>
                     )}
                   </div>
-                  {item.count !== undefined && item.count > 0 && (
-                    <Badge variant="outline" className="ml-auto shrink-0">
-                      {item.count}
-                    </Badge>
-                  )}
                 </button>
               )
             })}
           </div>
         </SheetContent>
       </Sheet>
+      )}
     </nav>
   )
 }

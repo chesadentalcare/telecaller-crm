@@ -15,7 +15,7 @@ import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Phone } from "lucide-react"
+import { Search, Phone, UserPlus } from "lucide-react"
 import { NotificationBell } from "@/components/telecaller/notification-bell"
 import { AuthGate } from "@/components/auth/auth-gate"
 import { UserMenu } from "@/components/auth/user-menu"
@@ -29,8 +29,8 @@ const HomeDashboard = dynamic(
   () => import("@/components/telecaller/home-dashboard").then((m) => ({ default: m.HomeDashboard })),
   { loading: () => <ViewSkeleton /> },
 )
-const PipelineView = dynamic(
-  () => import("@/components/telecaller/pipeline-view").then((m) => ({ default: m.PipelineView })),
+const PipelineHub = dynamic(
+  () => import("@/components/telecaller/pipeline-hub").then((m) => ({ default: m.PipelineHub })),
   { loading: () => <ViewSkeleton /> },
 )
 const LeadDetailView = dynamic(
@@ -139,8 +139,8 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   },
   pipeline: {
     title: "Pipeline",
-    subtitle: "Active leads ready for calls",
-    render: ({ openLead }) => <PipelineView onOpenLead={openLead} />,
+    subtitle: "Your full book of leads — switch segments to filter",
+    render: ({ openLead }) => <PipelineHub onOpenLead={openLead} />,
   },
   "lead-detail": {
     title: "Lead Detail",
@@ -251,27 +251,28 @@ function TelecallerDashboardInner() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Source of truth: URL. Lets refresh / browser-back / bookmark / share work.
-  const activeView = searchParams.get("view") ?? "home"
-  const selectedLeadId = searchParams.get("leadId")
-
   const [searchQuery, setSearchQuery] = useState("")
   const queueCounts = useQueueCounts()
   const { role, hasRole, isManagerOrAbove } = useRole()
+
+  // Worklist-first: a pure telecaller lands on Calls Due (where fresh leads now
+  // appear), not the analytics dashboard. Everyone else defaults to Home.
+  const defaultView = role === "telecaller" && !isManagerOrAbove ? "calls-due" : "home"
+  // Source of truth: URL. Lets refresh / browser-back / bookmark / share work.
+  const activeView = searchParams.get("view") ?? defaultView
+  const selectedLeadId = searchParams.get("leadId")
 
   // Stable callback identity so memoized children don't re-render needlessly.
   const setActiveView = useMemo(
     () => (view: string) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (view === "home") {
-        params.delete("view")
-        params.delete("leadId")
-      } else {
-        params.set("view", view)
-        if (view !== "lead-detail") params.delete("leadId")
-      }
-      const query = params.toString()
-      router.push(query ? `${pathname}?${query}` : pathname)
+      // `home` is kept EXPLICIT in the URL (not cleared) — telecallers default to
+      // Calls Due on a bare URL, so clearing `view` would bounce them off the
+      // Dashboard right back to Calls Due. Explicit ?view=home lets Home stick.
+      params.set("view", view)
+      if (view !== "lead-detail") params.delete("leadId")
+      if (view !== "pipeline") params.delete("segment")
+      router.push(`${pathname}?${params.toString()}`)
     },
     [pathname, router, searchParams],
   )
@@ -327,6 +328,18 @@ function TelecallerDashboardInner() {
                 className="h-9 w-64 pl-9 bg-background"
               />
             </div>
+
+            {(isManagerOrAbove || (role !== null && hasRole("telecaller"))) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => setActiveView("new-lead")}
+              >
+                <UserPlus className="size-4" />
+                <span className="hidden sm:inline">New Lead</span>
+              </Button>
+            )}
 
             <Button
               size="sm"

@@ -19,7 +19,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
-  UserPlus,
   Phone,
   Settings,
   HelpCircle,
@@ -28,18 +27,10 @@ import {
   ChevronRight,
   Inbox,
   PhoneCall,
-  PhoneOff,
-  Timer,
-  Moon,
-  Archive,
-  CheckCircle2,
-  Calendar,
-  Video,
   LayoutDashboard,
-  RotateCcw,
-  CalendarClock,
   Briefcase,
   Activity,
+  ClipboardCheck,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -70,15 +61,8 @@ const HOME_OPTION = {
   borderColor: "border-primary",
 } as const
 
-const OUTCOMES = [
-  { id: "converted",        title: "Converted", icon: CheckCircle2, color: "text-emerald-500", count: 12 },
-  { id: "meeting-scheduled", title: "Meetings",  icon: Calendar,     color: "text-blue-500",    count: 5  },
-  { id: "demo-booked",      title: "Demos",     icon: Video,        color: "text-violet-500",  count: 3  },
-] as const
-
 export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNavProps) {
   const homeOption = HOME_OPTION
-  const outcomes = OUTCOMES
 
   const router = useRouter()
   const { user, logout } = useAuth()
@@ -100,26 +84,19 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
     router.replace("/login")
   }
 
-  // Lifecycle stages depend on queueCounts — memoize so SidebarMenuItem children
-  // don't see a fresh array on every parent re-render.
+  // Lean navigation (Amendment): the ~12-item lifecycle list overwhelmed reps, so
+  // every status bucket (drip / no-response / idle / 6-month / re-qualify /
+  // reactivation / archived) now lives behind the in-page segment switcher inside
+  // Pipeline. The sidebar keeps only the genuinely-distinct work surfaces.
+  // "New Lead" moved to a header button; "Qualification" is contextual (lead cockpit).
   // Each stage declares which roles can see it. null = all roles.
   const allStages = useMemo(
     () => [
-      { id: "new-lead",      title: "New Lead",        subtitle: "Intake Form",         icon: UserPlus,      color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                       isAction: true,  roles: ["telecaller"] as UserRole[] },
-      { id: "pipeline",      title: "Pipeline",        subtitle: "Active Leads",        icon: Inbox,         color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.pipeline,       isAction: false, roles: null },
-      { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-Over Leads",   icon: Briefcase,     color: "bg-indigo-500",  textColor: "text-indigo-500",  borderColor: "border-indigo-500",  count: null,                       isAction: false, roles: ["sale_staff", "coordinator", "sale_head"] as UserRole[] },
-      { id: "qualification", title: "Qualification",   subtitle: "Rapid Qualify",       icon: PhoneCall,     color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: null,                       isAction: true,  roles: ["telecaller"] as UserRole[] },
-      { id: "calls-due",     title: "Calls Due",       subtitle: "Call worklist",       icon: PhoneCall,     color: "bg-blue-500",    textColor: "text-blue-500",    borderColor: "border-blue-500",    count: queueCounts.callsDue,       isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "no-response",   title: "No Response",     subtitle: "4+ Failed Calls",     icon: PhoneOff,      color: "bg-red-500",     textColor: "text-red-500",     borderColor: "border-red-500",     count: queueCounts.noResponse,     isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "drip",          title: "Drip Queue",      subtitle: "Nurture Campaign",    icon: Timer,         color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: queueCounts.drip,           isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "idle",          title: "Idle Queue",      subtitle: "No Activity 7d",      icon: Moon,          color: "bg-slate-400",   textColor: "text-slate-400",   borderColor: "border-slate-400",   count: queueCounts.idle,           isAction: false, roles: null },
-      // "Dormant" removed — it showed the SAME data as "Archived" (both use the
-      // useDormantLeads hook). Archived is the single terminal/filed bucket.
-      { id: "reactivation",  title: "Reactivation",    subtitle: "Returned from Sales", icon: RotateCcw,     color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: queueCounts.reactivation,   isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "six-month",     title: "6+ Month Funnel", subtitle: "Long-Cycle Nurture",  icon: CalendarClock, color: "bg-violet-500",  textColor: "text-violet-500",  borderColor: "border-violet-500",  count: queueCounts.sixMonth,       isAction: false, roles: null },
-      { id: "requalification", title: "Re-qualification", subtitle: "Fresh re-capture",  icon: RotateCcw,     color: "bg-primary",     textColor: "text-primary",     borderColor: "border-primary",     count: queueCounts.requalification, isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "archived",      title: "Archived",        subtitle: "Filed leads",         icon: Archive,       color: "bg-slate-600",   textColor: "text-slate-600",   borderColor: "border-slate-600",   count: queueCounts.archived,       isAction: false, roles: null },
-      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,    color: "bg-amber-500",   textColor: "text-amber-500",   borderColor: "border-amber-500",   count: null,                       isAction: false, roles: ["manager", "admin"] as UserRole[] },
+      { id: "calls-due",      title: "Calls Due",      subtitle: "Today's call worklist",   icon: PhoneCall,    color: "bg-blue-500",   textColor: "text-blue-500",   borderColor: "border-blue-500",   count: queueCounts.callsDue, isAction: false, roles: ["telecaller"] as UserRole[] },
+      { id: "pipeline",       title: "Pipeline",       subtitle: "Your full lead book",     icon: Inbox,        color: "bg-indigo-500", textColor: "text-indigo-500", borderColor: "border-indigo-500", count: queueCounts.pipeline, isAction: false, roles: null },
+      { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-over leads",       icon: Briefcase,    color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                 isAction: false, roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"] as UserRole[] },
+      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,     color: "bg-amber-500",  textColor: "text-amber-500",  borderColor: "border-amber-500",  count: null,                 isAction: false, roles: ["manager", "admin"] as UserRole[] },
+      { id: "approvals",      title: "Approvals",      subtitle: "Discount requests",       icon: ClipboardCheck, color: "bg-violet-500", textColor: "text-violet-500", borderColor: "border-violet-500", count: null,                 isAction: false, roles: ["manager", "admin"] as UserRole[] },
     ],
     [queueCounts],
   )
@@ -184,7 +161,7 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
         {/* Lead Lifecycle - Sequential Flow */}
         <SidebarGroup className="py-3">
           <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 px-2 mb-2">
-            Lead Lifecycle
+            Workspace
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="relative">
@@ -256,66 +233,6 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Divider */}
-        <div className="mx-3 my-2 border-t border-sidebar-border" />
-
-        {/* Outcomes / Conversions */}
-        <SidebarGroup className="py-2">
-          <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 px-2">
-            Today&apos;s Wins
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <div className="mx-2 mt-2 grid grid-cols-3 gap-1 group-data-[collapsible=icon]:grid-cols-1">
-              {outcomes.map((outcome) => (
-                <div
-                  key={outcome.id}
-                  className="flex flex-col items-center justify-center rounded-md bg-sidebar-accent/50 p-2 text-center"
-                >
-                  <outcome.icon className={cn("size-4 mb-1", outcome.color)} />
-                  <span className="text-sm font-bold text-sidebar-foreground">{outcome.count}</span>
-                  <span className="text-[9px] text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">{outcome.title}</span>
-                </div>
-              ))}
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Lifecycle Flow Diagram - Collapsed View */}
-        <div className="mx-3 mt-3 rounded-lg bg-sidebar-accent/30 p-3 group-data-[collapsible=icon]:hidden">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 mb-2">
-            Flow Overview
-          </div>
-          <div className="flex items-center justify-between text-[9px]">
-            <div className="flex flex-col items-center">
-              <div className="size-6 rounded bg-emerald-500/20 flex items-center justify-center">
-                <UserPlus className="size-3 text-emerald-500" />
-              </div>
-              <span className="mt-1 text-sidebar-foreground/60">In</span>
-            </div>
-            <ChevronRight className="size-3 text-sidebar-foreground/30" />
-            <div className="flex flex-col items-center">
-              <div className="size-6 rounded bg-blue-500/20 flex items-center justify-center">
-                <PhoneCall className="size-3 text-blue-500" />
-              </div>
-              <span className="mt-1 text-sidebar-foreground/60">Call</span>
-            </div>
-            <ChevronRight className="size-3 text-sidebar-foreground/30" />
-            <div className="flex flex-col items-center">
-              <div className="size-6 rounded bg-amber-500/20 flex items-center justify-center">
-                <Timer className="size-3 text-amber-500" />
-              </div>
-              <span className="mt-1 text-sidebar-foreground/60">Drip</span>
-            </div>
-            <ChevronRight className="size-3 text-sidebar-foreground/30" />
-            <div className="flex flex-col items-center">
-              <div className="size-6 rounded bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="size-3 text-emerald-500" />
-              </div>
-              <span className="mt-1 text-sidebar-foreground/60">Win</span>
-            </div>
-          </div>
-        </div>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
