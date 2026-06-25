@@ -1192,6 +1192,9 @@ export function CallsTab({
 
   const [explainerOpen, setExplainerOpen] = useState(false)
   const [meetingOpen, setMeetingOpen] = useState(false)
+  // Intelligent qualification gate — opened when a contact-made outcome (engaged)
+  // is logged on an under-qualified lead. The log is blocked until it's filled.
+  const [qualifyOpen, setQualifyOpen] = useState(false)
   const [engagedCallValues, setEngagedCallValues] = useState<EngagedCallValues>({ predictedClosingDate: "", notes: "" })
   const [lastResult, setLastResult] = useState<{
     flow: OutcomeFlow; projectionLabel?: string; triggerRecovery?: boolean; routedServerSide?: boolean
@@ -1227,6 +1230,16 @@ export function CallsTab({
       return
     }
     const submittedFlow = resolveFlow(values.outcome, { readyNow, niReason: niReason || undefined, attemptNumber })
+
+    // INTELLIGENT QUALIFICATION GATE — only for contact-made outcomes (engaged) where
+    // the next step needs the data. The lead must be fully qualified before the call
+    // can log: block and open the Qualification dialog. Unreachable outcomes
+    // (no_response, wrong_number) never hit this — you can't qualify a no-answer.
+    if (submittedFlow?.requiresQualification && !isFullyQualified) {
+      toast.warning("Qualify this lead first — an ‘Engaged’ call can’t be logged until qualification is complete.")
+      setQualifyOpen(true)
+      return
+    }
 
     // ENGAGED + ready: meeting details are MANDATORY before the call logs. Open the
     // chooser — it books the meeting AND logs the engaged attempt together.
@@ -1551,6 +1564,10 @@ export function CallsTab({
             callValues={engagedCallValues}
             onLogged={resetForm}
           />
+
+          {/* Intelligent qualification gate — opened when an engaged call is logged on
+              an under-qualified lead. Filling it lets the rep re-submit the log. */}
+          <QualificationDialog open={qualifyOpen} onOpenChange={setQualifyOpen} lead={lead} />
 
           {/* "Learn about this outcome" — full FE/BE flowchart for the selected outcome. */}
           <OutcomeExplainerDialog

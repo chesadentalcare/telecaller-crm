@@ -53,6 +53,15 @@ export interface OutcomeFlow {
   guidedAction: GuidedAction
   /** When true the form blocks the log until the guided follow-up is satisfied. */
   mandatoryBeforeCommit: boolean
+  /**
+   * Intelligent qualification gate. When true, the lead MUST be fully qualified
+   * before this outcome can be logged — the form blocks the log and opens the
+   * Qualification dialog first. Only set on CONTACT-MADE outcomes where the next
+   * step genuinely needs the data (engaged → meeting / nurture). Unreachable
+   * outcomes (no_response, wrong_number) leave it false — you can't qualify a lead
+   * that never answered, so demanding it there is nonsensical.
+   */
+  requiresQualification?: boolean
   /** Rep-facing bullets ({n} interpolated live from attempt context where present). */
   thresholds: string[]
   predictedClose: PredictedCloseMode
@@ -93,6 +102,7 @@ export const OUTCOME_FLOWS: Record<string, OutcomeFlow> = {
     whatThisDoes: "Books the meeting (Physical or Zoom) and logs the call together, then moves the lead toward sales.",
     guidedAction: "open-meeting-modal",
     mandatoryBeforeCommit: true,
+    requiresQualification: true,
     predictedClose: "required",
     thresholds: [
       "Meeting details are required before the call logs",
@@ -127,6 +137,7 @@ export const OUTCOME_FLOWS: Record<string, OutcomeFlow> = {
     whatThisDoes: "Enters the lead into the nurture drip on its timeline track and projects a closing date.",
     guidedAction: "enter-drip",
     mandatoryBeforeCommit: false,
+    requiresQualification: true,
     predictedClose: "required",
     thresholds: [
       "Track from timeline: 1-month = 9 touches/17d · 3-month = 19/90d · 6-month = 13/168d",
