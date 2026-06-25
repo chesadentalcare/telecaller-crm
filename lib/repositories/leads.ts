@@ -205,9 +205,13 @@ const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
   equipment: r.equipment ?? "—",
   track: r.track,
   messagesSent: r.messages_sent,
-  nextCallAt: new Date(r.next_call_at),
-  callLabel: r.call_label,
-  dripDay: r.drip_day,
+  calls: r.calls.map((c) => ({
+    at: new Date(c.at),
+    label: c.label,
+    dripDay: c.drip_day,
+    touchIndex: c.touch_index,
+    dueNow: c.due_now,
+  })),
   whatsappNumber: r.whatsapp_number ?? undefined,
 })
 

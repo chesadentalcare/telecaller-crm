@@ -467,7 +467,7 @@ export interface CallNudgeRow extends ReplyRowFields {
   whatsapp_number?: string | null
 }
 
-// Upcoming drip CALL anchors — the forward schedule (next call per active drip lead).
+// Upcoming drip CALL anchors — the FULL call schedule per active drip lead.
 export interface DripCallRow {
   id: number
   customer_name: string | null
@@ -476,9 +476,13 @@ export interface DripCallRow {
   equipment: string | null
   track: "1_month" | "3_month" | "6_plus_month"
   messages_sent: number
-  next_call_at: string
-  call_label: string
-  drip_day: number | null
+  calls: {
+    at: string
+    label: string
+    drip_day: number | null
+    touch_index: number
+    due_now: boolean
+  }[]
 }
 
 export interface QueueCountsResponse {

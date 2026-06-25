@@ -144,9 +144,6 @@ function UpcomingDripCallsDialog({
   calls: UpcomingDripCall[]
   onOpenLead: (id: string) => void
 }) {
-  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
-  const isDueToday = (d: Date) => d < new Date(startOfToday.getTime() + 86_400_000)
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
@@ -162,37 +159,49 @@ function UpcomingDripCallsDialog({
         {calls.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No drip calls scheduled.</p>
         ) : (
-          <div className="divide-y">
-            {calls.map((c) => {
-              const tel = c.phone.replace(/\D/g, "")
-              const due = isDueToday(c.nextCallAt)
+          <div className="space-y-4">
+            {calls.map((lead) => {
+              const tel = lead.phone.replace(/\D/g, "")
               return (
-                <div key={c.id} className="flex items-center gap-3 py-2.5">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600">
-                    <CalendarClock className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{c.name}</span>
-                      <span className="text-[10px] text-muted-foreground">#{c.id}</span>
-                      <Badge variant="outline" className="text-[10px]">{TRACK_LABEL[c.track] ?? c.track}</Badge>
-                      {due && <Badge className="bg-amber-500 text-white text-[10px]">Due today</Badge>}
+                <div key={lead.id} className="rounded-lg border p-3">
+                  {/* Lead header */}
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{lead.name}</span>
+                    <span className="text-[10px] text-muted-foreground">#{lead.id}</span>
+                    <Badge variant="outline" className="text-[10px]">{TRACK_LABEL[lead.track] ?? lead.track}</Badge>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      {tel.length >= 10 && (
+                        <Button asChild size="sm" variant="outline" className="gap-1 h-7"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" /></a></Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-7" onClick={() => onOpenLead(lead.id)}>Open</Button>
                     </div>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {c.dripDay != null ? `Day ${c.dripDay} · ` : ""}{c.callLabel}
-                    </p>
-                    <p className="text-[11px] font-medium text-foreground">
-                      📞 {c.nextCallAt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}
-                      {" · "}
-                      {c.nextCallAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                    </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {tel.length >= 10 && (
-                      <Button asChild size="sm" variant="outline" className="gap-1"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" /></a></Button>
-                    )}
-                    <Button size="sm" variant="ghost" onClick={() => onOpenLead(c.id)}>Open</Button>
-                  </div>
+
+                  {/* Full call schedule — every remaining call anchor with its date */}
+                  <ol className="mt-2.5 space-y-2 border-l border-dashed border-muted-foreground/30 pl-4">
+                    {lead.calls.map((c) => {
+                      const due = isDueToday(c.at)
+                      return (
+                        <li key={c.touchIndex} className="relative">
+                          <span className={`absolute -left-[1.3rem] top-0.5 flex size-4 items-center justify-center rounded-full border ${due ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/40 bg-background"}`}>
+                            <CalendarClock className="size-2.5" />
+                          </span>
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="text-[11px] font-medium text-foreground">
+                              {c.dripDay != null ? `Day ${c.dripDay}` : `Call ${c.touchIndex + 1}`}
+                            </span>
+                            <span className={`text-[11px] ${due ? "font-semibold text-amber-600" : "text-muted-foreground"}`}>
+                              {c.at.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}
+                              {" · "}
+                              {c.at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                            </span>
+                            {due && <Badge className="bg-amber-500 text-white text-[9px] px-1 py-0">Due — in Calls Due now</Badge>}
+                          </div>
+                          <p className="truncate text-[11px] text-muted-foreground">{c.label}</p>
+                        </li>
+                      )
+                    })}
+                  </ol>
                 </div>
               )
             })}

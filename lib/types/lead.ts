@@ -115,15 +115,20 @@ export interface CallsDueLead extends LeadBase {
   whatsappNumber?: string
 }
 
-// Upcoming drip CALL anchors — the forward schedule shown in the "Upcoming Drip
-// Calls" modal on the Calls Due tab (each drip lead's next call-touch date).
+// Upcoming drip CALL anchors — the full call schedule shown in the "Upcoming Drip
+// Calls" modal on the Calls Due tab (each drip lead's every remaining call-touch date).
+export interface DripCallTouch {
+  at: Date
+  label: string
+  dripDay: number | null
+  touchIndex: number
+  dueNow: boolean
+}
 export interface UpcomingDripCall extends LeadBase {
   equipment: string
   track: "1_month" | "3_month" | "6_plus_month"
   messagesSent: number
-  nextCallAt: Date
-  callLabel: string
-  dripDay: number | null
+  calls: DripCallTouch[]
   whatsappNumber?: string
 }
 
