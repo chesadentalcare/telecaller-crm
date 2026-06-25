@@ -66,9 +66,21 @@ export function useLogAttempt(id: string | number) {
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       callback_at?: string
     }) => leadsApi.logAttempt(id, body),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
       invalidateAllLeads(qc)
+      // Confirm the live SAP Conversation-Activity push (created the moment the
+      // call was logged). Silent when there's no call activity to push (skipped).
+      const sap = res?.sapActivity
+      if (sap?.synced) {
+        toast.success("Call logged · pushed to SAP", {
+          description: sap.activityCode ? `SAP activity #${sap.activityCode}` : undefined,
+        })
+      } else if (sap && !sap.skipped) {
+        toast.warning("Call logged · SAP push failed", {
+          description: sap.error ? `SAP: ${sap.error}` : "Will be retried.",
+        })
+      }
     },
   })
 }

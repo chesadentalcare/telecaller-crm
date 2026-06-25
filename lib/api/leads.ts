@@ -490,6 +490,13 @@ export interface AttemptResponse {
   route?: string // present when ROUTE_OUTCOMES=true (Phase 6 dispatcher)
   predictedClosingDate?: string
   predictedCloseSynced?: boolean // did the SAP PredictedClosingDate push succeed
+  // Live SAP Conversation-Activity push result (null for non-call rows).
+  sapActivity?: {
+    synced: boolean
+    skipped?: boolean
+    activityCode?: number | null
+    error?: string
+  } | null
 }
 
 // ─── Mutations ──────────────────────────────────────────────────────────
