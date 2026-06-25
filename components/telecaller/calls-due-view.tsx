@@ -152,97 +152,131 @@ function UpcomingCallsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Timer className="size-4 text-amber-500" />Upcoming Calls
+      <DialogContent className="w-full max-w-md gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="space-y-1 border-b px-5 py-4">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+              <Timer className="size-4" />
+            </span>
+            Upcoming Calls
+            {scheduled.length + drip.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{scheduled.length + drip.length}</Badge>
+            )}
           </DialogTitle>
-          <DialogDescription>
-            Calls scheduled for a future day. Each one automatically moves into Calls Due — Today on its date.
+          <DialogDescription className="text-xs leading-relaxed">
+            Calls scheduled for a future day. Each one moves into <span className="font-medium text-foreground">Calls Due — Today</span> automatically on its date.
           </DialogDescription>
         </DialogHeader>
 
-        {empty ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nothing scheduled ahead.</p>
-        ) : (
-          <div className="space-y-5">
-            {/* Scheduled calls — real future call_nudges (callbacks, re-qual, first-contact) */}
-            {scheduled.length > 0 && (
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scheduled calls</p>
-                <div className="divide-y rounded-lg border">
-                  {scheduled.map((c) => {
-                    const tel = c.phone.replace(/\D/g, "")
-                    return (
-                      <div key={`${c.id}-${c.reason}-${c.scheduledAt.getTime()}`} className="flex items-center gap-3 px-3 py-2.5">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-600">
-                          <CalendarClock className="size-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-sm font-medium">{c.name}</span>
-                            <span className="text-[10px] text-muted-foreground">#{c.id}</span>
-                            <Badge variant="outline" className="text-[10px]">{REASON_LABEL[c.reason] ?? c.reason}</Badge>
+        <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden px-3 py-3">
+          {empty ? (
+            <div className="py-12 text-center">
+              <CalendarClock className="mx-auto mb-2 size-6 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nothing scheduled ahead.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Scheduled calls — real future call_nudges (callbacks, re-qual, first-contact) */}
+              {scheduled.length > 0 && (
+                <section>
+                  <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Scheduled calls</p>
+                  <div className="space-y-1">
+                    {scheduled.map((c) => {
+                      const tel = c.phone.replace(/\D/g, "")
+                      return (
+                        <div
+                          key={`${c.id}-${c.reason}-${c.scheduledAt.getTime()}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onOpenLead(c.id)}
+                          onKeyDown={(e) => { if (e.key === "Enter") onOpenLead(c.id) }}
+                          className="group flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent"
+                        >
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                            <CalendarClock className="size-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <span className="min-w-0 truncate text-sm font-medium">{c.name}</span>
+                              <Badge variant="secondary" className="shrink-0 px-1.5 text-[9px] font-medium">{REASON_LABEL[c.reason] ?? c.reason}</Badge>
+                            </div>
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              <span className="text-muted-foreground/70">#{c.id}</span>
+                              {" · "}
+                              <span className="font-medium text-foreground">{fmtDateTime(c.scheduledAt)}</span>
+                            </p>
                           </div>
-                          <p className="text-[11px] font-medium text-foreground">📞 {fmtDateTime(c.scheduledAt)}</p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
                           {tel.length >= 10 && (
-                            <Button asChild size="sm" variant="outline" className="gap-1 h-7"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" /></a></Button>
+                            <a
+                              href={`tel:${tel}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex size-8 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-success hover:text-success-foreground"
+                              title="Call"
+                            >
+                              <PhoneCall className="size-3.5" />
+                            </a>
                           )}
-                          <Button size="sm" variant="ghost" className="h-7" onClick={() => onOpenLead(c.id)}>Open</Button>
+                          <ChevronRight className="size-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-foreground" />
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
 
-            {/* Drip call schedule — projected forward call anchors per nurturing lead */}
-            {drip.length > 0 && (
-              <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Drip call schedule</p>
-                <div className="space-y-4">
-                  {drip.map((lead) => {
-                    const tel = lead.phone.replace(/\D/g, "")
-                    return (
-                      <div key={lead.id} className="rounded-lg border p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{lead.name}</span>
-                          <span className="text-[10px] text-muted-foreground">#{lead.id}</span>
-                          <Badge variant="outline" className="text-[10px]">{TRACK_LABEL[lead.track] ?? lead.track}</Badge>
-                          <div className="ml-auto flex items-center gap-1.5">
+              {/* Drip call schedule — projected forward call anchors per nurturing lead */}
+              {drip.length > 0 && (
+                <section>
+                  <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Drip call schedule</p>
+                  <div className="space-y-2">
+                    {drip.map((lead) => {
+                      const tel = lead.phone.replace(/\D/g, "")
+                      return (
+                        <div key={lead.id} className="rounded-xl border bg-card/50 p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium">{lead.name}</span>
+                            <Badge variant="outline" className="shrink-0 text-[9px]">{TRACK_LABEL[lead.track] ?? lead.track}</Badge>
                             {tel.length >= 10 && (
-                              <Button asChild size="sm" variant="outline" className="gap-1 h-7"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" /></a></Button>
+                              <a
+                                href={`tel:${tel}`}
+                                className="flex size-7 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-success hover:text-success-foreground"
+                                title="Call"
+                              >
+                                <PhoneCall className="size-3" />
+                              </a>
                             )}
-                            <Button size="sm" variant="ghost" className="h-7" onClick={() => onOpenLead(lead.id)}>Open</Button>
+                            <button
+                              onClick={() => onOpenLead(lead.id)}
+                              className="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10"
+                            >
+                              Open
+                            </button>
                           </div>
-                        </div>
-                        <ol className="mt-2.5 space-y-2 border-l border-dashed border-muted-foreground/30 pl-4">
-                          {lead.calls.map((c) => (
-                            <li key={c.touchIndex} className="relative">
-                              <span className="absolute -left-[1.3rem] top-0.5 flex size-4 items-center justify-center rounded-full border border-muted-foreground/40 bg-background">
-                                <CalendarClock className="size-2.5" />
-                              </span>
-                              <div className="flex flex-wrap items-baseline gap-x-2">
-                                <span className="text-[11px] font-medium text-foreground">
-                                  {c.dripDay != null ? `Day ${c.dripDay}` : `Call ${c.touchIndex + 1}`}
+                          <ol className="mt-2.5 space-y-2 border-l border-dashed border-muted-foreground/25 pl-4">
+                            {lead.calls.map((c) => (
+                              <li key={c.touchIndex} className="relative">
+                                <span className="absolute -left-[1.32rem] top-0.5 flex size-4 items-center justify-center rounded-full border border-muted-foreground/30 bg-background">
+                                  <CalendarClock className="size-2.5 text-muted-foreground" />
                                 </span>
-                                <span className="text-[11px] text-muted-foreground">{fmtDateTime(c.at)}</span>
-                              </div>
-                              <p className="truncate text-[11px] text-muted-foreground">{c.label}</p>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                                <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                                  <span className="text-[11px] font-semibold text-foreground">
+                                    {c.dripDay != null ? `Day ${c.dripDay}` : `Call ${c.touchIndex + 1}`}
+                                  </span>
+                                  <span className="text-[11px] text-muted-foreground">{fmtDateTime(c.at)}</span>
+                                </div>
+                                <p className="truncate text-[11px] text-muted-foreground/80">{c.label}</p>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
