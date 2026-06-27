@@ -15,12 +15,11 @@ import { useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { MapPinned, Video, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2 } from "lucide-react"
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -45,6 +44,7 @@ export function MeetingChooserDialog({
   isFullyQualified,
   callValues,
   onLogged,
+  meetingType,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -56,8 +56,13 @@ export function MeetingChooserDialog({
   callValues: EngagedCallValues
   /** Called after BOTH the meeting and the engaged attempt are committed. */
   onLogged: () => void
+  /**
+   * Which meeting to book — decided by the engaged sub-flow, NOT chosen here:
+   *   "physical" = Engaged · "Yes, ready for a physical meeting" → meeting + named handover.
+   *   "zoom"     = Engaged · "No — nurture · Zoom consult" → Zoom + design-fee branch.
+   */
+  meetingType: "physical" | "zoom"
 }) {
-  const [type, setType] = useState<"physical" | "zoom">("physical")
   // Once the meeting books we must not re-book on a log retry.
   const [meetingBooked, setMeetingBooked] = useState(false)
 
@@ -78,6 +83,8 @@ export function MeetingChooserDialog({
     onLogged()
   }
 
+  const isPhysical = meetingType === "physical"
+
   return (
     <Dialog
       open={open}
@@ -88,9 +95,13 @@ export function MeetingChooserDialog({
     >
       <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Schedule the meeting &amp; log the call</DialogTitle>
+          <DialogTitle>
+            {isPhysical ? "Schedule the physical meeting & log the call" : "Schedule the Zoom consult & log the call"}
+          </DialogTitle>
           <DialogDescription>
-            The engaged call logs together with this meeting. Pick the meeting type and fill the details.
+            {isPhysical
+              ? "The engaged call logs together with this physical meeting and hands the lead to a named salesperson."
+              : "The engaged call logs together with this Zoom meeting (you keep the lead for the design-fee decision)."}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,7 +109,7 @@ export function MeetingChooserDialog({
           <Alert className="border-amber-500/30 bg-amber-500/5">
             <AlertTriangle className="size-4 text-amber-600" />
             <AlertDescription className="text-xs">
-              Complete the lead's qualification first — both meeting types require it. Use “Update Qualification” on the Call Log tab, then come back.
+              Complete the lead's qualification first — meetings require it. Use “Update Qualification” on the Call Log tab, then come back.
             </AlertDescription>
           </Alert>
         )}
@@ -128,33 +139,23 @@ export function MeetingChooserDialog({
               Log the call
             </Button>
           </div>
+        ) : isPhysical ? (
+          <PhysicalBody
+            leadId={leadId}
+            address={address}
+            disabled={!isFullyQualified}
+            onMeetingBooked={() => setMeetingBooked(true)}
+            logEngaged={logEngaged}
+            finish={finish}
+          />
         ) : (
-          <Tabs value={type} onValueChange={(v) => setType(v as "physical" | "zoom")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="physical" className="gap-1.5 text-xs"><MapPinned className="size-3.5" />Physical</TabsTrigger>
-              <TabsTrigger value="zoom" className="gap-1.5 text-xs"><Video className="size-3.5" />Zoom</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="physical" className="mt-3">
-              <PhysicalBody
-                leadId={leadId}
-                address={address}
-                disabled={!isFullyQualified}
-                onMeetingBooked={() => setMeetingBooked(true)}
-                logEngaged={logEngaged}
-                finish={finish}
-              />
-            </TabsContent>
-            <TabsContent value="zoom" className="mt-3">
-              <ZoomBody
-                leadId={leadId}
-                disabled={!isFullyQualified}
-                onMeetingBooked={() => setMeetingBooked(true)}
-                logEngaged={logEngaged}
-                finish={finish}
-              />
-            </TabsContent>
-          </Tabs>
+          <ZoomBody
+            leadId={leadId}
+            disabled={!isFullyQualified}
+            onMeetingBooked={() => setMeetingBooked(true)}
+            logEngaged={logEngaged}
+            finish={finish}
+          />
         )}
       </DialogContent>
     </Dialog>
@@ -182,16 +183,25 @@ function PhysicalBody({
   const { errors, isSubmitting } = formState
 
   const onSubmit = async (values: PhysicalMeetingValues) => {
+    // 1) Book the meeting. If THIS fails, nothing is orphaned and no retry button shows.
+    let res
     try {
-      const res = await schedulePhysical(values)
-      onMeetingBooked()
-      if (res.sapSynced === false) toast.warning("Booked, but the SAP ownership assignment failed — re-sync later.")
+      res = await schedulePhysical(values)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to book the meeting")
+      return
+    }
+    if (res.sapSynced === false) toast.warning("Booked, but the SAP ownership assignment failed — re-sync later.")
+    // 2) Log the engaged call ONCE. Only on a log failure do we surface the retry button
+    // (onMeetingBooked) — setting it earlier flashed the retry mid-flow and a click could
+    // double-log the call.
+    try {
       await logEngaged()
       toast.success("Physical meeting booked + engaged call logged")
       finish()
     } catch (err) {
-      // If the meeting itself failed, meetingBooked stays false → nothing orphaned.
-      toast.error(err instanceof ApiError ? err.message : "Failed to book the meeting")
+      onMeetingBooked()
+      toast.error(err instanceof ApiError ? err.message : "Meeting booked — logging failed. Click ‘Log the call’.")
     }
   }
 
@@ -259,14 +269,22 @@ function ZoomBody({
   const feeStatus = watch("designFeeStatus")
 
   const onSubmit = async (values: ZoomMeetingValues) => {
+    // 1) Book the Zoom meeting. If THIS fails, nothing is orphaned.
     try {
       await scheduleZoom(values)
-      onMeetingBooked()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to book the Zoom meeting")
+      return
+    }
+    // 2) Log the engaged call ONCE. The retry button (onMeetingBooked) appears ONLY on a
+    // log failure — flipping it earlier flashed the retry mid-flow and a click double-logged.
+    try {
       await logEngaged()
       toast.success("Zoom meeting booked + engaged call logged")
       finish()
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to book the Zoom meeting")
+      onMeetingBooked()
+      toast.error(err instanceof ApiError ? err.message : "Meeting booked — logging failed. Click ‘Log the call’.")
     }
   }
 
@@ -307,6 +325,11 @@ function ZoomBody({
           </Field>
         )} />
       )}
+      <Controller control={control} name="extraEmails" render={({ field }) => (
+        <Field label="Invite by email (optional)" error={errors.extraEmails?.message} hint="Comma-separated. Customer & you are included automatically.">
+          <Input {...field} placeholder="e.g. manager@clinic.com, partner@clinic.com" />
+        </Field>
+      )} />
       <DialogFooter>
         <Button type="submit" disabled={isSubmitting || disabled} className="gap-1.5">
           <CheckCircle2 className="size-3.5" />

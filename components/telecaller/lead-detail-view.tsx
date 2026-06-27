@@ -1185,7 +1185,9 @@ export function CallsTab({
 
   // Phase 6 — conditional disposition inputs threaded into the attempt body so
   // the server-side dispatcher (routeOutcome) can route deterministically.
-  const [readyNow, setReadyNow] = useState(false)                      // engaged → meeting vs drip
+  const [readyNow, setReadyNow] = useState(false)                      // engaged → physical meeting vs nurture
+  const [meetingType, setMeetingType] = useState<"physical" | "zoom">("physical") // which meeting the modal books
+  const [nurtureQualifyOpen, setNurtureQualifyOpen] = useState(false)  // engaged + not-ready → qualification (Zoom/Drip route)
   const [niReason, setNiReason] = useState<NotInterestedReason | "">("") // not_interested 3-way
   const [callbackAt, setCallbackAt] = useState("")                     // call_back_requested
 
@@ -1242,9 +1244,19 @@ export function CallsTab({
     }
     const submittedFlow = resolveFlow(values.outcome, { readyNow, niReason: niReason || undefined, attemptNumber })
 
-    // INTELLIGENT QUALIFICATION GATE — only for contact-made outcomes (engaged) where
-    // the next step needs the data. The lead must be fully qualified before the call
-    // can log: block and open the Qualification dialog. Unreachable outcomes
+    // ENGAGED · "No — nurture": ALWAYS open the Qualification modal in nurture mode. It
+    // captures/confirms qualification AND chooses the next route (Zoom or Drip) under
+    // "Next Step Route" — which then opens the Zoom modal or enters the drip + logs the
+    // call. (Handled by onNurtureRoute below.)
+    if (values.outcome === "engaged" && !readyNow) {
+      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "" })
+      setNurtureQualifyOpen(true)
+      return
+    }
+
+    // INTELLIGENT QUALIFICATION GATE — only for contact-made outcomes (engaged + Yes)
+    // where the next step needs the data. The lead must be fully qualified before the
+    // call can log: block and open the Qualification dialog. Unreachable outcomes
     // (no_response, wrong_number) never hit this — you can't qualify a no-answer.
     if (submittedFlow?.requiresQualification && !isFullyQualified) {
       toast.warning("Qualify this lead first — an ‘Engaged’ call can’t be logged until qualification is complete.")
@@ -1252,9 +1264,11 @@ export function CallsTab({
       return
     }
 
-    // ENGAGED + ready: meeting details are MANDATORY before the call logs. Open the
-    // chooser — it books the meeting AND logs the engaged attempt together.
+    // ENGAGED · "Yes — ready": physical-meeting details are MANDATORY before the call
+    // logs. The modal books the physical meeting + named handover AND logs the engaged
+    // attempt together.
     if (submittedFlow?.guidedAction === "open-meeting-modal") {
+      setMeetingType("physical")
       setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "" })
       setMeetingOpen(true)
       return
@@ -1303,6 +1317,44 @@ export function CallsTab({
       if (submittedFlow) {
         setLastResult({ flow: submittedFlow, projectionLabel, triggerRecovery: !!res.triggerRecovery, routedServerSide })
       }
+      resetForm()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to log attempt")
+    }
+  }
+
+  // Engaged · "No — nurture": the qualification modal saved qualification and handed
+  // back the chosen route. Zoom → open the Zoom modal (books Zoom + logs the engaged
+  // call). Drip → log the engaged call, then enter the nurture drip on the chosen timeline.
+  const onNurtureRoute = async (route: "online_meeting" | "drip_info", timeline: string) => {
+    setNurtureQualifyOpen(false)
+    if (route === "online_meeting") {
+      setMeetingType("zoom")
+      setMeetingOpen(true)
+      return
+    }
+    try {
+      const res = await logAttempt({
+        outcome: "engaged",
+        ready_now: false,
+        ...(engagedCallValues.predictedClosingDate ? { predicted_closing_date: engagedCallValues.predictedClosingDate } : {}),
+        notes: engagedCallValues.notes,
+      })
+      toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
+      let projectionLabel: string | undefined
+      if (res.route !== "drip") {
+        try {
+          const drip = await enterDrip({ timelineBucket: timeline })
+          if (drip?.projection) {
+            const date = new Date(drip.projection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+            projectionLabel = `Stage 1 of ${drip.projection.totalStages} · projected close ${date}`
+          }
+        } catch {
+          toast.warning("Logged, but drip entry failed — retry from the Drip tab.")
+        }
+      }
+      const flow = resolveFlow("engaged", { readyNow: false, attemptNumber })
+      if (flow) setLastResult({ flow, projectionLabel, triggerRecovery: !!res.triggerRecovery, routedServerSide: !!res.route })
       resetForm()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to log attempt")
@@ -1407,12 +1459,15 @@ export function CallsTab({
               </div>
             )}
 
-            {/* P6.1 — ENGAGED: ready for a meeting now? (drives meeting vs drip) */}
+            {/* P6.1 — ENGAGED: ready for a PHYSICAL meeting now?
+                  Yes → physical meeting + named handover (one step).
+                  No  → opens the Qualification modal, where the rep chooses the nurture
+                        route (Zoom consult or Drip) under "Next Step Route". */}
             {outcome === "engaged" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Ready for a physical meeting now?</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {[{ v: true, l: "Yes — schedule meeting" }, { v: false, l: "No — nurture (drip)" }].map((o) => (
+                  {[{ v: true, l: "Yes — book physical meeting" }, { v: false, l: "No — nurture" }].map((o) => (
                     <button
                       key={String(o.v)}
                       type="button"
@@ -1426,6 +1481,11 @@ export function CallsTab({
                     </button>
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {readyNow
+                    ? "Books the physical meeting and hands the lead to a named salesperson in the same step."
+                    : "Opens qualification — pick a Zoom consult or the drip there."}
+                </p>
               </div>
             )}
 
@@ -1582,7 +1642,8 @@ export function CallsTab({
             </div>
           )}
 
-          {/* Engaged → meeting: the atomic chooser (books meeting + logs the call together). */}
+          {/* Engaged → meeting: the atomic modal (books the chosen meeting + logs the call
+              together). Physical for "ready", Zoom for the "nurture · Zoom" path. */}
           <MeetingChooserDialog
             open={meetingOpen}
             onOpenChange={setMeetingOpen}
@@ -1590,12 +1651,22 @@ export function CallsTab({
             address={lead.address}
             isFullyQualified={isFullyQualified}
             callValues={engagedCallValues}
+            meetingType={meetingType}
             onLogged={resetForm}
           />
 
           {/* Intelligent qualification gate — opened when an engaged call is logged on
               an under-qualified lead. Filling it lets the rep re-submit the log. */}
           <QualificationDialog open={qualifyOpen} onOpenChange={setQualifyOpen} lead={lead} />
+
+          {/* Engaged · "No — nurture": qualify + choose the Zoom-vs-Drip route here, then
+              act (open the Zoom modal or enter the drip + log the engaged call). */}
+          <QualificationDialog
+            open={nurtureQualifyOpen}
+            onOpenChange={setNurtureQualifyOpen}
+            lead={lead}
+            engagedNurture={{ onRoute: onNurtureRoute }}
+          />
 
           {/* "Learn about this outcome" — full FE/BE flowchart for the selected outcome. */}
           <OutcomeExplainerDialog
@@ -2006,10 +2077,13 @@ function QualificationDialog({
   open,
   onOpenChange,
   lead,
+  engagedNurture,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   lead: LeadDetail
+  /** Engaged · "No — nurture": restrict routes to Zoom + Drip and hand the choice back. */
+  engagedNurture?: { onRoute: (route: "online_meeting" | "drip_info", timeline: string) => void }
 }) {
   const isRequalify = !!lead.requalifyPending
   return (
@@ -2023,6 +2097,7 @@ function QualificationDialog({
           leadId={lead.id}
           lead={{ name: lead.name, phone: lead.phone, equipment: lead.equipment }}
           requalify={isRequalify}
+          engagedNurture={engagedNurture}
           defaults={{
             phoneVerified: lead.phoneVerified ? true : undefined,
             decisionMaker: lead.decisionMaker ?? "",

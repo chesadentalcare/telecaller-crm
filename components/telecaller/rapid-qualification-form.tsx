@@ -37,6 +37,13 @@ const ROUTE_OPTIONS = [
   { id: "drip_info", label: "Add to Drip", desc: "Nurture over time", icon: Droplets, color: "text-chart-3", bgColor: "bg-chart-3/10", borderColor: "border-chart-3" },
 ] as const
 
+// Engaged · "No — nurture" path: the route choice is Zoom consult vs Drip ONLY
+// (Physical is the "Yes" path). Online_meeting is relabelled "Zoom consult" here.
+const ENGAGED_NURTURE_ROUTES = [
+  { id: "online_meeting", label: "Zoom consult", desc: "Schedule a Zoom demo", icon: Video, color: "text-primary", bgColor: "bg-primary/10", borderColor: "border-primary" },
+  { id: "drip_info", label: "Add to Drip", desc: "Nurture over time", icon: Droplets, color: "text-chart-3", bgColor: "bg-chart-3/10", borderColor: "border-chart-3" },
+] as const
+
 interface LeadInfo {
   name: string
   phone: string
@@ -52,20 +59,37 @@ interface RapidQualificationFormProps {
   requalify?: boolean
   /** Called after a successful qualify (e.g. close a dialog / refresh). */
   onQualified?: () => void
+  /**
+   * Engaged · "No — nurture" mode. When set, the Next Step Route is restricted to
+   * Zoom consult + Add to Drip, and on Complete the form QUALIFIES then hands the
+   * chosen route back to the caller (which opens the Zoom modal or enters the drip
+   * AND logs the engaged call) instead of running its own drip-entry / success card.
+   */
+  engagedNurture?: { onRoute: (route: "online_meeting" | "drip_info", timeline: string) => void }
 }
 
-export function RapidQualificationForm({ lead, leadId, defaults, requalify, onQualified }: RapidQualificationFormProps) {
+export function RapidQualificationForm({ lead, leadId, defaults, requalify, onQualified, engagedNurture }: RapidQualificationFormProps) {
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [lastRoute, setLastRoute] = useState<string>("")
 
   const { mutateAsync: qualify } = useQualify(leadId ?? "")
   const { mutateAsync: enterDrip } = useEnterDrip(leadId ?? "")
 
+  const routeOptions = engagedNurture ? ENGAGED_NURTURE_ROUTES : ROUTE_OPTIONS
+  // In nurture mode, drop a pre-filled Physical route (not offered here) so the rep
+  // makes an explicit Zoom-vs-Drip choice. Otherwise keep the lead's current route.
+  const initialRoute =
+    engagedNurture && defaults?.route !== "online_meeting" && defaults?.route !== "drip_info"
+      ? ""
+      : (defaults?.route ?? qualificationDefaults.route)
+
   const { control, handleSubmit, reset, formState } = useForm<QualificationValues>({
     resolver: zodResolver(qualificationSchema),
     // Re-qualification clears everything ("never carry stale data forward"); otherwise
     // pre-fill so the rep only fills the gaps.
-    defaultValues: requalify ? qualificationDefaults : { ...qualificationDefaults, ...defaults },
+    defaultValues: requalify
+      ? qualificationDefaults
+      : { ...qualificationDefaults, ...defaults, route: initialRoute as QualificationValues["route"] },
     mode: "onChange",
   })
   const { isValid, isSubmitting } = formState
@@ -79,6 +103,13 @@ export function RapidQualificationForm({ lead, leadId, defaults, requalify, onQu
       const res = await qualify(values)
       if (res?.sapSynced === false) {
         toast.warning("Qualification saved, but the SAP sync failed — it will need a re-sync.")
+      }
+      // Engaged · "No — nurture": qualification is saved; hand the chosen route back to
+      // the caller, which opens the Zoom modal or enters the drip AND logs the engaged
+      // call. No success card here — the caller closes this dialog and takes over.
+      if (engagedNurture) {
+        engagedNurture.onRoute(values.route as "online_meeting" | "drip_info", values.timeline)
+        return
       }
       // Drip route → enter the nurture track immediately (no extra clicks).
       if (values.route === "drip_info") {
@@ -347,8 +378,8 @@ export function RapidQualificationForm({ lead, leadId, defaults, requalify, onQu
               control={control}
               name="route"
               render={({ field }) => (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {ROUTE_OPTIONS.map((route) => {
+                <div className={cn("grid gap-2", engagedNurture ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
+                  {routeOptions.map((route) => {
                     const active = field.value === route.id
                     const Icon = route.icon
                     return (
