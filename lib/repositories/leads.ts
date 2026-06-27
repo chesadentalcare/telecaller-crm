@@ -32,6 +32,9 @@ import type {
   NoResponseRow,
   IdleRow,
   DormantRow,
+  ReactivationRow,
+  SixMonthRow,
+  RequalificationRow,
   CallNudgeRow,
   DripCallRow,
   ScheduledCallRow,
@@ -139,60 +142,45 @@ const toIdle = (r: IdleRow): IdleLead => ({
 
 const toDormant = (r: DormantRow): DormantLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
   dormantDays: r.dormant_days,
   reason: r.reason ?? "no response",
+  replied: toReplied(r),
 })
-
-// Row shapes for the reactivation / six-month queues are declared inline on
-// leadsApi.queues.* — mirror them here so the mappers stay type-safe.
-type ReactivationRow = {
-  id: number
-  equipment: string | null
-  handed_back_at: string
-  handed_back_by: string
-  reason: string
-}
-
-type SixMonthRow = {
-  id: number
-  equipment: string | null
-  timeline: string
-  reactivate_by: string | null
-  reason: string | null
-  source?: string | null
-  retouch?: number | boolean
-}
-
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
   handedBackAt: humanAgo(r.handed_back_at),
   handedBackBy: r.handed_back_by,
   reason: r.reason ?? "—",
+  replied: toReplied(r),
 })
 
 const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
   reactivateBy: r.reactivate_by ?? "—",
   source: r.source ?? "—",
   reason: r.reason ?? "—",
   retouch: !!r.retouch, // MySQL boolean expr → 0/1; coerce to bool
+  replied: toReplied(r),
 })
 
-type RequalRow = { id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }
-const toRequalification = (r: RequalRow): RequalificationLead => ({
+const toRequalification = (r: RequalificationRow): RequalificationLead => ({
   id: String(r.id),
-  name: placeholderName(r.id),
-  phone: placeholderPhone,
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
   reason: r.reason ?? "—",
   timeline: r.timeline ?? "—",
   requestedAgo: humanAgo(r.requalify_at),
   equipment: r.equipment ?? "—",
+  replied: toReplied(r),
 })
 
 const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
@@ -205,6 +193,8 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   equipment: r.equipment ?? "—",
   whatsappNumber: r.whatsapp_number ?? undefined,
   replied: toReplied(r),
+  lastOutcome: r.last_outcome ?? null,
+  lastOutcomeAt: r.last_outcome_at ?? null,
 })
 
 const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
@@ -214,6 +204,7 @@ const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
   equipment: r.equipment ?? "—",
   track: r.track,
   messagesSent: r.messages_sent,
+  lastOutcome: r.last_outcome ?? null,
   calls: r.calls.map((c) => ({
     at: new Date(c.at),
     label: c.label,
@@ -231,6 +222,7 @@ const toScheduledCall = (r: ScheduledCallRow): ScheduledCall => ({
   scheduledAt: new Date(r.scheduled_at),
   equipment: r.equipment ?? "—",
   whatsappNumber: r.whatsapp_number ?? undefined,
+  lastOutcome: r.last_outcome ?? null,
 })
 
 // Tiny relative-time helper. The mock data already used strings like

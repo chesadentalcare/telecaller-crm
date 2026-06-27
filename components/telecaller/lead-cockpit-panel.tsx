@@ -12,7 +12,7 @@ import { Loader2, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useLeadFullDetail } from "@/hooks/use-leads"
-import { mapDetail, CallsTab, MeetingsTab, DripTab } from "./lead-detail-view"
+import { mapDetail, OverviewTab, CallsTab, MeetingsTab, DripTab } from "./lead-detail-view"
 import { EditLeadForm } from "./edit-lead-form"
 
 export function LeadCockpitPanel({
@@ -50,13 +50,18 @@ export function LeadCockpitPanel({
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="log" className="text-xs">Log &amp; Qualify</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+          <TabsTrigger value="log" className="text-xs">Call Log</TabsTrigger>
           <TabsTrigger value="meetings" className="text-xs">Meetings</TabsTrigger>
           <TabsTrigger value="drip" className="text-xs">Drip</TabsTrigger>
           <TabsTrigger value="edit" className="text-xs">Edit</TabsTrigger>
         </TabsList>
 
+        {/* Same Overview as the full pipeline lead-detail page. */}
+        <TabsContent value="overview" className="mt-3">
+          <OverviewTab lead={lead} />
+        </TabsContent>
         {/* The Next-Action CTA inside CallsTab navigates to meetings/drip — wire it to
             the cockpit's own tabs so it stays on the same screen. */}
         <TabsContent value="log" className="mt-3">

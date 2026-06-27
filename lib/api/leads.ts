@@ -449,10 +449,45 @@ export interface IdleRow extends ReplyRowFields {
   last_activity: string
 }
 
-export interface DormantRow {
+export interface DormantRow extends ReplyRowFields {
   id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
   dormant_days: number
   reason: string | null
+}
+
+// Segment queues now carry the same identity as the Active pipeline so every
+// pipeline-hub segment renders the canonical LeadQueueRow.
+export interface ReactivationRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  handed_back_at: string
+  handed_back_by: string
+  reason: string
+}
+export interface SixMonthRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  source: string | null
+  timeline: string
+  reactivate_by: string | null
+  reason: string | null
+  retouch?: number | boolean
+}
+export interface RequalificationRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  reason: string
+  requalify_at: string
+  timeline: string | null
 }
 
 // P6.8 — Calls-Due worklist row (over call_nudges, with enriched phone).
@@ -467,6 +502,8 @@ export interface CallNudgeRow extends ReplyRowFields {
   customer_name?: string | null
   phone: string
   whatsapp_number?: string | null
+  last_outcome?: CallOutcome | null
+  last_outcome_at?: string | null
 }
 
 // Upcoming calls (future-dated, beyond today). Two parts: real scheduled call_nudges
@@ -479,6 +516,8 @@ export interface ScheduledCallRow {
   phone: string
   whatsapp_number: string | null
   equipment: string | null
+  last_outcome?: CallOutcome | null
+  last_outcome_at?: string | null
 }
 export interface DripCallRow {
   id: number
@@ -488,6 +527,8 @@ export interface DripCallRow {
   equipment: string | null
   track: "1_month" | "3_month" | "6_plus_month"
   messages_sent: number
+  last_outcome?: CallOutcome | null
+  last_outcome_at?: string | null
   calls: {
     at: string
     label: string
@@ -944,9 +985,9 @@ export const leadsApi = {
     drip:         () => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip)),
     idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
-    reactivation: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; handed_back_at: string; handed_back_by: string; reason: string }>>>(endpoints.queueReactivation)),
-    sixMonth:     () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; source: string | null; timeline: string; reactivate_by: string | null; reason: string | null; retouch?: number | boolean }>>>(endpoints.queueSixMonth)),
-    requalification: () => unwrap(api.get<Envelope<Array<{ id: number; equipment: string | null; reason: string; requalify_at: string; timeline: string | null }>>>(endpoints.queueRequalification)),
+    reactivation: () => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation)),
+    sixMonth:     () => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth)),
+    requalification: () => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification)),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),

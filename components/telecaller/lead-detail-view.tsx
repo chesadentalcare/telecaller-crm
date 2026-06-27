@@ -747,7 +747,10 @@ function LeadDetailHeader({
 }
 
 // ─── Overview Tab ──────────────────────────────────────────────────────
-function OverviewTab({ lead }: { lead: LeadDetail }) {
+// Exported so the inline cockpit (LeadCockpitPanel) can show the SAME overview as
+// the full lead-detail page. Its private deps (overviewCards/InfoRow/LeadActionsCard)
+// live in this module, so the single export is drop-in.
+export function OverviewTab({ lead }: { lead: LeadDetail }) {
   const { data: products } = useProducts()
   // Stored interest is the product id; resolve to the friendly name shown in the
   // intake dropdown (falls back to the raw id while products load / on a miss).

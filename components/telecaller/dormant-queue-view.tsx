@@ -1,10 +1,11 @@
 "use client"
 
-import { Archive } from "lucide-react"
+import { Archive, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
+import { LeadQueueRow } from "./lead-queue-row"
 import { useDormantLeads } from "@/hooks/use-leads"
 
 export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
@@ -25,33 +26,46 @@ export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => 
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {leads.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">No dormant leads right now</p>
+        ) : (
         <div className="divide-y">
-          {leads.map((lead) => (
-            <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground font-medium text-sm">
-                  {lead.name.split(" ").map((n) => n[0]).join("")}
-                </div>
-                <div>
-                  <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
-                  <p className="text-xs text-muted-foreground"><span className="font-mono text-primary">#{lead.id}</span> · {lead.phone}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px]">
+          {leads.map((lead) => {
+            const tel = lead.phone.replace(/\D/g, "")
+            return (
+              <LeadQueueRow
+                key={lead.id}
+                id={lead.id}
+                name={lead.name}
+                phone={lead.phone}
+                equipment={lead.equipment}
+                replied={lead.replied}
+                onOpen={onOpenLead}
+                meta={lead.reason}
+                badge={
+                  <Badge variant="outline" className="text-[10px]">
                     {lead.dormantDays} days
                   </Badge>
-                  <p className="text-[10px] text-muted-foreground mt-1">{lead.reason}</p>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm">Revive</Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground">Archive</Button>
-                </div>
-              </div>
-            </div>
-          ))}
+                }
+                actions={
+                  <div className="flex items-center gap-1">
+                    {tel.length >= 10 ? (
+                      <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                        <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
+                    )}
+                    <Button variant="outline" size="sm">Revive</Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">Archive</Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => onOpenLead?.(lead.id)}>Open</Button>
+                  </div>
+                }
+              />
+            )
+          })}
         </div>
+        )}
       </CardContent>
     </Card>
   )

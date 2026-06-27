@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { PhoneOff, RefreshCw, Phone, AlertTriangle, MessageSquare } from "lucide-react"
+import { PhoneOff, RefreshCw, Phone, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
+import { LeadQueueRow } from "./lead-queue-row"
 import { ViewSkeleton } from "./view-skeleton"
 import { useNoResponseLeads, leadKeys } from "@/hooks/use-leads"
 import { leadsApi } from "@/lib/api/leads"
@@ -155,36 +156,18 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
           ) : (
             <div className="divide-y">
               {leads.map((lead) => (
-                <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive font-medium text-sm">
-                      {lead.name.split(" ").map((n) => n[0]).join("")}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button type="button" onClick={() => onOpenLead?.(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
-                        {lead.replied?.hasUnread && (
-                          <Badge className="gap-1 bg-success/15 text-success border-success/30 text-[10px]">
-                            <MessageSquare className="size-3" />Replied
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
-                      </div>
-                      {lead.replied?.body && (
-                        <p className="text-xs italic text-foreground/80 bg-muted/60 rounded px-2 py-1 mt-1 max-w-md line-clamp-2">“{lead.replied.body}”</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 text-[10px]">
-                        {lead.attempts} attempts
-                      </Badge>
-                      <p className="text-[10px] text-muted-foreground mt-1">Last: {lead.lastAttempt}</p>
-                    </div>
-                    <div className="flex gap-1">
+                <LeadQueueRow
+                  key={lead.id}
+                  id={lead.id}
+                  name={lead.name}
+                  phone={lead.phone}
+                  equipment={lead.equipment}
+                  replied={lead.replied}
+                  onOpen={onOpenLead}
+                  meta={<span>Last attempt {lead.lastAttempt}</span>}
+                  badge={<Badge variant="destructive" className="text-[10px]">{lead.attempts} attempts</Badge>}
+                  actions={
+                    <div className="flex items-center gap-1">
                       <Button asChild variant="ghost" size="icon" className="size-8" title={`Call ${lead.name}`}>
                         <a href={telHref(lead.phone)} aria-label={`Call ${lead.name}`}>
                           <Phone className="size-4 text-success" />
@@ -205,9 +188,12 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
                           <WhatsAppIcon className="size-4 text-[#25D366]" />
                         )}
                       </Button>
+                      <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={() => onOpenLead?.(lead.id)}>
+                        Open
+                      </Button>
                     </div>
-                  </div>
-                </div>
+                  }
+                />
               ))}
             </div>
           )}

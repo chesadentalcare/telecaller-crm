@@ -1,10 +1,11 @@
 "use client"
 
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
+import { LeadQueueRow } from "./lead-queue-row"
 import { useRequalificationLeads } from "@/hooks/use-leads"
 
 interface RequalificationViewProps {
@@ -36,25 +37,35 @@ export function RequalificationView({ onOpenLead }: RequalificationViewProps) {
           <p className="text-sm text-muted-foreground text-center py-10">Nothing to re-qualify right now</p>
         ) : (
           <div className="divide-y">
-            {leads.map((lead) => (
-              <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm shrink-0">
-                    {lead.name.split(" ").slice(-2).map((n) => n[0]).join("")}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{lead.name}</p>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                      <span className="truncate">{lead.reason}</span><span>•</span><span>{lead.requestedAgo}</span>
+            {leads.map((lead) => {
+              const tel = lead.phone.replace(/\D/g, "")
+              return (
+                <LeadQueueRow
+                  key={lead.id}
+                  id={lead.id}
+                  name={lead.name}
+                  phone={lead.phone}
+                  equipment={lead.equipment}
+                  replied={lead.replied}
+                  onOpen={onOpenLead}
+                  meta={<span>{lead.reason} · requested {lead.requestedAgo}</span>}
+                  badge={<Badge variant="outline" className="text-[10px]">timeline: {lead.timeline}</Badge>}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {tel.length >= 10 ? (
+                        <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                          <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
+                      )}
+                      <Button size="sm" onClick={() => onOpenLead(lead.id)}>Re-qualify</Button>
+                      <Button variant="outline" size="sm" className="h-8 px-2.5" onClick={() => onOpenLead(lead.id)}>Open</Button>
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="bg-primary/5 text-[10px]">timeline: {lead.timeline}</Badge>
-                  <Button size="sm" onClick={() => onOpenLead(lead.id)}>Re-qualify</Button>
-                </div>
-              </div>
-            ))}
+                  }
+                />
+              )
+            })}
           </div>
         )}
       </CardContent>

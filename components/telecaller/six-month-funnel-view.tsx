@@ -1,10 +1,11 @@
 "use client"
 
-import { CalendarClock, RefreshCw } from "lucide-react"
+import { CalendarClock, RefreshCw, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
+import { LeadQueueRow } from "./lead-queue-row"
 import { useSixMonthLeads } from "@/hooks/use-leads"
 
 interface SixMonthFunnelViewProps {
@@ -42,41 +43,56 @@ export function SixMonthFunnelView({ onOpenLead }: SixMonthFunnelViewProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {leads.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">No long-cycle leads in the funnel right now</p>
+        ) : (
         <div className="divide-y">
-          {leads.map((lead) => (
-            <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="flex size-10 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 font-medium text-sm shrink-0">
-                  {lead.name.split(" ").slice(-2).map((n) => n[0]).join("")}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
-                    {lead.name}
-                    {lead.retouch && (
-                      <Badge variant="outline" className="text-[9px] gap-0.5 border-sky-500/30 bg-sky-500/10 text-sky-700">
-                        <RefreshCw className="size-2.5" />24-mo re-touch
-                      </Badge>
+          {leads.map((lead) => {
+            const tel = lead.phone.replace(/\D/g, "")
+            return (
+              <LeadQueueRow
+                key={lead.id}
+                id={lead.id}
+                name={lead.name}
+                phone={lead.phone}
+                equipment={lead.equipment}
+                replied={lead.replied}
+                onOpen={onOpenLead}
+                meta={
+                  <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    <span>{lead.source}</span>
+                    <span>•</span>
+                    <span>{lead.reason}</span>
+                  </span>
+                }
+                badge={
+                  lead.retouch ? (
+                    <Badge variant="outline" className="text-[10px] gap-0.5 bg-sky-500/10 text-sky-700 border-sky-500/30">
+                      <RefreshCw className="size-2.5" />Re-touch by {lead.reactivateBy}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] bg-violet-500/10 text-violet-700 border-violet-500/30">
+                      Reactivate by {lead.reactivateBy}
+                    </Badge>
+                  )
+                }
+                actions={
+                  <div className="flex items-center gap-1">
+                    {tel.length >= 10 ? (
+                      <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                        <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
                     )}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                    <span>{lead.phone}</span><span>•</span><span>{lead.source}</span>
+                    <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={() => onOpenLead(lead.id)}>Open</Button>
                   </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <Badge variant="outline" className={lead.retouch
-                    ? "bg-sky-500/10 text-sky-700 border-sky-500/30 text-[10px]"
-                    : "bg-violet-500/10 text-violet-700 border-violet-500/30 text-[10px]"}>
-                    {lead.retouch ? "Re-touch by" : "Reactivate by"} {lead.reactivateBy}
-                  </Badge>
-                  <p className="text-[10px] text-muted-foreground mt-1">{lead.reason}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => onOpenLead(lead.id)}>Open</Button>
-              </div>
-            </div>
-          ))}
+                }
+              />
+            )
+          })}
         </div>
+        )}
       </CardContent>
     </Card>
   )

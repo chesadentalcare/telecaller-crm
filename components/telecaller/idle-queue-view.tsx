@@ -3,17 +3,17 @@
 import { useState } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { toast } from "sonner"
-import { Clock, Droplets, Loader2, MessageSquare } from "lucide-react"
+import { Clock, Droplets, Loader2, Phone } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { LeadQueueRow } from "./lead-queue-row"
 import { ViewSkeleton } from "./view-skeleton"
-import { useIdleLeads } from "@/hooks/use-leads"
+import { useIdleLeads, leadKeys } from "@/hooks/use-leads"
 import { leadsApi } from "@/lib/api/leads"
 import { ApiError } from "@/lib/api/client"
 import { useQueryClient } from "@tanstack/react-query"
-import { leadKeys } from "@/hooks/use-leads"
 
 export function IdleQueueView() {
   const { data: leads = [], isLoading } = useIdleLeads()
@@ -68,56 +68,54 @@ export function IdleQueueView() {
           </div>
         ) : (
           <div className="divide-y">
-            {leads.map((lead) => (
-              <div key={lead.id} className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-warning/10 text-warning font-medium text-sm">
-                    {lead.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button type="button" onClick={() => openLead(lead.id)} className="text-sm font-medium text-foreground hover:underline text-left">{lead.name}</button>
-                      {lead.replied?.hasUnread && (
-                        <Badge className="gap-1 bg-success/15 text-success border-success/30 text-[10px]">
-                          <MessageSquare className="size-3" />Replied
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono text-primary">#{lead.id}</span><span>•</span><span>{lead.phone}</span><span>•</span><span>{lead.equipment}</span>
-                    </div>
-                    {lead.replied?.body && (
-                      <p className="text-xs italic text-foreground/80 bg-muted/60 rounded px-2 py-1 mt-1 max-w-md line-clamp-2">“{lead.replied.body}”</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px]">
+            {leads.map((lead) => {
+              const tel = lead.phone.replace(/\D/g, "")
+              return (
+                <LeadQueueRow
+                  key={lead.id}
+                  id={lead.id}
+                  name={lead.name}
+                  phone={lead.phone}
+                  equipment={lead.equipment}
+                  replied={lead.replied}
+                  onOpen={openLead}
+                  meta={<span>Last activity {lead.lastActivity}</span>}
+                  badge={
+                    <Badge variant="outline" className="text-[10px] text-warning border-warning/40">
                       {lead.idleDays} days idle
                     </Badge>
-                    <p className="text-[10px] text-muted-foreground mt-1">{lead.lastActivity}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => addToDrip(lead.id)}
-                    disabled={pendingId === lead.id}
-                  >
-                    {pendingId === lead.id ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Droplets className="size-3.5" />
-                    )}
-                    Add to Drip
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openLead(lead.id)}>
-                    Open
-                  </Button>
-                </div>
-              </div>
-            ))}
+                  }
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {tel.length >= 10 ? (
+                        <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                          <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2.5 gap-1.5"
+                        onClick={() => addToDrip(lead.id)}
+                        disabled={pendingId === lead.id}
+                      >
+                        {pendingId === lead.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Droplets className="size-3.5" />
+                        )}
+                        Add to Drip
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={() => openLead(lead.id)}>
+                        Open
+                      </Button>
+                    </div>
+                  }
+                />
+              )
+            })}
           </div>
         )}
       </CardContent>

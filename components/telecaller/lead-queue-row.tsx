@@ -14,6 +14,7 @@
 import type { ReactNode } from "react"
 import { MessageSquare } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
 
 const INTENT_LABEL: Record<string, string> = {
@@ -37,16 +38,18 @@ export interface LeadQueueRowProps {
   /** Row actions (call, WhatsApp, menu). */
   actions?: ReactNode
   onOpen?: (id: string) => void
+  /** Extra classes for the row wrapper (e.g. pastel-red overdue highlight). */
+  className?: string
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, meta, badge, replied, actions, onOpen,
+  id, name, phone, equipment, meta, badge, replied, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
+    <div className={cn("flex flex-wrap items-start justify-between gap-3 p-4 hover:bg-muted/50 transition-colors", className)}>
       <div className="flex items-start gap-3 min-w-0">
         <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-xs shrink-0">
           {initials}

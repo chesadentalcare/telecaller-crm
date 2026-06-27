@@ -1,8 +1,10 @@
 "use client"
 
-import { Inbox, RotateCcw } from "lucide-react"
+import { Inbox, Phone, RotateCcw } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { LeadQueueRow } from "./lead-queue-row"
 import { ViewSkeleton } from "./view-skeleton"
 import { useReactivationLeads } from "@/hooks/use-leads"
 
@@ -43,29 +45,46 @@ export function ReactivationView({ onOpenLead }: ReactivationViewProps) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {leads.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">No leads returned from sales right now</p>
+          ) : (
           <div className="divide-y">
-            {leads.map((lead) => (
-              <div key={lead.id} className="flex flex-wrap items-start justify-between gap-3 p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-start gap-4 min-w-0 flex-1">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm shrink-0">
-                    {lead.name.split(" ").slice(-2).map((n) => n[0]).join("")}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{lead.name}</p>
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                    <p className="mt-1.5 text-xs">
+            {leads.map((lead) => {
+              const tel = lead.phone.replace(/\D/g, "")
+              return (
+                <LeadQueueRow
+                  key={lead.id}
+                  id={lead.id}
+                  name={lead.name}
+                  phone={lead.phone}
+                  equipment={lead.equipment}
+                  replied={lead.replied}
+                  onOpen={onOpenLead}
+                  meta={
+                    <span>
                       <span className="text-muted-foreground">From {lead.handedBackBy} · {lead.handedBackAt}: </span>
                       <span className="text-foreground">{lead.reason}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => onOpenLead(lead.id)}>Open</Button>
-                  <Button size="sm">Assume Ownership</Button>
-                </div>
-              </div>
-            ))}
+                    </span>
+                  }
+                  badge={<Badge variant="secondary" className="text-[10px]">Returned</Badge>}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {tel.length >= 10 ? (
+                        <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
+                          <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
+                      )}
+                      <Button size="sm">Assume Ownership</Button>
+                      <Button size="sm" variant="outline" onClick={() => onOpenLead(lead.id)}>Open</Button>
+                    </div>
+                  }
+                />
+              )
+            })}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

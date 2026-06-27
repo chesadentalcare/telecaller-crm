@@ -9,10 +9,11 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
-  ChevronRight, Calendar, MessageSquare, ShieldCheck, ShieldAlert,
+  ChevronRight, ChevronDown, SlidersHorizontal, Calendar, MessageSquare, ShieldCheck, ShieldAlert,
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
@@ -46,6 +47,10 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const { data: leads = [], isLoading } = usePipelineLeads()
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
+  // Inline cockpit (Amendment 2 Theme 1) — expand a lead in place to log/qualify/edit
+  // without leaving the pipeline, mirroring the Calls-Due worklist.
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
 
   if (isLoading) return <PipelineViewSkeleton />
 
@@ -131,9 +136,19 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
               {filteredLeads.map((lead) => {
                 const statusConfig = getStatusConfig(lead.status)
                 const tel = lead.phone.replace(/\D/g, "")
+                const expanded = expandedId === lead.id
                 return (
+                  <div key={lead.id}>
+                  {/* Whole card → details page; only the Cockpit button (below, with
+                      stopPropagation) opens the inline cockpit. */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onOpenLead?.(lead.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter") onOpenLead?.(lead.id) }}
+                    className="cursor-pointer"
+                  >
                   <LeadQueueRow
-                    key={lead.id}
                     id={lead.id}
                     name={lead.name}
                     phone={lead.phone}
@@ -162,14 +177,18 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                       <div className="flex items-center gap-1">
                         {tel.length >= 10 ? (
                           <Button asChild size="sm" className="h-8 px-2.5 gap-1.5 bg-success hover:bg-success/90 text-success-foreground">
-                            <a href={`tel:${tel}`}><Phone className="size-3" />Call</a>
+                            <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()}><Phone className="size-3" />Call</a>
                           </Button>
                         ) : (
                           <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
                         )}
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); toggle(lead.id) }} className="h-8 px-2.5 gap-1" title="Open cockpit">
+                          {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                          <SlidersHorizontal className="size-3.5" />Cockpit
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                               <MoreHorizontal className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -185,6 +204,9 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                       </div>
                     }
                   />
+                  </div>
+                  {expanded && <LeadCockpitPanel leadId={lead.id} onOpenFull={onOpenLead} />}
+                  </div>
                 )
               })}
             </div>

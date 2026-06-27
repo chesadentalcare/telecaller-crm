@@ -4,6 +4,8 @@
 // As real fields land (SAP cardCode, BP type, owner ID, addresses), extend
 // LeadBase first — narrower types pick up new fields automatically.
 
+import type { CallOutcome } from "@/lib/schemas/call-attempt"
+
 export type LeadStatus = "new" | "contacted" | "qualified" | "unqualified" | "meeting-scheduled"
 export type DripTrack = "1-month" | "3-month" | "6-month"
 export type InterestLevel = "hot" | "warm" | "cold" | "just_exploring"
@@ -79,6 +81,7 @@ export interface IdleLead extends LeadBase {
 export interface DormantLead extends LeadBase {
   dormantDays: number
   reason: string
+  equipment: string
 }
 
 // Gap #8 — sales handed this lead back to telecaller
@@ -86,6 +89,7 @@ export interface ReactivationLead extends LeadBase {
   handedBackAt: string
   handedBackBy: string
   reason: string
+  equipment: string
 }
 
 // Gap #11 — long-cycle nurture pool. P6.12 — `retouch` marks the 24-month
@@ -96,6 +100,7 @@ export interface SixMonthLead extends LeadBase {
   source: string
   reason: string
   retouch: boolean
+  equipment: string
 }
 
 // P6.9 — re-qualification work items (drip reply / changed-details / timing)
@@ -113,6 +118,9 @@ export interface CallsDueLead extends LeadBase {
   slot: string | null
   equipment: string
   whatsappNumber?: string
+  // Most recent call disposition (null = never called → "Fresh call").
+  lastOutcome?: CallOutcome | null
+  lastOutcomeAt?: string | null
 }
 
 // Upcoming calls (future-dated) shown in the "Upcoming Calls" modal on the Calls Due
@@ -122,6 +130,7 @@ export interface ScheduledCall extends LeadBase {
   scheduledAt: Date
   equipment: string
   whatsappNumber?: string
+  lastOutcome?: CallOutcome | null
 }
 export interface DripCallTouch {
   at: Date
@@ -135,6 +144,8 @@ export interface UpcomingDripCall extends LeadBase {
   messagesSent: number
   calls: DripCallTouch[]
   whatsappNumber?: string
+  // Per-lead — all this lead's projected touches share it.
+  lastOutcome?: CallOutcome | null
 }
 export interface UpcomingCalls {
   scheduled: ScheduledCall[]

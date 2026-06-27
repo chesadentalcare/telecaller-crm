@@ -55,21 +55,21 @@ export const MOCK_IDLE_LEADS: IdleLead[] = [
 ]
 
 export const MOCK_DORMANT_LEADS: DormantLead[] = [
-  { id: "1", name: "Dr. Rajesh Sharma", phone: "9876543210", dormantDays: 92, reason: "Budget constraints" },
-  { id: "2", name: "Dr. Anita Verma",   phone: "9123456780", dormantDays: 78, reason: "Went silent"        },
+  { id: "1", name: "Dr. Rajesh Sharma", phone: "9876543210", dormantDays: 92, reason: "Budget constraints", equipment: "Dental Chair" },
+  { id: "2", name: "Dr. Anita Verma",   phone: "9123456780", dormantDays: 78, reason: "Went silent",        equipment: "X-Ray Unit"   },
 ]
 
 export const MOCK_REACTIVATION_LEADS: ReactivationLead[] = [
-  { id: "R-1", name: "Dr. Manish Joshi", phone: "9001122334", handedBackAt: "2 days ago",  handedBackBy: "Ravi Kumar",   reason: "Customer asked to follow up in 3 months — budget cycle starts in Q3" },
-  { id: "R-2", name: "Dr. Sneha Iyer",   phone: "9665544332", handedBackAt: "5 hours ago", handedBackBy: "Anita Verma", reason: "Lost competitor; revisit when their AMC expires" },
+  { id: "R-1", name: "Dr. Manish Joshi", phone: "9001122334", handedBackAt: "2 days ago",  handedBackBy: "Ravi Kumar",   reason: "Customer asked to follow up in 3 months — budget cycle starts in Q3", equipment: "Dental Chair" },
+  { id: "R-2", name: "Dr. Sneha Iyer",   phone: "9665544332", handedBackAt: "5 hours ago", handedBackBy: "Anita Verma", reason: "Lost competitor; revisit when their AMC expires", equipment: "Autoclave" },
 ]
 
 export const MOCK_SIX_MONTH_LEADS: SixMonthLead[] = [
-  { id: "F-1", name: "Dr. Tanvi Bose",     phone: "9442211009", reactivateBy: "Aug 2026", source: "Reactivated",          reason: "Budget Q3",       retouch: false },
-  { id: "F-2", name: "Dr. Praveen Nair",   phone: "9112233445", reactivateBy: "Jul 2026", source: "Cold-cycle drip exit", reason: "Long timeline",   retouch: false },
-  { id: "F-3", name: "Dr. Vinod Menon",    phone: "9221100887", reactivateBy: "Sep 2026", source: "Reactivated",          reason: "AMC expiry",      retouch: false },
-  { id: "F-4", name: "Dr. Lata Kulkarni",  phone: "9778899001", reactivateBy: "Dec 2026", source: "24-month re-touch",     reason: "Already purchased — re-touch", retouch: true },
-  { id: "F-5", name: "Dr. Rakesh Pillai",  phone: "9554433221", reactivateBy: "Oct 2026", source: "Cold-cycle drip exit", reason: "Watching market", retouch: false },
+  { id: "F-1", name: "Dr. Tanvi Bose",     phone: "9442211009", reactivateBy: "Aug 2026", source: "Reactivated",          reason: "Budget Q3",       retouch: false, equipment: "Dental Chair" },
+  { id: "F-2", name: "Dr. Praveen Nair",   phone: "9112233445", reactivateBy: "Jul 2026", source: "Cold-cycle drip exit", reason: "Long timeline",   retouch: false, equipment: "X-Ray Unit"   },
+  { id: "F-3", name: "Dr. Vinod Menon",    phone: "9221100887", reactivateBy: "Sep 2026", source: "Reactivated",          reason: "AMC expiry",      retouch: false, equipment: "Compressor"   },
+  { id: "F-4", name: "Dr. Lata Kulkarni",  phone: "9778899001", reactivateBy: "Dec 2026", source: "24-month re-touch",     reason: "Already purchased — re-touch", retouch: true, equipment: "Dental Chair" },
+  { id: "F-5", name: "Dr. Rakesh Pillai",  phone: "9554433221", reactivateBy: "Oct 2026", source: "Cold-cycle drip exit", reason: "Watching market", retouch: false, equipment: "Autoclave"    },
 ]
 
 export const MOCK_QUEUE_COUNTS: QueueCounts = {
