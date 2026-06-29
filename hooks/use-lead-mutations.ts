@@ -197,6 +197,23 @@ export function useAckReplies(id: string | number) {
   })
 }
 
+// Two-way reply — send a free-text WhatsApp message to the customer from the lead's
+// Replies thread. Invalidates the full detail (re-renders the thread) and the queue
+// counts (clears this lead from the awaiting-reply badge). Toast surfaces a closed
+// 24h window / opt-out so the rep knows why a send was refused.
+export function useSendReply(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { text: string }) => leadsApi.sendReply(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(id)) })
+      qc.invalidateQueries({ queryKey: leadKeys.queueCounts() })
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to send the reply"),
+  })
+}
+
 export function useEnterDrip(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

@@ -75,6 +75,7 @@ const toReplied = (r: ReplyRowFields): ReplyIndicator | undefined => {
   if (!r.last_inbound_at && !r.last_inbound_body) return undefined
   return {
     hasUnread: !!r.has_unread_reply,
+    awaitingReply: !!r.awaiting_reply,
     body: r.last_inbound_body ?? null,
     intent: r.last_inbound_intent ?? null,
     at: r.last_inbound_at ?? null,
@@ -306,6 +307,8 @@ export const fetchQueueCounts = async (): Promise<QueueCounts> => {
     archived: c.archived,
     requalification: c.requalification,
     callsDue: c.callsDue,
+    callsDueAwaitingReply: c.callsDueAwaitingReply ?? 0,
+    pipelineAwaitingReply: c.pipelineAwaitingReply ?? 0,
     reTouch: c.reTouch,
     neglected: c.neglected ?? 0,
   }

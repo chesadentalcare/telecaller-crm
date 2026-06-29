@@ -51,20 +51,21 @@ export function BottomTabNav({
         ? [
             { id: "home",           title: "Home",     icon: LayoutDashboard },
             { id: "sales-pipeline", title: "Sales",    icon: Briefcase },
-            { id: "pipeline",       title: "Pipeline", icon: Inbox, count: queueCounts.pipeline },
+            { id: "pipeline",       title: "Pipeline", icon: Inbox, count: queueCounts.pipelineAwaitingReply },
           ]
         : teleOnly
         ? [
-            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDue },
-            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipeline },
+            // Badge counts = un-replied WhatsApp responses, not queue size.
+            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
+            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipelineAwaitingReply },
             { id: "new-lead",  title: "Add Lead",  icon: UserPlus },
             { id: "home",      title: "Home",      icon: LayoutDashboard },
           ]
         : [
             // Manager / admin
             { id: "home",      title: "Home",      icon: LayoutDashboard },
-            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDue },
-            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipeline },
+            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
+            { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipelineAwaitingReply },
           ],
     [queueCounts, salesOnly, teleOnly],
   )

@@ -30,6 +30,9 @@ const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
 // Issue 3 — reply-indicator columns the queue endpoints attach to each row.
 export interface ReplyRowFields {
   has_unread_reply?: 0 | 1 | boolean
+  // True while the customer's latest reply is still un-answered by the rep (cleared
+  // only by SENDING a reply, not by viewing). Drives the "Needs reply" row badge.
+  awaiting_reply?: 0 | 1 | boolean
   last_inbound_at?: string | null
   last_inbound_body?: string | null
   last_inbound_intent?: "stop" | "meeting" | "zoom" | "vague" | null
@@ -385,9 +388,13 @@ export interface LeadDetail {
   whatsapp: Array<{
     id: number
     template_name: string
-    message_type: "recovery" | "drip" | "manual"
+    message_type: "recovery" | "drip" | "manual" | "quotation"
     sent_at: string
+    delivered_at?: string | null
+    read_at?: string | null
     whatsapp_message_id: string | null
+    // Manual replies carry their free text here ({ text, sentBy }); template sends are null.
+    payload?: { text?: string; sentBy?: string | null } | string | null
   }>
   quotations: QuotationRow[]
   // P6.6 — classified inbound WhatsApp replies (newest first). P6.7 — first-contact state.
@@ -553,6 +560,10 @@ export interface QueueCountsResponse {
   archived: number
   requalification: number
   callsDue: number
+  // WhatsApp awaiting-reply badges — leads (in each surface) whose customer replied
+  // and the rep hasn't replied back yet. Replace the raw queue-size badges on the nav.
+  callsDueAwaitingReply: number
+  pipelineAwaitingReply: number
   reTouch: number
   // Amendment 2 (Theme 6) — brand-new leads with zero activity past 24h.
   neglected: number
@@ -751,6 +762,16 @@ export const leadsApi = {
   ackReplies: (id: number | string) =>
     unwrap(
       api.post<Envelope<{ acknowledged: number }>>(endpoints.leadAckReplies(String(id))),
+    ),
+
+  // Two-way reply — send a free-text WhatsApp message to the customer. Rejected with a
+  // 409 (code WINDOW_CLOSED) outside the 24h customer-care window.
+  sendReply: (id: number | string, body: { text: string }) =>
+    unwrap(
+      api.post<Envelope<{ messageId: string | null; dryRun: boolean; text: string }>>(
+        endpoints.leadSendReply(String(id)),
+        body,
+      ),
     ),
 
   exitDrip: (id: number | string, body: { reason: string; status?: string }) =>

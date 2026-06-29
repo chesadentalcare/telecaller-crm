@@ -64,11 +64,18 @@ export function LeadQueueRow({
               {name}
             </button>
             <span className="font-mono text-xs text-primary">#{id}</span>
-            {replied?.hasUnread && (
+            {/* Awaiting reply (customer messaged, rep hasn't replied back) takes
+                priority — amber "Needs reply" matches the nav awaiting-reply count.
+                Otherwise an already-answered inbound still shows a muted "Replied". */}
+            {replied?.awaitingReply ? (
+              <Badge className="gap-1 bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">
+                <MessageSquare className="size-3" />Needs reply
+              </Badge>
+            ) : replied?.hasUnread ? (
               <Badge className="gap-1 bg-success/15 text-success border-success/30 text-[10px]">
                 <MessageSquare className="size-3" />Replied
               </Badge>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
             {phone && phone !== "—" && (

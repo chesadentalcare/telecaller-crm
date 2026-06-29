@@ -32,6 +32,7 @@ import {
   Activity,
   ClipboardCheck,
   AlertTriangle,
+  MessageSquare,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -93,11 +94,13 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
   // Each stage declares which roles can see it. null = all roles.
   const allStages = useMemo(
     () => [
-      { id: "calls-due",      title: "Calls Due",      subtitle: "Today's call worklist",   icon: PhoneCall,    color: "bg-blue-500",   textColor: "text-blue-500",   borderColor: "border-blue-500",   count: queueCounts.callsDue, isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "pipeline",       title: "Pipeline",       subtitle: "Your full lead book",     icon: Inbox,        color: "bg-indigo-500", textColor: "text-indigo-500", borderColor: "border-indigo-500", count: queueCounts.pipeline, isAction: false, roles: null },
-      { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-over leads",       icon: Briefcase,    color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                 isAction: false, roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"] as UserRole[] },
-      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,     color: "bg-amber-500",  textColor: "text-amber-500",  borderColor: "border-amber-500",  count: null,                 isAction: false, roles: ["manager", "admin"] as UserRole[] },
-      { id: "approvals",      title: "Approvals",      subtitle: "Discount requests",       icon: ClipboardCheck, color: "bg-violet-500", textColor: "text-violet-500", borderColor: "border-violet-500", count: null,                 isAction: false, roles: ["manager", "admin"] as UserRole[] },
+      // Badge counts now reflect un-replied WhatsApp responses (NOT queue size): a lead
+      // counts the moment its customer replies and clears only when the rep replies back.
+      { id: "calls-due",      title: "Calls Due",      subtitle: "Today's call worklist",   icon: PhoneCall,    color: "bg-blue-500",   textColor: "text-blue-500",   borderColor: "border-blue-500",   count: queueCounts.callsDueAwaitingReply, isReplyCount: true, isAction: false, roles: ["telecaller"] as UserRole[] },
+      { id: "pipeline",       title: "Pipeline",       subtitle: "Your full lead book",     icon: Inbox,        color: "bg-indigo-500", textColor: "text-indigo-500", borderColor: "border-indigo-500", count: queueCounts.pipelineAwaitingReply, isReplyCount: true, isAction: false, roles: null },
+      { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-over leads",       icon: Briefcase,    color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                 isReplyCount: false, isAction: false, roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"] as UserRole[] },
+      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,     color: "bg-amber-500",  textColor: "text-amber-500",  borderColor: "border-amber-500",  count: null,                 isReplyCount: false, isAction: false, roles: ["manager", "admin"] as UserRole[] },
+      { id: "approvals",      title: "Approvals",      subtitle: "Discount requests",       icon: ClipboardCheck, color: "bg-violet-500", textColor: "text-violet-500", borderColor: "border-violet-500", count: null,                 isReplyCount: false, isAction: false, roles: ["manager", "admin"] as UserRole[] },
     ],
     [queueCounts],
   )
@@ -223,12 +226,20 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
                     </SidebarMenuButton>
                     
                     {stage.count !== null && stage.count > 0 && (
-                      <SidebarMenuBadge className={cn(
-                        "text-[10px] font-semibold",
-                        activeView === stage.id 
-                          ? `${stage.color} text-white` 
-                          : "bg-sidebar-accent text-sidebar-foreground"
-                      )}>
+                      <SidebarMenuBadge
+                        title={stage.isReplyCount ? "WhatsApp replies awaiting your response" : undefined}
+                        className={cn(
+                          "gap-1 text-[10px] font-semibold",
+                          // Reply counts read as "act now" — WhatsApp-green with a chat dot,
+                          // distinct from a neutral queue-size badge.
+                          stage.isReplyCount
+                            ? "bg-emerald-500 text-white"
+                            : activeView === stage.id
+                              ? `${stage.color} text-white`
+                              : "bg-sidebar-accent text-sidebar-foreground"
+                        )}
+                      >
+                        {stage.isReplyCount && <MessageSquare className="size-2.5" />}
                         {stage.count}
                       </SidebarMenuBadge>
                     )}

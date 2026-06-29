@@ -16,6 +16,9 @@ export type InterestLevel = "hot" | "warm" | "cold" | "just_exploring"
 export type ReplyIntent = "stop" | "meeting" | "zoom" | "vague"
 export interface ReplyIndicator {
   hasUnread: boolean
+  // True until the rep SENDS a reply back (viewing doesn't clear it) — drives the
+  // amber "Needs reply" row badge so the list matches the awaiting-reply nav counts.
+  awaitingReply: boolean
   body: string | null
   intent: ReplyIntent | null
   at?: string | null
@@ -165,6 +168,9 @@ export interface QueueCounts {
   archived: number
   requalification: number
   callsDue: number
+  // WhatsApp awaiting-reply badges (replace the raw queue-size counts on the nav).
+  callsDueAwaitingReply: number
+  pipelineAwaitingReply: number
   reTouch: number
   // Amendment 2 (Theme 6) — brand-new leads with zero activity past 24h.
   neglected: number

@@ -36,6 +36,8 @@ import {
   ArrowRightLeft,
   Briefcase,
   Pencil,
+  Check,
+  CheckCheck,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -113,6 +115,7 @@ import {
   useUpdateZoomOutcome,
   useSendDesignerFeeLink,
   useEnterDrip,
+  useSendReply,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -231,6 +234,7 @@ type LeadDetail = {
   callbackRetryCount?: number
   lastInboundAt?: string
   inbound?: InboundReply[]
+  whatsappOutbound?: WhatsappOutbound[]
   firstContact?: { touchIndex: number; callAttemptsUsed: number; status: string }
 }
 
@@ -239,6 +243,20 @@ type InboundReply = {
   intent: "stop" | "meeting" | "zoom" | "vague"
   body: string
   receivedAt: Date
+}
+
+// Outbound WhatsApp for the conversation thread: free-text replies the rep sent
+// ('manual', text in `text`) plus the system template sends (recovery / drip /
+// quotation) the customer received, so the rep sees both sides of the exchange.
+type WhatsappOutbound = {
+  id: number
+  kind: "recovery" | "drip" | "manual" | "quotation"
+  text: string | null
+  templateName: string
+  sentBy: string | null
+  sentAt: Date
+  deliveredAt?: Date
+  readAt?: Date
 }
 
 type ZoomMeetingSummary = {
@@ -255,6 +273,16 @@ type ZoomMeetingSummary = {
 // returning — so these fields are real values, not placeholders.
 // Exported so the cockpit panel (calls-due inline surface, Amendment 2 Theme 1) can
 // reuse the exact same mapping + tab components instead of duplicating them.
+// whatsapp_messages.payload arrives as a JSON object (mysql2) or a JSON string
+// (depending on the driver/column) — normalise both to { text, sentBy } | null.
+function parsePayload(p: unknown): { text?: string; sentBy?: string | null } | null {
+  if (!p) return null
+  if (typeof p === "string") {
+    try { return JSON.parse(p) } catch { return null }
+  }
+  return p as { text?: string; sentBy?: string | null }
+}
+
 export function mapDetail(d: ApiLeadDetail): LeadDetail {
   const ext = d.extension
   const id = String(ext.opportunity_doc_entry)
@@ -282,6 +310,23 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
   const latestRecovery = d.whatsapp
     .filter((w) => w.message_type === "recovery")
     .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())[0]
+
+  // Outbound thread for the Replies conversation. Manual replies carry their free text
+  // in `payload` ({ text, sentBy }); template sends (recovery/drip/quotation) show their
+  // template name instead so the rep still sees what the customer received.
+  const whatsappOutbound: WhatsappOutbound[] = d.whatsapp.map((w) => {
+    const p = parsePayload(w.payload)
+    return {
+      id: w.id,
+      kind: w.message_type,
+      text: w.message_type === "manual" ? (p?.text ?? null) : null,
+      templateName: w.template_name,
+      sentBy: p?.sentBy ?? null,
+      sentAt: new Date(w.sent_at),
+      deliveredAt: w.delivered_at ? new Date(w.delivered_at) : undefined,
+      readAt: w.read_at ? new Date(w.read_at) : undefined,
+    }
+  })
 
   return {
     id,
@@ -365,6 +410,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     inbound: (d.inbound ?? []).map((m) => ({
       id: m.id, intent: m.intent, body: m.body, receivedAt: new Date(m.received_at),
     })),
+    whatsappOutbound,
     firstContact: d.firstContact
       ? { touchIndex: d.firstContact.current_touch_index, callAttemptsUsed: d.firstContact.call_attempts_used, status: d.firstContact.status }
       : undefined,
@@ -531,24 +577,21 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
       )}
 
       {/* Tabs — horizontally scrollable on mobile so all stay readable instead of
-          wrapping to an uneven grid. Snap to grid on sm+. P6.6 — a "Replies" tab
-          appears only when the lead has classified inbound WhatsApp replies. */}
+          wrapping to an uneven grid. Snap to grid on sm+. The "Replies" tab is always
+          present (mandatory two-way WhatsApp thread); it badges the inbound count. */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={cn(
-          "flex w-full overflow-x-auto sm:grid [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-          hasInbound ? "sm:grid-cols-6" : "sm:grid-cols-5",
-        )}>
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
           <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Call Log</TabsTrigger>
           <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
           <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
           <TabsTrigger value="quotes"        className="shrink-0 text-xs sm:text-sm">Quotes</TabsTrigger>
-          {hasInbound && (
-            <TabsTrigger value="replies" className="shrink-0 text-xs sm:text-sm gap-1">
-              Replies
+          <TabsTrigger value="replies" className="shrink-0 text-xs sm:text-sm gap-1">
+            Replies
+            {hasInbound && (
               <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[9px]">{lead.inbound!.length}</Badge>
-            </TabsTrigger>
-          )}
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -571,11 +614,9 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
           <QuotesTab lead={lead} />
         </TabsContent>
 
-        {hasInbound && (
-          <TabsContent value="replies" className="mt-4">
-            <InboundRepliesTab lead={lead} />
-          </TabsContent>
-        )}
+        <TabsContent value="replies" className="mt-4">
+          <InboundRepliesTab lead={lead} />
+        </TabsContent>
       </Tabs>
     </div>
   )
@@ -2131,37 +2172,146 @@ const INTENT_CONFIG: Record<
 }
 const INBOUND_INTENTS = ["meeting", "zoom", "vague", "stop"] as const
 
-// REPLIED inbound conversation: classified WhatsApp replies as chat bubbles, each
-// with its intent chip and a one-tap manual classifier override (P6.14). Correcting
-// the intent re-routes the lead server-side (and STOP archives + opts out).
-function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
-  const { mutateAsync: reclassify, isPending } = useReclassifyInbound(lead.id)
-  const { mutate: ackReplies } = useAckReplies(lead.id)
-  const replies = [...(lead.inbound ?? [])].sort(
-    (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime(),
-  )
+const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
+  manual: "You",
+  recovery: "Recovery template",
+  drip: "Drip message",
+  quotation: "Quotation",
+}
 
-  // Issue 3 — opening the Replies tab means the rep has read them: clear the
-  // "Replied" unread badge across the queues. Fire once per lead when the tab mounts.
+// Customer reply bubble (left): the message, its auto-classified intent chip, and a
+// one-tap manual classifier override (P6.14) — correcting the intent re-routes the
+// lead server-side (and STOP archives + opts out).
+function InboundBubble({
+  m, onReclassify, disabled,
+}: { m: InboundReply; onReclassify: (id: number, intent: InboundReply["intent"]) => void; disabled: boolean }) {
+  const cfg = INTENT_CONFIG[m.intent]
+  const Icon = cfg.icon
+  return (
+    <div className="space-y-1">
+      <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
+        <p className="text-sm whitespace-pre-wrap break-words">
+          {m.body || <span className="italic text-muted-foreground">(no text content)</span>}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 pl-1">
+        <span className="text-[10px] text-muted-foreground">{m.receivedAt.toLocaleString()}</span>
+        <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium", cfg.cls)}>
+          <Icon className="size-3" />{cfg.label}
+        </span>
+        <Select value={m.intent} onValueChange={(v) => onReclassify(m.id, v as InboundReply["intent"])} disabled={disabled}>
+          <SelectTrigger className="h-6 w-auto gap-1 px-2 text-[10px]" aria-label="Reclassify intent">
+            <Pencil className="size-3" />
+          </SelectTrigger>
+          <SelectContent>
+            {INBOUND_INTENTS.map((o) => (
+              <SelectItem key={o} value={o} className="text-xs">{INTENT_CONFIG[o].label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+
+// Our outbound bubble (right): a manual free-text reply (filled) or a system template
+// send the customer received (outlined). Footer shows sender, time + delivery receipt.
+function OutboundBubble({ m }: { m: WhatsappOutbound }) {
+  const isManual = m.kind === "manual"
+  const receipt = m.readAt ? "Read" : m.deliveredAt ? "Delivered" : "Sent"
+  const ReceiptIcon = m.readAt || m.deliveredAt ? CheckCheck : Check
+  return (
+    <div className="flex flex-col items-end space-y-1">
+      <div className={cn(
+        "max-w-[85%] rounded-2xl rounded-tr-sm px-3 py-2",
+        isManual ? "bg-primary text-primary-foreground" : "border bg-background",
+      )}>
+        {isManual ? (
+          <p className="text-sm whitespace-pre-wrap break-words">
+            {m.text || <span className="italic opacity-80">(no text)</span>}
+          </p>
+        ) : (
+          <p className="text-xs">
+            <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
+            <span className="text-muted-foreground"> · {m.templateName}</span>
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 pr-1 text-[10px] text-muted-foreground">
+        {isManual && m.sentBy && <span>{m.sentBy} ·</span>}
+        <span>{m.sentAt.toLocaleString()}</span>
+        <span className={cn("inline-flex items-center gap-0.5", m.readAt ? "text-sky-500" : "")}>
+          <ReceiptIcon className="size-3" />{receipt}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// Two-way WhatsApp conversation: the full inbound + outbound thread as chat bubbles,
+// with a composer to reply directly from the dashboard. Free text is only permitted
+// inside Meta's 24h customer-care window (composer disabled + notice otherwise).
+function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
+  const { mutateAsync: reclassify, isPending: reclassifying } = useReclassifyInbound(lead.id)
+  const { mutate: ackReplies } = useAckReplies(lead.id)
+  const { mutateAsync: sendReply, isPending: sending } = useSendReply(lead.id)
+  const [draft, setDraft] = useState("")
+
+  const inbound = lead.inbound ?? []
+  const outbound = lead.whatsappOutbound ?? []
+
+  // Merge both directions into one chronological thread.
+  const thread = useMemo(() => {
+    const items: Array<
+      | { side: "in"; at: Date; key: string; reply: InboundReply }
+      | { side: "out"; at: Date; key: string; msg: WhatsappOutbound }
+    > = [
+      ...inbound.map((m) => ({ side: "in" as const, at: m.receivedAt, key: `in-${m.id}`, reply: m })),
+      ...outbound.map((m) => ({ side: "out" as const, at: m.sentAt, key: `out-${m.id}`, msg: m })),
+    ]
+    return items.sort((a, b) => a.at.getTime() - b.at.getTime())
+  }, [inbound, outbound])
+
+  // Awaiting = customer's latest inbound (not a STOP) with no manual reply after it.
+  const lastInbound = inbound.reduce<InboundReply | null>((acc, m) => (!acc || m.receivedAt > acc.receivedAt ? m : acc), null)
+  const lastManualOut = outbound.reduce<Date | null>((acc, m) => (m.kind === "manual" && (!acc || m.sentAt > acc) ? m.sentAt : acc), null)
+  const awaiting = !!lastInbound && lastInbound.intent !== "stop" && (!lastManualOut || lastInbound.receivedAt > lastManualOut)
+
+  // 24h customer-care window — Meta only allows free text within 24h of the last inbound.
+  // Basis = the actual latest inbound in the thread (falls back to the denormalized
+  // lead.lastInboundAt), so the gate is right even when that column is stale/null.
+  const windowBasis = lastInbound?.receivedAt ?? (lead.lastInboundAt ? new Date(lead.lastInboundAt) : null)
+  const windowOpen = windowBasis ? Date.now() - windowBasis.getTime() <= 24 * 3600_000 : false
+  const optedOut = !!lead.whatsappOptedOut
+  const noPhone = !lead.phone || lead.phone === "—"
+  const canSend = windowOpen && !optedOut && !noPhone
+
+  // Opening the thread = the rep has READ the replies (clears the unread badge). It does
+  // NOT clear the awaiting-reply count — only sending a reply does (server-side).
   useEffect(() => {
-    if (replies.length) ackReplies()
+    if (inbound.length) ackReplies()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lead.id])
 
   const onReclassify = async (inboundId: number, intent: InboundReply["intent"]) => {
     try {
       const res = await reclassify({ inboundId, intent })
-      if (res.unchanged) {
-        toast.info("Already classified that way")
-        return
-      }
-      toast.success(
-        intent === "stop"
-          ? "Reclassified as opt-out — lead archived"
-          : `Reclassified as ${INTENT_CONFIG[intent].label}`,
-      )
+      if (res.unchanged) { toast.info("Already classified that way"); return }
+      toast.success(intent === "stop" ? "Reclassified as opt-out — lead archived" : `Reclassified as ${INTENT_CONFIG[intent].label}`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to reclassify")
+    }
+  }
+
+  const onSend = async () => {
+    const text = draft.trim()
+    if (!text || !canSend) return
+    try {
+      const res = await sendReply({ text })
+      setDraft("")
+      toast.success(res.dryRun ? "Reply queued (dry-run — see backend logs)" : "Reply sent to customer")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to send the reply")
     }
   }
 
@@ -2169,56 +2319,79 @@ function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <MessageSquare className="size-4 text-primary" /> WhatsApp Replies
-          <Badge variant="outline" className="ml-auto text-[10px]">{replies.length}</Badge>
+          <MessageSquare className="size-4 text-primary" /> WhatsApp Conversation
+          {awaiting && (
+            <Badge className="gap-1 bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">Needs reply</Badge>
+          )}
+          <Badge variant="outline" className="ml-auto text-[10px]">
+            {thread.length} message{thread.length === 1 ? "" : "s"}
+          </Badge>
         </CardTitle>
         <CardDescription className="text-xs">
-          Inbound replies, auto-classified. Correct the intent if the classifier got it
-          wrong — the corrected intent re-routes the lead.
+          The full WhatsApp thread with the customer. Reply directly below — and correct an
+          auto-classified intent if the classifier got it wrong (it re-routes the lead).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {lead.lastInboundAt && (
-          <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-1.5">
-            <Clock className="size-3.5 text-success shrink-0" />
-            <span className="text-[11px] text-success">
-              24h customer-care window last opened {new Date(lead.lastInboundAt).toLocaleString()}
-            </span>
+        {thread.length === 0 ? (
+          <div className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">
+            No WhatsApp messages yet. Sent templates and customer replies will appear here.
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
+            {thread.map((item) =>
+              item.side === "in" ? (
+                <InboundBubble key={item.key} m={item.reply} onReclassify={onReclassify} disabled={reclassifying} />
+              ) : (
+                <OutboundBubble key={item.key} m={item.msg} />
+              ),
+            )}
           </div>
         )}
-        {replies.map((m) => {
-          const cfg = INTENT_CONFIG[m.intent]
-          const Icon = cfg.icon
-          return (
-            <div key={m.id} className="space-y-1.5">
-              <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
-                <p className="text-sm whitespace-pre-wrap break-words">
-                  {m.body || <span className="italic text-muted-foreground">(no text content)</span>}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 pl-1">
-                <span className="text-[10px] text-muted-foreground">{m.receivedAt.toLocaleString()}</span>
-                <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium", cfg.cls)}>
-                  <Icon className="size-3" />{cfg.label}
-                </span>
-                <Select
-                  value={m.intent}
-                  onValueChange={(v) => onReclassify(m.id, v as InboundReply["intent"])}
-                  disabled={isPending}
-                >
-                  <SelectTrigger className="h-6 w-auto gap-1 px-2 text-[10px]" aria-label="Reclassify intent">
-                    <Pencil className="size-3" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INBOUND_INTENTS.map((o) => (
-                      <SelectItem key={o} value={o} className="text-xs">{INTENT_CONFIG[o].label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )
-        })}
+
+        {/* Composer + 24h window state */}
+        <div className="space-y-2 border-t pt-3">
+          {optedOut ? (
+            <p className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
+              <XCircle className="size-3.5 shrink-0" /> Customer opted out of WhatsApp — replies are disabled.
+            </p>
+          ) : noPhone ? (
+            <p className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+              <AlertTriangle className="size-3.5 shrink-0" /> No phone number on file — add one to message this customer.
+            </p>
+          ) : !windowOpen ? (
+            <p className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+              <Clock className="size-3.5 shrink-0" />
+              24h reply window closed{windowBasis ? ` (last reply ${windowBasis.toLocaleString()})` : ""} — the customer must message again before you can send free text.
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-[11px] text-success">
+              <Clock className="size-3.5 shrink-0" /> Reply window open — free text allowed for 24h after the customer's last message.
+            </p>
+          )}
+          <div className="flex items-end gap-2">
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend() }
+              }}
+              placeholder={canSend ? "Type a reply…  (Enter to send, Shift+Enter for a new line)" : "Replies disabled"}
+              disabled={!canSend || sending}
+              rows={2}
+              className="min-h-[44px] resize-none text-sm"
+            />
+            <Button
+              type="button"
+              size="icon"
+              onClick={onSend}
+              disabled={!canSend || sending || !draft.trim()}
+              aria-label="Send reply"
+            >
+              <Send className="size-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

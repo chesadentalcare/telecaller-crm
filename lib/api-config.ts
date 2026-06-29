@@ -91,6 +91,8 @@ export const endpoints = {
   leadRecoverNumber: (id: string) => `/leads/${id}/recover-number`,
   leadReclassify: (id: string) => `/leads/${id}/reclassify`,
   leadAckReplies: (id: string) => `/leads/${id}/replies/ack`,
+  // Two-way WhatsApp reply — send a free-text message to the customer (24h window gated).
+  leadSendReply: (id: string) => `/leads/${id}/replies/send`,
   leadTimeline: (id: string) => `/leads/${id}/timeline`,
   leadHandBack: (id: string) => `/leads/${id}/hand-back`,
   // Meeting SLAs (Phase 3)
