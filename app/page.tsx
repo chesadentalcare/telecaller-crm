@@ -10,6 +10,7 @@ import { ViewSkeleton } from "@/components/telecaller/view-skeleton"
 import { ViewErrorBoundary } from "@/components/telecaller/error-boundary"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useRole } from "@/hooks/use-role"
+import { useConversationStream } from "@/hooks/use-conversation-stream"
 import { useLeadFullDetail } from "@/hooks/use-leads"
 import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
@@ -254,6 +255,10 @@ function TelecallerDashboardInner() {
   const [searchQuery, setSearchQuery] = useState("")
   const queueCounts = useQueueCounts()
   const { role, hasRole, isManagerOrAbove } = useRole()
+
+  // One session-long SSE connection: live-refresh the WhatsApp chat + awaiting-reply
+  // badges the moment a customer replies or a rep sends a reply.
+  useConversationStream()
 
   // Worklist-first: a pure telecaller lands on Calls Due (where fresh leads now
   // appear), not the analytics dashboard. Everyone else defaults to Home.

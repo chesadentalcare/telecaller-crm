@@ -22,7 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 60 * 60 * 1000,
             gcTime: 24 * 60 * 60 * 1000,
             retry: 1,
-            refetchOnWindowFocus: false,
+            // Fallback live-refresh when the SSE stream is down or the tab was backgrounded:
+            // re-sync stale queries on refocus / network reconnect. (The SSE-driven
+            // invalidateQueries is the primary real-time path; these just cover the gaps.)
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
           },
         },
       }),
