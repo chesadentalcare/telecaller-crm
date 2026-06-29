@@ -2251,7 +2251,8 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
 // Two-way WhatsApp conversation: the full inbound + outbound thread as chat bubbles,
 // with a composer to reply directly from the dashboard. Free text is only permitted
 // inside Meta's 24h customer-care window (composer disabled + notice otherwise).
-function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
+// Exported so the calls-due/pipeline cockpit panel mounts the exact same Replies surface.
+export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutateAsync: reclassify, isPending: reclassifying } = useReclassifyInbound(lead.id)
   const { mutate: ackReplies } = useAckReplies(lead.id)
   const { mutateAsync: sendReply, isPending: sending } = useSendReply(lead.id)
