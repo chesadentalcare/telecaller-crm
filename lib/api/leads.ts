@@ -27,6 +27,19 @@ interface Envelope<T> {
 const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
   p.then((res) => res.data)
 
+// Result of the on-booking meeting WhatsApp send (Zoom join link / physical venue).
+// `ok` = sent (or dry-run logged); `skipped` = no phone; `error` = provider/template failure.
+export type MeetingWhatsAppResult = {
+  ok: boolean
+  dryRun?: boolean
+  skipped?: boolean
+  reason?: string
+  error?: string
+  summary?: string
+  templateName?: string
+  messageId?: string | null
+} | null
+
 // Issue 3 — reply-indicator columns the queue endpoints attach to each row.
 export interface ReplyRowFields {
   has_unread_reply?: 0 | 1 | boolean
@@ -388,7 +401,7 @@ export interface LeadDetail {
   whatsapp: Array<{
     id: number
     template_name: string
-    message_type: "recovery" | "drip" | "manual" | "quotation"
+    message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting"
     sent_at: string
     delivered_at?: string | null
     read_at?: string | null
@@ -678,6 +691,7 @@ export const leadsApi = {
           zoomJoinUrl: string | null
           zoomStartUrl: string | null
           zoomPasscode: string | null
+          meetingWhatsApp: MeetingWhatsAppResult
         }>
       >(endpoints.leadZoomMeeting(String(id)), fd),
     )
@@ -686,7 +700,7 @@ export const leadsApi = {
   physicalMeeting: (id: number | string, values: PhysicalMeetingValues) =>
     unwrap(
       api.post<
-        Envelope<{ meetingId: number; assignedSalesperson: string; sapSynced: boolean; event: string }>
+        Envelope<{ meetingId: number; assignedSalesperson: string; sapSynced: boolean; event: string; meetingWhatsApp: MeetingWhatsAppResult }>
       >(endpoints.leadPhysicalMeeting(String(id)), {
         meetingAt: values.meetingAt,
         location: values.location,

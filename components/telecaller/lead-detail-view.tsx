@@ -250,7 +250,7 @@ type InboundReply = {
 // quotation) the customer received, so the rep sees both sides of the exchange.
 type WhatsappOutbound = {
   id: number
-  kind: "recovery" | "drip" | "manual" | "quotation"
+  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting"
   text: string | null
   templateName: string
   sentBy: string | null
@@ -319,7 +319,9 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     return {
       id: w.id,
       kind: w.message_type,
-      text: w.message_type === "manual" ? (p?.text ?? null) : null,
+      // Manual replies + meeting confirmations carry a human-readable line in payload.text;
+      // other template sends (recovery/drip/quotation) render by label only.
+      text: w.message_type === "manual" || w.message_type === "meeting" ? (p?.text ?? null) : null,
       templateName: w.template_name,
       sentBy: p?.sentBy ?? null,
       sentAt: new Date(w.sent_at),
@@ -2177,6 +2179,7 @@ const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
   recovery: "Recovery template",
   drip: "Drip message",
   quotation: "Quotation",
+  meeting: "Meeting confirmation",
 }
 
 // Customer reply bubble (left): the message, its auto-classified intent chip, and a
@@ -2231,10 +2234,14 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
             {m.text || <span className="italic opacity-80">(no text)</span>}
           </p>
         ) : (
-          <p className="text-xs">
-            <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
-            <span className="text-muted-foreground"> · {m.templateName}</span>
-          </p>
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
+              <span className="text-muted-foreground"> · {m.templateName}</span>
+            </p>
+            {/* Meeting confirmations carry the venue/link + date-time line the customer received. */}
+            {m.text && <p className="whitespace-pre-wrap break-words text-foreground/90">{m.text}</p>}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-1.5 pr-1 text-[10px] text-muted-foreground">

@@ -116,11 +116,25 @@ export function useUpdateLead(id: string | number) {
   })
 }
 
+// Surface the on-booking WhatsApp result (join link / venue sent to the customer) so the
+// rep knows the notification went out. Silent when there's no phone to notify.
+const toastMeetingWhatsApp = (wa?: { ok: boolean; dryRun?: boolean; skipped?: boolean; error?: string } | null) => {
+  if (!wa) return
+  if (wa.ok) {
+    toast.success(wa.dryRun ? "Meeting details queued on WhatsApp (dry-run)" : "Meeting details sent to the customer on WhatsApp")
+  } else if (!wa.skipped) {
+    toast.warning("Meeting booked · WhatsApp not sent", { description: wa.error || "Retry from the lead's Replies tab." })
+  }
+}
+
 export function useZoomMeeting(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (values: ZoomMeetingValues) => leadsApi.zoomMeeting(id, values),
-    onSuccess: () => invalidateAllLeads(qc),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toastMeetingWhatsApp(res?.meetingWhatsApp)
+    },
   })
 }
 
@@ -128,7 +142,10 @@ export function usePhysicalMeeting(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (values: PhysicalMeetingValues) => leadsApi.physicalMeeting(id, values),
-    onSuccess: () => invalidateAllLeads(qc),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toastMeetingWhatsApp(res?.meetingWhatsApp)
+    },
   })
 }
 
