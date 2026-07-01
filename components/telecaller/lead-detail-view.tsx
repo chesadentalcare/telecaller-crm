@@ -1150,7 +1150,7 @@ function WrongNumberRecoveryCard({ lead }: { lead: LeadDetail }) {
     if (phone.replace(/\D/g, "").length < 10) { toast.error("Enter a valid mobile number"); return }
     try {
       await recover({ phone, ...(wa ? { whatsappNumber: wa } : {}) })
-      toast.success("Number recovered — re-entering first contact")
+      toast.success("Number recovered — added to Calls Due. Calling is unlocked; call the new number now.")
       setPhone(""); setWa("")
     } catch (err) { toast.error(err instanceof ApiError ? err.message : "Recovery failed") }
   }
