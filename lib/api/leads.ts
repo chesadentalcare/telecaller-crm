@@ -717,6 +717,34 @@ export const leadsApi = {
     body: { outcome_notes?: string; design_fee_discussed?: boolean; design_fee_paid?: boolean; design_fee_declined?: boolean },
   ) => unwrap(api.put<Envelope<{ meetingId: number }>>(endpoints.meetingZoomOutcome(String(meetingId)), body)),
 
+  // Resend the meeting invite (email + WhatsApp) for an existing Zoom meeting — same time,
+  // same join link.
+  resendMeeting: (meetingId: number | string) =>
+    unwrap(
+      api.post<Envelope<{ meetingId: number; joinUrl: string | null; meetingWhatsApp: MeetingWhatsAppResult }>>(
+        endpoints.meetingResend(String(meetingId)),
+        {},
+      ),
+    ),
+
+  // Reschedule an existing Zoom meeting to a new time — keeps the same join link and
+  // re-sends the invite (email + WhatsApp) with the new time.
+  rescheduleMeeting: (
+    meetingId: number | string,
+    body: { meeting_at: string; duration_minutes?: number; notes?: string },
+  ) =>
+    unwrap(
+      api.patch<
+        Envelope<{
+          meetingId: number
+          meetingAt: string
+          zoomUpdated: boolean
+          joinUrl: string | null
+          meetingWhatsApp: MeetingWhatsAppResult
+        }>
+      >(endpoints.meetingReschedule(String(meetingId)), body),
+    ),
+
   // Amendment 2 (Theme 8) — send the ₹5,000 designer-fee payment link (stubbed seam).
   sendDesignerFeeLink: (meetingId: number | string) =>
     unwrap(

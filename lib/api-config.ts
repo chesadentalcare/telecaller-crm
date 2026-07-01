@@ -104,6 +104,9 @@ export const endpoints = {
   // Amendment 2 (Theme 8) — edit the Zoom outcome + send the (stubbed) design-fee link.
   meetingZoomOutcome: (meetingId: string) => `/meetings/${meetingId}/zoom-outcome`,
   meetingDesignFeeLink: (meetingId: string) => `/meetings/${meetingId}/design-fee-link`,
+  // Resend the invite (email + WhatsApp) / reschedule an existing Zoom meeting.
+  meetingResend: (meetingId: string) => `/meetings/${meetingId}/resend`,
+  meetingReschedule: (meetingId: string) => `/meetings/${meetingId}/reschedule`,
   // Quotations (Phase 4)
   quotations: `/quotations`,
   quotationDetail: (id: string) => `/quotations/${id}`,

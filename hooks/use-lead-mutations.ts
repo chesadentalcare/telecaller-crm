@@ -150,6 +150,42 @@ export function usePhysicalMeeting(id: string | number) {
 }
 
 // Amendment 2 (Theme 8) — edit a Zoom meeting's outcome + send the design-fee link.
+// Resend an existing Zoom meeting's invite (email + WhatsApp). Same time, same link.
+export function useResendMeeting(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.resendMeeting(meetingId),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      const wa = res?.meetingWhatsApp
+      toast.success(
+        wa?.ok
+          ? (wa.dryRun ? "Invite resent · email + WhatsApp (dry-run)" : "Invite resent · email + WhatsApp")
+          : "Invite email resent (no WhatsApp number on file)",
+      )
+    },
+    onError: toastError("Failed to resend the meeting invite"),
+  })
+}
+
+// Reschedule an existing Zoom meeting — keeps the same join link, re-sends the invite.
+export function useRescheduleMeeting(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { meeting_at: string; duration_minutes?: number; notes?: string }) =>
+      leadsApi.rescheduleMeeting(meetingId, body),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(
+        res?.zoomUpdated
+          ? "Zoom meeting rescheduled · invite re-sent (same link)"
+          : "Meeting rescheduled · invite re-sent",
+      )
+    },
+    onError: toastError("Failed to reschedule the meeting"),
+  })
+}
+
 export function useUpdateZoomOutcome(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({

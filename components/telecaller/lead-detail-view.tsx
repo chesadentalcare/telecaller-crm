@@ -114,6 +114,8 @@ import {
   useHandover,
   useUpdateZoomOutcome,
   useSendDesignerFeeLink,
+  useResendMeeting,
+  useRescheduleMeeting,
   useEnterDrip,
   useSendReply,
 } from "@/hooks/use-lead-mutations"
@@ -3038,6 +3040,7 @@ function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
                   startUrl={m.startUrl}
                   passcode={m.passcode}
                 />
+                <ZoomManagePanel meetingId={m.id} meetingAt={m.meetingAt} locked={lead.crmLocked} />
                 <ZoomOutcomePanel meetingId={m.id} locked={lead.crmLocked} />
               </div>
             ))}
@@ -3163,6 +3166,94 @@ function ZoomLinkPanel({
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">No Zoom join link was generated for this meeting.</p>
+      )}
+    </div>
+  )
+}
+
+// Resend the invite (email + WhatsApp) or reschedule an existing Zoom meeting. Rescheduling
+// keeps the SAME join link and re-sends the invite with the new time.
+function ZoomManagePanel({
+  meetingId,
+  meetingAt,
+  locked,
+}: {
+  meetingId: number
+  meetingAt: string
+  locked?: boolean
+}) {
+  const { mutateAsync: resend, isPending: resending } = useResendMeeting(meetingId)
+  const { mutateAsync: reschedule, isPending: rescheduling } = useRescheduleMeeting(meetingId)
+  const [open, setOpen] = useState(false)
+
+  // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in LOCAL time.
+  const toLocalInput = (d: string) => {
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ""
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
+  const [when, setWhen] = useState(() => toLocalInput(meetingAt))
+
+  const onResend = async () => {
+    try {
+      await resend()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to resend the invite")
+    }
+  }
+  const onReschedule = async () => {
+    if (!when) {
+      toast.error("Pick a new date & time")
+      return
+    }
+    try {
+      // Send the raw datetime-local string ("YYYY-MM-DDTHH:mm") — same format the booking
+      // form uses, so the backend's Zoom + DB time handling stays identical (no TZ shift).
+      await reschedule({ meeting_at: when })
+      setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to reschedule")
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={onResend} disabled={resending || locked}>
+          <Send className="size-3.5" /> {resending ? "Resending…" : "Resend email + WhatsApp"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1.5"
+          onClick={() => setOpen((o) => !o)}
+          disabled={locked}
+        >
+          <CalendarClock className="size-3.5" /> Reschedule
+        </Button>
+      </div>
+      {open && (
+        <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+          <Label className="text-xs">New date &amp; time</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="datetime-local"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              className="h-8 w-auto text-xs"
+            />
+            <Button size="sm" className="h-8 gap-1.5" onClick={onReschedule} disabled={rescheduling}>
+              {rescheduling ? "Saving…" : "Save & re-send"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            The same Zoom join link is kept — the invite is re-sent (email + WhatsApp) with the new time.
+          </p>
+        </div>
       )}
     </div>
   )
