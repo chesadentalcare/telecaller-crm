@@ -849,6 +849,15 @@ export const leadsApi = {
       ),
     ),
 
+  // One-button revive: un-archive a filed lead back to No Response + flag re-qualification.
+  unarchiveToNoResponse: (id: number | string) =>
+    unwrap(
+      api.post<Envelope<{ opportunityDocEntry: number }>>(
+        endpoints.leadUnarchiveNoResponse(String(id)),
+        {},
+      ),
+    ),
+
   // ─── Meeting SLAs ────────────────────────────────────────────────────
   uploadMeetingSummary: (meetingId: number | string, file: File) => {
     const fd = new FormData()

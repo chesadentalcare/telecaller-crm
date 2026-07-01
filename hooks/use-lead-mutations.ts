@@ -313,6 +313,19 @@ export function useHandBackLead(id: string | number) {
   })
 }
 
+// One-button revive: un-archive a filed lead back to No Response + flag re-qualification.
+export function useUnarchiveToNoResponse(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.unarchiveToNoResponse(id),
+    onSuccess: () => {
+      invalidateAllLeads(qc)
+      toast.success("Brought back as No Response — flagged for re-qualification")
+    },
+    onError: toastError("Failed to un-archive the lead"),
+  })
+}
+
 export function useUploadMeetingSummary(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({
