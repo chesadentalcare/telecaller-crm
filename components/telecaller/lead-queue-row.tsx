@@ -12,7 +12,7 @@
 // component owns identity + the cross-cutting reply indicator.
 
 import type { ReactNode } from "react"
-import { MessageSquare } from "lucide-react"
+import { MessageSquare, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
@@ -35,6 +35,9 @@ export interface LeadQueueRowProps {
   badge?: ReactNode
   /** Inbound-reply indicator (Issue 3). */
   replied?: ReplyIndicator
+  /** Urgent flag shown as a red badge next to the name (e.g. a wrong-number lead whose
+      calling is locked and needs recovery). Undefined = not urgent. */
+  urgent?: { label: string }
   /** Row actions (call, WhatsApp, menu). */
   actions?: ReactNode
   onOpen?: (id: string) => void
@@ -43,7 +46,7 @@ export interface LeadQueueRowProps {
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, meta, badge, replied, actions, onOpen, className,
+  id, name, phone, equipment, meta, badge, replied, urgent, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
@@ -64,6 +67,13 @@ export function LeadQueueRow({
               {name}
             </button>
             <span className="font-mono text-xs text-primary">#{id}</span>
+            {/* URGENT flag (e.g. wrong number — calling is locked, needs recovery). Shown
+                first so it's the thing the eye lands on when scanning the pipeline. */}
+            {urgent && (
+              <Badge className="gap-1 bg-destructive/15 text-destructive border-destructive/40 text-[10px] font-semibold">
+                <AlertTriangle className="size-3" />URGENT · {urgent.label}
+              </Badge>
+            )}
             {/* Awaiting reply (customer messaged, rep hasn't replied back) takes
                 priority — amber "Needs reply" matches the nav awaiting-reply count.
                 Otherwise an already-answered inbound still shows a muted "Replied". */}

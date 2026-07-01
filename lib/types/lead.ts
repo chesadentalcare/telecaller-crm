@@ -52,6 +52,8 @@ export interface PipelineLead extends LeadBase {
   createdAt: Date
   lastAttemptTime?: Date
   value?: string
+  // Most recent (non-superseded) call disposition — drives the URGENT "Wrong number" flag.
+  lastOutcome?: CallOutcome | null
 }
 
 // Drip campaign queue

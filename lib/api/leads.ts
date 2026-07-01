@@ -435,6 +435,8 @@ export interface PipelineRow extends ReplyRowFields {
   updated_at: string
   failed_attempts: number
   last_attempt_time: string | null
+  last_outcome?: CallOutcome | null
+  last_outcome_at?: string | null
 }
 
 export interface NoResponseRow extends ReplyRowFields {

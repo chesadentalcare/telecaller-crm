@@ -148,6 +148,9 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     onKeyDown={(e) => { if (e.key === "Enter") onOpenLead?.(lead.id) }}
                     className="cursor-pointer"
                   >
+                  {/* Wrong number = calling is locked; flag it URGENT so the rep spots it at a
+                      glance and recovers the number. Clears once the number is fixed (the
+                      recovered attempt is superseded → last_outcome is no longer wrong_number). */}
                   <LeadQueueRow
                     id={lead.id}
                     name={lead.name}
@@ -155,6 +158,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     equipment={lead.equipment}
                     replied={lead.replied}
                     onOpen={onOpenLead}
+                    urgent={lead.lastOutcome === "wrong_number" ? { label: "Wrong number" } : undefined}
+                    className={lead.lastOutcome === "wrong_number" ? "bg-destructive/[0.04]" : undefined}
                     meta={
                       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                         {lead.value && <><span className="font-medium text-foreground">{lead.value}</span><span>•</span></>}

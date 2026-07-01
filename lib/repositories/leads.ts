@@ -101,6 +101,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   lastAttemptTime: parseDate(r.last_attempt_time),
   value: r.budget_range || undefined,
   replied: toReplied(r),
+  lastOutcome: r.last_outcome ?? null,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {
