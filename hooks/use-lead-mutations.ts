@@ -62,6 +62,10 @@ export function useLogAttempt(id: string | number) {
       attempt_type?: "call" | "retry_call"
       // Amendment 2 (Theme 4): optional — not-interested outcomes may omit it.
       predicted_closing_date?: string
+      // Predicted-close provenance: 'manual' when the rep overrode the auto value; omit
+      // (or 'auto_track') when they confirmed the projection. The server upgrades to
+      // 'drip_confirmed' for an engaged call logged after a customer reply.
+      predicted_close_source?: "manual" | "auto_track"
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       callback_at?: string

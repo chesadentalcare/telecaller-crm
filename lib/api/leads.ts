@@ -101,6 +101,10 @@ export interface LeadExtensionRow {
   // Amendment 2 (decision #1): SAP-native, overlaid live by getLeadDetail (predicted
   // close + closing %); cached column values when SAP is unreachable.
   predicted_closing_date: string | null
+  // Predicted-close provenance: how the date above was set (auto_track = derived from the
+  // drip track, manual = rep override, drip_confirmed = customer confirmed timing).
+  predicted_close_source: "auto_track" | "manual" | "drip_confirmed" | null
+  predicted_close_confirmed_at: string | null
   closing_percentage: number | null
   crm_locked: 0 | 1
   crm_locked_reason: string | null
@@ -589,6 +593,9 @@ export interface AttemptResponse {
   triggerRecovery: boolean
   route?: string // present when ROUTE_OUTCOMES=true (Phase 6 dispatcher)
   predictedClosingDate?: string
+  // How the stored date was sourced after this log (auto_track / manual / drip_confirmed),
+  // or null when nothing was written (e.g. a stronger source already held the date).
+  predictedCloseSource?: "auto_track" | "manual" | "drip_confirmed" | null
   predictedCloseSynced?: boolean // did the SAP PredictedClosingDate push succeed
   // Live SAP Conversation-Activity push result (null for non-call rows).
   sapActivity?: {
@@ -616,6 +623,10 @@ export const leadsApi = {
       // Predicted close (YYYY-MM-DD) — pushed to SAP. Amendment 2 (Theme 4): optional;
       // not-interested outcomes may omit it (the server no longer forces a date there).
       predicted_closing_date?: string
+      // Provenance of the date the rep submitted: 'manual' = they overrode the auto value;
+      // 'auto_track' = they confirmed the projection. Server upgrades to 'drip_confirmed'
+      // for an engaged call after a customer reply, and precedence-guards the write.
+      predicted_close_source?: "manual" | "auto_track"
       // Phase 6 routing inputs (honored when ROUTE_OUTCOMES=true; additive, ignored otherwise)
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"

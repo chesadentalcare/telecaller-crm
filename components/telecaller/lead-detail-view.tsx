@@ -187,6 +187,8 @@ type LeadDetail = {
   sapLive?: boolean
   /** SAP-native predicted closing date (live-read, cached on outage). 'YYYY-MM-DD'. */
   predictedClosingDate?: string
+  /** How the predicted close was set: auto_track (drip), manual (rep), drip_confirmed (customer). */
+  predictedCloseSource?: "auto_track" | "manual" | "drip_confirmed"
   createdAt: Date
   lastActivityAt: Date
   idleDays: number
@@ -351,6 +353,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     stage: ext.stage,
     sapLive: d.sapLive ?? true,
     predictedClosingDate: ext.predicted_closing_date ?? undefined,
+    predictedCloseSource: ext.predicted_close_source ?? undefined,
     status: (
       ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
         ? "meeting-scheduled"
@@ -885,13 +888,17 @@ function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
           {/* SAP-native predicted closing date (live-read; "cached" when SAP was unreachable). */}
           <InfoRow
             icon={CalendarClock}
-            label="Predicted close (SAP)"
+            label="Predicted close"
             value={
               lead.predictedClosingDate
-                ? `${new Date(lead.predictedClosingDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}${lead.sapLive === false ? " · cached" : ""}`
+                ? `${new Date(lead.predictedClosingDate).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`
+                  + (lead.predictedCloseSource === "drip_confirmed" ? " · Customer-confirmed"
+                     : lead.predictedCloseSource === "manual" ? " · Manual"
+                     : lead.predictedCloseSource === "auto_track" ? " · Auto from drip" : "")
+                  + (lead.sapLive === false ? " · cached" : "")
                 : undefined
             }
-            emptyText="Not set in SAP"
+            emptyText="Not set"
           />
           <InfoRow icon={Calendar} label="Created" value={lead.createdAt.toLocaleDateString()} />
           <InfoRow icon={Clock} label="Last activity" value={`${lead.idleDays} days ago`} />
@@ -1217,12 +1224,29 @@ export function CallsTab({
   const currentPredictedClose = lead.predictedClosingDate
     ? String(lead.predictedClosingDate).slice(0, 10)
     : ""
+  // Auto-derived predicted close used to PRE-FILL the field, so the date is auto-selected
+  // rather than hand-typed (the rep only overrides if the customer confirmed a different
+  // date). Priority: the stored close (already track-derived once dripping) → the live drip
+  // projection → a rough estimate from the qualified timeline bucket. The server re-derives
+  // the precise value on log, so this is just a sensible, never-blank default.
+  const dripProjClose = lead.dripProjection?.projectedCompletionAt
+    ? String(lead.dripProjection.projectedCompletionAt).slice(0, 10)
+    : ""
+  const timelineEstimate = (() => {
+    const m = lead.timelineBucket === "1_month" ? 1
+      : lead.timelineBucket === "3_months" ? 3
+      : lead.timelineBucket === "6_plus_months" ? 6 : 0
+    if (!m) return ""
+    const d = new Date(); d.setMonth(d.getMonth() + m)
+    return d.toISOString().slice(0, 10)
+  })()
+  const autoPredictedClose = currentPredictedClose || dripProjClose || timelineEstimate
 
   const { control, handleSubmit, reset, watch, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
     // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
     // register the Select. zod catches the empty value on submit.
-    defaultValues: { ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: currentPredictedClose },
+    defaultValues: { ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: autoPredictedClose },
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
@@ -1264,9 +1288,15 @@ export function CallsTab({
   const { mutateAsync: sendRecovery, isPending: sendingRecovery } = useRecoveryWhatsapp(lead.id)
 
   const resetForm = () => {
-    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: currentPredictedClose })
+    reset({ ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: autoPredictedClose })
     setReadyNow(false); setNiReason(""); setCallbackAt("")
   }
+
+  // Provenance of the date the rep is submitting: 'manual' if they changed it from the
+  // auto-derived pre-fill, else 'auto_track' (they confirmed the projection). The server
+  // upgrades to 'drip_confirmed' when the customer had replied on WhatsApp.
+  const closeSourceFor = (date: string): "manual" | "auto_track" =>
+    (date || "") !== autoPredictedClose ? "manual" : "auto_track"
 
   const sendRecoveryWhatsApp = async () => {
     try {
@@ -1294,7 +1324,7 @@ export function CallsTab({
     // "Next Step Route" — which then opens the Zoom modal or enters the drip + logs the
     // call. (Handled by onNurtureRoute below.)
     if (values.outcome === "engaged" && !readyNow) {
-      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "" })
+      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "", predictedCloseSource: closeSourceFor(values.predictedClosingDate ?? "") })
       setNurtureQualifyOpen(true)
       return
     }
@@ -1314,7 +1344,7 @@ export function CallsTab({
     // attempt together.
     if (submittedFlow?.guidedAction === "open-meeting-modal") {
       setMeetingType("physical")
-      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "" })
+      setEngagedCallValues({ predictedClosingDate: values.predictedClosingDate ?? "", notes: values.notes ?? "", predictedCloseSource: closeSourceFor(values.predictedClosingDate ?? "") })
       setMeetingOpen(true)
       return
     }
@@ -1325,7 +1355,10 @@ export function CallsTab({
         notes: values.notes,
         // Amendment 2 (Theme 4): only send a predicted close when one was entered —
         // not-interested outcomes may omit it (the server no longer forces a date there).
-        ...(values.predictedClosingDate ? { predicted_closing_date: values.predictedClosingDate } : {}),
+        // Tag its provenance so a manual override survives the drip's auto re-projection.
+        ...(values.predictedClosingDate
+          ? { predicted_closing_date: values.predictedClosingDate, predicted_close_source: closeSourceFor(values.predictedClosingDate) }
+          : {}),
         ...(values.outcome === "engaged" ? { ready_now: readyNow } : {}),
         ...(values.outcome === "not_interested" ? { not_interested_reason: niReason as NotInterestedReason } : {}),
         // datetime-local ("YYYY-MM-DDTHH:mm") → mysql datetime
@@ -1383,6 +1416,7 @@ export function CallsTab({
         outcome: "engaged",
         ready_now: false,
         ...(engagedCallValues.predictedClosingDate ? { predicted_closing_date: engagedCallValues.predictedClosingDate } : {}),
+        ...(engagedCallValues.predictedCloseSource ? { predicted_close_source: engagedCallValues.predictedCloseSource } : {}),
         notes: engagedCallValues.notes,
       })
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
@@ -1615,7 +1649,7 @@ export function CallsTab({
                       <p className="text-[10px] text-muted-foreground">
                         {optional
                           ? "Optional for a timing/budget lead — if set, it syncs to SAP."
-                          : "Required — synced to SAP as the opportunity’s predicted close."}
+                          : "Auto-set from the drip/timeline — adjust only if the customer confirmed a different date. Synced to SAP."}
                       </p>
                       {errors.predictedClosingDate && (
                         <p className="text-[11px] text-destructive">{errors.predictedClosingDate.message}</p>

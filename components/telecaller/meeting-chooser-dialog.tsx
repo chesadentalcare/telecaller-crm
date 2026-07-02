@@ -34,6 +34,9 @@ import { ApiError } from "@/lib/api/client"
 export interface EngagedCallValues {
   predictedClosingDate: string
   notes: string
+  // 'manual' when the rep overrode the auto-derived close; else omitted (server defaults
+  // to auto_track and re-derives, or upgrades to drip_confirmed after a customer reply).
+  predictedCloseSource?: "manual" | "auto_track"
 }
 
 export function MeetingChooserDialog({
@@ -73,6 +76,7 @@ export function MeetingChooserDialog({
       outcome: "engaged",
       ready_now: true,
       ...(callValues.predictedClosingDate ? { predicted_closing_date: callValues.predictedClosingDate } : {}),
+      ...(callValues.predictedCloseSource ? { predicted_close_source: callValues.predictedCloseSource } : {}),
       notes: callValues.notes,
     })
   }
