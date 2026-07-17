@@ -318,6 +318,11 @@ export interface SalesUserRow {
   role: "sale_staff" | "coordinator" | "sale_head"
   sales_person_code: number | null
   sap_employee_id: number | null
+  territory_label?: string | null
+  territory_states?: string[]
+  match_tier?: 0 | 1 | 2
+  match_reason?: "state_city" | "state" | null
+  match_label?: string | null
 }
 
 export interface SalesPipelineRow {
@@ -1025,8 +1030,12 @@ export const leadsApi = {
       }>>(endpoints.handover(String(id)), body),
     ),
 
-  getSalesUsers: () =>
-    unwrap(api.get<Envelope<SalesUserRow[]>>(endpoints.salesUsers)),
+  getSalesUsers: (oppId?: number | string) =>
+    unwrap(api.get<Envelope<SalesUserRow[]>>(
+      oppId != null && oppId !== ""
+        ? `${endpoints.salesUsers}?oppId=${encodeURIComponent(String(oppId))}`
+        : endpoints.salesUsers,
+    )),
 
   getSalesPipeline: () =>
     unwrap(api.get<Envelope<SalesPipelineRow[]>>(endpoints.salesPipeline)),

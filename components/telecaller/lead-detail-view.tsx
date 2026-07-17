@@ -96,6 +96,7 @@ import {
   type PhysicalMeetingValues,
 } from "@/lib/schemas/physical-meeting"
 import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers } from "@/hooks/use-leads"
+import { SalesUserOptions } from "./sales-user-options"
 import {
   useLogAttempt,
   useEditAttempt,
@@ -2750,7 +2751,7 @@ function HandToSalesCard({ lead }: { lead: LeadDetail }) {
   const closed = lead.stage === "closed_won" || lead.stage === "closed_lost"
   const [target, setTarget] = useState("")
 
-  const { data: salesUsers = [], isLoading } = useSalesUsers(canHandover && !handed && !closed)
+  const { data: salesUsers = [], isLoading } = useSalesUsers(canHandover && !handed && !closed, lead.id)
   const { mutateAsync, isPending } = useHandover(lead.id)
 
   // Salespeople and post-handover/closed leads don't see this card.
@@ -2809,16 +2810,7 @@ function HandToSalesCard({ lead }: { lead: LeadDetail }) {
               <SelectValue placeholder={isLoading ? "Loading salespeople…" : "Select a salesperson"} />
             </SelectTrigger>
             <SelectContent>
-              {salesUsers.map((u) => (
-                <SelectItem key={u.username} value={u.username}>
-                  {u.full_name || u.username}
-                  <span className="text-muted-foreground"> · {u.role.replace("_", " ")}</span>
-                  {!u.sales_person_code ? " · ⚠ no SAP code" : ""}
-                </SelectItem>
-              ))}
-              {!isLoading && salesUsers.length === 0 && (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">No active salespeople found</div>
-              )}
+              <SalesUserOptions salesUsers={salesUsers} loading={isLoading} />
             </SelectContent>
           </Select>
           <Button onClick={submit} disabled={isPending || !target} className="gap-1.5">
@@ -3318,7 +3310,7 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
 
   const { mutateAsync: schedulePhysical } = usePhysicalMeeting(lead.id)
   // The rep names the sales employee on this same screen (Amendment 2 Theme 7).
-  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(scheduleOpen)
+  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(scheduleOpen, lead.id)
 
   const onSubmit = async (values: PhysicalMeetingValues) => {
     try {
@@ -3417,16 +3409,7 @@ function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
                           <SelectValue placeholder={salesLoading ? "Loading…" : "Select a salesperson"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {salesUsers.map((u) => (
-                            <SelectItem key={u.username} value={u.username} disabled={!u.sales_person_code}>
-                              {u.full_name || u.username}
-                              <span className="text-muted-foreground"> · {u.role.replace("_", " ")}</span>
-                              {!u.sales_person_code ? " · ⚠ no SAP code" : ""}
-                            </SelectItem>
-                          ))}
-                          {!salesLoading && salesUsers.length === 0 && (
-                            <div className="px-2 py-1.5 text-xs text-muted-foreground">No active salespeople found</div>
-                          )}
+                          <SalesUserOptions salesUsers={salesUsers} loading={salesLoading} />
                         </SelectContent>
                       </Select>
                       {errors.salesUsername && <p className="text-[11px] text-destructive">{errors.salesUsername.message}</p>}

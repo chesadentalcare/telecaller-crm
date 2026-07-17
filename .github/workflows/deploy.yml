@@ -1,0 +1,119 @@
+name: Telecaller CRM Deploy
+
+on:
+  push:
+    branches:
+      - production-live
+
+env:
+  DEPLOY_DIR: /var/www/html/telecaller-crm/out
+  BACKUP_DIR: /var/www/html/telecaller-crm/out_backup
+  BUILD_DIR: out
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Backup current version on EC2
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            BACKUP_DIR="${{ env.BACKUP_DIR }}"
+            SOURCE_DIR="${{ env.DEPLOY_DIR }}"
+
+            if [ -d "$BACKUP_DIR" ]; then
+              rm -rf "$BACKUP_DIR"
+            fi
+
+            if [ -d "$SOURCE_DIR" ]; then
+              cp -r "$SOURCE_DIR" "$BACKUP_DIR"
+              echo "Backup created at $BACKUP_DIR"
+            else
+              echo "No existing deployment to backup"
+            fi
+          '
+
+      - name: Preserve .htaccess before deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            if [ -f "${{ env.DEPLOY_DIR }}/.htaccess" ]; then
+              cp "${{ env.DEPLOY_DIR }}/.htaccess" /tmp/.htaccess_telecaller_bak
+              echo ".htaccess saved"
+            else
+              echo "No .htaccess found to preserve"
+            fi
+          '
+
+      - name: Deploy new version to EC2
+        id: deploy
+        run: |
+          rsync -rlgoDzvc --delete -e "ssh -i ~/.ssh/deploy_key" ${{ env.BUILD_DIR }}/ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ env.DEPLOY_DIR }}/
+
+      - name: Restore .htaccess after deploy
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            if [ -f "/tmp/.htaccess_telecaller_bak" ]; then
+              cp /tmp/.htaccess_telecaller_bak "${{ env.DEPLOY_DIR }}/.htaccess"
+              rm -f /tmp/.htaccess_telecaller_bak
+              echo ".htaccess restored"
+            else
+              echo "No .htaccess backup to restore"
+            fi
+          '
+
+      - name: Verify deployment
+        id: verify
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            if [ -f "${{ env.DEPLOY_DIR }}/index.html" ]; then
+              echo "Deployment verified - index.html exists"
+            else
+              echo "Deployment FAILED - index.html missing"
+              exit 1
+            fi
+          '
+
+      - name: Rollback on failure
+        if: failure() && steps.deploy.outcome == 'failure' || failure() && steps.verify.outcome == 'failure'
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            BACKUP_DIR="${{ env.BACKUP_DIR }}"
+            TARGET_DIR="${{ env.DEPLOY_DIR }}"
+
+            if [ -d "$BACKUP_DIR" ]; then
+              rm -rf "$TARGET_DIR"
+              cp -r "$BACKUP_DIR" "$TARGET_DIR"
+              echo "ROLLED BACK to previous version"
+            else
+              echo "No backup found to rollback to"
+            fi
+          '
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

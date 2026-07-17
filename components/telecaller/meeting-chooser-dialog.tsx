@@ -29,6 +29,7 @@ import { physicalMeetingSchema, physicalMeetingDefaults, type PhysicalMeetingVal
 import { zoomMeetingSchema, zoomMeetingDefaults, type ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import { usePhysicalMeeting, useZoomMeeting, useLogAttempt } from "@/hooks/use-lead-mutations"
 import { useSalesUsers } from "@/hooks/use-leads"
+import { SalesUserOptions } from "./sales-user-options"
 import { ApiError } from "@/lib/api/client"
 
 export interface EngagedCallValues {
@@ -178,7 +179,7 @@ function PhysicalBody({
   finish: () => void
 }) {
   const { mutateAsync: schedulePhysical } = usePhysicalMeeting(leadId)
-  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(true)
+  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(true, leadId)
   const { control, handleSubmit, formState } = useForm<PhysicalMeetingValues>({
     resolver: zodResolver(physicalMeetingSchema),
     defaultValues: { ...physicalMeetingDefaults, address: address ?? "" },
@@ -228,12 +229,7 @@ function PhysicalBody({
               <SelectValue placeholder={salesLoading ? "Loading…" : "Select a salesperson"} />
             </SelectTrigger>
             <SelectContent>
-              {salesUsers.map((u) => (
-                <SelectItem key={u.username} value={u.username} disabled={!u.sales_person_code}>
-                  {u.full_name || u.username}<span className="text-muted-foreground"> · {u.role.replace("_", " ")}</span>
-                  {!u.sales_person_code ? " · ⚠ no SAP code" : ""}
-                </SelectItem>
-              ))}
+              <SalesUserOptions salesUsers={salesUsers} loading={salesLoading} />
             </SelectContent>
           </Select>
         </Field>

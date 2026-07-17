@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/run.mjs dev dev",
+    "dev:local": "node scripts/run.mjs dev dev",
+    "dev:staging": "node scripts/run.mjs dev staging",
+    "dev:prod": "node scripts/run.mjs dev prod",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

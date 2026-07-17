@@ -213,11 +213,10 @@ export function useSalesPipeline() {
   })
 }
 
-/** Active sales-role logins — handover target picker. */
-export function useSalesUsers(enabled = true) {
+export function useSalesUsers(enabled = true, oppId?: number | string) {
   return useQuery({
-    queryKey: leadKeys.salesUsers(),
-    queryFn: () => leadsApi.getSalesUsers(),
+    queryKey: [...leadKeys.salesUsers(), oppId ?? null],
+    queryFn: () => leadsApi.getSalesUsers(oppId),
     staleTime: 5 * 60_000,
     enabled,
   })
