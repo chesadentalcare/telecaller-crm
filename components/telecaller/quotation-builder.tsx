@@ -666,9 +666,10 @@ function QuotationCard({
         </div>
       )}
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
         <span>Valid: {new Date(q.validity_date).toLocaleDateString("en-IN")}</span>
         <span>Terms: {q.payment_terms}</span>
+        <span>{q.source === "sales" ? "via Sales" : "via Telecaller"}{q.created_by ? ` · by ${q.created_by}` : ""}</span>
         {q.sap_doc_entry && <span className="text-green-600">SAP #{q.sap_doc_entry}</span>}
         {q.pdf_url && <a href={q.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDF</a>}
       </div>

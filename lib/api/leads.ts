@@ -203,6 +203,8 @@ export interface QuotationRow {
   pdf_url: string | null
   sap_doc_entry: number | null
   created_by: string
+  // Origin dashboard the quote was created from (migration 052): 'telecaller' | 'sales'.
+  source: string | null
   created_at: string
   updated_at: string
 }
