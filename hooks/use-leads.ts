@@ -11,6 +11,7 @@ import {
   fetchSixMonthLeads,
   fetchRequalificationLeads,
   fetchCallsDueLeads,
+  fetchMeetingsDueLeads,
   fetchUpcomingCalls,
   fetchQueueCounts,
   fetchLeadById,
@@ -31,6 +32,7 @@ export const leadKeys = {
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   requalification: () => [...leadKeys.all, "requalification"] as const,
   callsDue: () => [...leadKeys.all, "calls-due"] as const,
+  meetingsDue: () => [...leadKeys.all, "meetings-due"] as const,
   dripCalls: () => [...leadKeys.all, "drip-calls"] as const,
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
   fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
@@ -82,6 +84,9 @@ export function useCallsDueLeads() {
 }
 export function useUpcomingCalls() {
   return useQuery({ queryKey: leadKeys.dripCalls(),   queryFn: fetchUpcomingCalls })
+}
+export function useMeetingsDueLeads() {
+  return useQuery({ queryKey: leadKeys.meetingsDue(), queryFn: fetchMeetingsDueLeads })
 }
 export function useLeadById(id: string | undefined) {
   return useQuery({

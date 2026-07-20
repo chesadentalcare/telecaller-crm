@@ -7,6 +7,9 @@ const fileSchema = z
 export const zoomMeetingSchema = z
   .object({
     meetingAt: z.string().min(1, "Please pick a meeting time"),
+    // Zoom needs a valid inbox for the join link — reconfirm it at booking (parallel to
+    // the physical-meeting address reconfirm). Written back to the lead on the server.
+    customerEmail: z.string().trim().email("Reconfirm a valid customer email"),
     layoutShared: z.enum(["yes", "no"], { message: "Please indicate whether a layout was shared" }),
     designFeeStatus: z.enum(["discussed", "paid", "declined"], {
       message: "Please mark design fee discussion status",
@@ -31,6 +34,7 @@ export type ZoomMeetingValues = z.infer<typeof zoomMeetingSchema>
 
 export const zoomMeetingDefaults: ZoomMeetingValues = {
   meetingAt: "",
+  customerEmail: "",
   layoutShared: "" as ZoomMeetingValues["layoutShared"],
   designFeeStatus: "" as ZoomMeetingValues["designFeeStatus"],
   paymentProof: null,

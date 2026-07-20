@@ -18,6 +18,7 @@ import type {
   SixMonthLead,
   RequalificationLead,
   CallsDueLead,
+  MeetingsDueLead,
   UpcomingDripCall,
   ScheduledCall,
   UpcomingCalls,
@@ -36,6 +37,7 @@ import type {
   SixMonthRow,
   RequalificationRow,
   CallNudgeRow,
+  MeetingDueRow,
   DripCallRow,
   ScheduledCallRow,
   ReplyRowFields,
@@ -199,6 +201,20 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   lastOutcomeAt: r.last_outcome_at ?? null,
 })
 
+const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  meetingId: String(r.meeting_id),
+  meetingType: r.meeting_type,
+  meetingAt: new Date(r.meeting_at),
+  equipment: r.equipment ?? "—",
+  location: r.location,
+  joinUrl: r.zoom_join_url,
+  assignedSalesperson: r.assigned_salesperson,
+  summaryUploaded: !!r.meeting_summary_url,
+})
+
 const toDripCall = (r: DripCallRow): UpcomingDripCall => ({
   id: String(r.id),
   name: r.customer_name || placeholderName(r.id),
@@ -285,6 +301,11 @@ export const fetchRequalificationLeads = async (): Promise<RequalificationLead[]
 export const fetchCallsDueLeads = async (): Promise<CallsDueLead[]> => {
   const rows = await leadsApi.queues.calling()
   return rows.map(toCallsDue)
+}
+
+export const fetchMeetingsDueLeads = async (): Promise<MeetingsDueLead[]> => {
+  const rows = await leadsApi.queues.meetingsDue()
+  return rows.map(toMeetingsDue)
 }
 
 export const fetchUpcomingCalls = async (): Promise<UpcomingCalls> => {

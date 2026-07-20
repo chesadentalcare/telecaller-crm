@@ -82,6 +82,10 @@ const CallsDueView = dynamic(
   () => import("@/components/telecaller/calls-due-view").then((m) => ({ default: m.CallsDueView })),
   { loading: () => <ViewSkeleton /> },
 )
+const MeetingsDueView = dynamic(
+  () => import("@/components/telecaller/meetings-due-view").then((m) => ({ default: m.MeetingsDueView })),
+  { loading: () => <ViewSkeleton /> },
+)
 const PendingApprovalsView = dynamic(
   () => import("@/components/telecaller/pending-approvals"),
   { loading: () => <ViewSkeleton /> },
@@ -201,6 +205,11 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Your call worklist",
     roles: ["telecaller"],
     render: ({ openLead }) => <CallsDueView onOpenLead={openLead} />,
+  },
+  "meetings-due": {
+    title: "Meetings Due",
+    subtitle: "Your upcoming meeting worklist",
+    render: ({ openLead }) => <MeetingsDueView onOpenLead={openLead} />,
   },
   requalification: {
     title: "Re-qualification",
