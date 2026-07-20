@@ -33,6 +33,7 @@ import {
   ClipboardCheck,
   AlertTriangle,
   MessageSquare,
+  CalendarClock,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -97,6 +98,7 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
       // Badge counts now reflect un-replied WhatsApp responses (NOT queue size): a lead
       // counts the moment its customer replies and clears only when the rep replies back.
       { id: "calls-due",      title: "Calls Due",      subtitle: "Today's call worklist",   icon: PhoneCall,    color: "bg-blue-500",   textColor: "text-blue-500",   borderColor: "border-blue-500",   count: queueCounts.callsDueAwaitingReply, isReplyCount: true, isAction: false, roles: ["telecaller"] as UserRole[] },
+      { id: "meetings-due",   title: "Meetings Due",   subtitle: "Upcoming meetings",       icon: CalendarClock, color: "bg-sky-500",   textColor: "text-sky-500",   borderColor: "border-sky-500",   count: null,                 isReplyCount: false, isAction: false, roles: ["telecaller"] as UserRole[] },
       { id: "pipeline",       title: "Pipeline",       subtitle: "Your full lead book",     icon: Inbox,        color: "bg-indigo-500", textColor: "text-indigo-500", borderColor: "border-indigo-500", count: queueCounts.pipelineAwaitingReply, isReplyCount: true, isAction: false, roles: null },
       { id: "sales-pipeline", title: "Sales Pipeline", subtitle: "Handed-over leads",       icon: Briefcase,    color: "bg-emerald-500", textColor: "text-emerald-500", borderColor: "border-emerald-500", count: null,                 isReplyCount: false, isAction: false, roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"] as UserRole[] },
       { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,     color: "bg-amber-500",  textColor: "text-amber-500",  borderColor: "border-amber-500",  count: null,                 isReplyCount: false, isAction: false, roles: ["manager", "admin"] as UserRole[] },

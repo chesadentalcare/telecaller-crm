@@ -1729,6 +1729,7 @@ export function CallsTab({
             onOpenChange={setMeetingOpen}
             leadId={lead.id}
             address={lead.address}
+            email={lead.email}
             isFullyQualified={isFullyQualified}
             callValues={engagedCallValues}
             meetingType={meetingType}

@@ -128,6 +128,18 @@ export interface CallsDueLead extends LeadBase {
   lastOutcomeAt?: string | null
 }
 
+// Meetings-Due worklist — upcoming physical/zoom meetings (parallel to Calls Due).
+export interface MeetingsDueLead extends LeadBase {
+  meetingId: string
+  meetingType: "zoom" | "physical"
+  meetingAt: Date
+  equipment: string
+  location?: string | null
+  joinUrl?: string | null
+  assignedSalesperson?: string | null
+  summaryUploaded: boolean
+}
+
 // Upcoming calls (future-dated) shown in the "Upcoming Calls" modal on the Calls Due
 // tab — a scheduled call_nudge (callback etc.) drops into Calls Due on its day.
 export interface ScheduledCall extends LeadBase {

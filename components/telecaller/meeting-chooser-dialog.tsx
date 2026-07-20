@@ -45,6 +45,7 @@ export function MeetingChooserDialog({
   onOpenChange,
   leadId,
   address,
+  email,
   isFullyQualified,
   callValues,
   onLogged,
@@ -54,6 +55,8 @@ export function MeetingChooserDialog({
   onOpenChange: (o: boolean) => void
   leadId: string | number
   address?: string
+  /** The lead's email on file — pre-fills the Zoom reconfirm-email field. */
+  email?: string
   /** Physical + Zoom both require full qualification (qualificationGate). */
   isFullyQualified: boolean
   /** The engaged-call fields collected on the main form (logged together with the meeting). */
@@ -156,6 +159,7 @@ export function MeetingChooserDialog({
         ) : (
           <ZoomBody
             leadId={leadId}
+            email={email}
             disabled={!isFullyQualified}
             onMeetingBooked={() => setMeetingBooked(true)}
             logEngaged={logEngaged}
@@ -251,9 +255,10 @@ function PhysicalBody({
 
 // ── Zoom meeting body (stays with the telecaller; design-fee branch) ──
 function ZoomBody({
-  leadId, disabled, onMeetingBooked, logEngaged, finish,
+  leadId, email, disabled, onMeetingBooked, logEngaged, finish,
 }: {
   leadId: string | number
+  email?: string
   disabled: boolean
   onMeetingBooked: () => void
   logEngaged: () => Promise<void>
@@ -262,7 +267,7 @@ function ZoomBody({
   const { mutateAsync: scheduleZoom } = useZoomMeeting(leadId)
   const { control, handleSubmit, watch, formState } = useForm<ZoomMeetingValues>({
     resolver: zodResolver(zoomMeetingSchema),
-    defaultValues: { ...zoomMeetingDefaults, layoutShared: "no", designFeeStatus: "discussed" },
+    defaultValues: { ...zoomMeetingDefaults, customerEmail: email ?? "", layoutShared: "no", designFeeStatus: "discussed" },
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
@@ -293,6 +298,11 @@ function ZoomBody({
       <Controller control={control} name="meetingAt" render={({ field }) => (
         <Field label="Date & time" error={errors.meetingAt?.message}>
           <Input type="datetime-local" {...field} />
+        </Field>
+      )} />
+      <Controller control={control} name="customerEmail" render={({ field }) => (
+        <Field label="Reconfirm customer email" error={errors.customerEmail?.message} hint="The Zoom join link is sent here — confirm or correct it. Written back to the lead.">
+          <Input type="email" {...field} placeholder="doctor@clinic.com" />
         </Field>
       )} />
       <Controller control={control} name="layoutShared" render={({ field }) => (

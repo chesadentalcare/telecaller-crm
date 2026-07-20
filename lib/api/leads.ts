@@ -537,6 +537,22 @@ export interface CallNudgeRow extends ReplyRowFields {
   last_outcome_at?: string | null
 }
 
+// Meetings-Due worklist row (over meeting_records, enriched identity).
+export interface MeetingDueRow {
+  meeting_id: number
+  id: number
+  meeting_type: "zoom" | "physical"
+  meeting_at: string
+  location: string | null
+  assigned_salesperson: string | null
+  zoom_join_url: string | null
+  duration_minutes: number | null
+  meeting_summary_url: string | null
+  equipment: string | null
+  customer_name: string | null
+  phone: string | null
+}
+
 // Upcoming calls (future-dated, beyond today). Two parts: real scheduled call_nudges
 // (callbacks etc.) and the projected forward drip-call timeline per active drip lead.
 export interface ScheduledCallRow {
@@ -688,6 +704,7 @@ export const leadsApi = {
   zoomMeeting: (id: number | string, values: ZoomMeetingValues) => {
     const fd = new FormData()
     fd.append("meeting_at", values.meetingAt)
+    fd.append("customer_email", values.customerEmail)
     fd.append("layout_shared", values.layoutShared === "yes" ? "true" : "false")
     // Any of the 3 enum values means the fee topic was discussed; the
     // schema enforces a non-empty value at submit time, so this is always true.
@@ -1084,6 +1101,7 @@ export const leadsApi = {
     requalification: () => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification)),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
+    meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),
     counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
   },
 }
