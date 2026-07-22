@@ -764,6 +764,18 @@ export const leadsApi = {
       ),
     ),
 
+  // Item 10c — upload a custom PDF brochure and send it to the customer as a WhatsApp document.
+  sendBrochure: (id: number | string, file: File) => {
+    const fd = new FormData()
+    fd.append("brochure", file)
+    return unwrap(
+      api.post<Envelope<{ dryRun: boolean; messageId: string | null; url: string }>>(
+        `/leads/${id}/send-brochure`,
+        fd,
+      ),
+    )
+  },
+
   // Reschedule an existing Zoom meeting to a new time — keeps the same join link and
   // re-sends the invite (email + WhatsApp) with the new time.
   rescheduleMeeting: (

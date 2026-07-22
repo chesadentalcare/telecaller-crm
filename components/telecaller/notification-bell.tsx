@@ -28,6 +28,10 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
   // Amendment 2 (Theme 6) — brand-new lead with zero activity past 24h.
   new_lead_neglected: AlertTriangle,
   lead_handover: ArrowRightLeft,
+  whatsapp_reply: MessageSquare,
+  whatsapp_meeting_request: MessageSquare,
+  whatsapp_requalify: MessageSquare,
+  whatsapp_unclear: MessageSquare,
   system: Bell,
 }
 
@@ -43,6 +47,10 @@ const TYPE_COLORS: Record<string, string> = {
   quote_read: "text-amber-600",
   new_lead_neglected: "text-red-600",
   lead_handover: "text-blue-600",
+  whatsapp_reply: "text-green-600",
+  whatsapp_meeting_request: "text-green-600",
+  whatsapp_requalify: "text-amber-600",
+  whatsapp_unclear: "text-amber-600",
   system: "text-muted-foreground",
 }
 

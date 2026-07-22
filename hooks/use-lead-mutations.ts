@@ -172,6 +172,19 @@ export function useResendMeeting(meetingId: string | number) {
   })
 }
 
+// Item 10c — send a custom PDF brochure to the customer as a WhatsApp document.
+export function useSendBrochure(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => leadsApi.sendBrochure(id, file),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(res?.dryRun ? "Brochure sent (dry-run)" : "Brochure sent to the customer")
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to send the brochure"),
+  })
+}
+
 // Reschedule an existing Zoom meeting — keeps the same join link, re-sends the invite.
 export function useRescheduleMeeting(meetingId: string | number) {
   const qc = useQueryClient()
