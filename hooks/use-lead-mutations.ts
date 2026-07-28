@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { leadsApi } from "@/lib/api/leads"
+import type { QuickLeadInput } from "@/lib/api/leads"
 import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
@@ -40,6 +41,16 @@ export function useCreateLead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (values: LeadIntakeValues) => leadsApi.create(values),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
+// Merged daily entry (Meta-ads flow): create the lead + record the first call
+// response in one atomic call; the backend routes it (drip / meeting / callback).
+export function useQuickCreateLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: QuickLeadInput) => leadsApi.quickCreate(input),
     onSuccess: () => invalidateAllLeads(qc),
   })
 }
@@ -169,6 +180,19 @@ export function useResendMeeting(meetingId: string | number) {
       )
     },
     onError: toastError("Failed to resend the meeting invite"),
+  })
+}
+
+// Item 10c — send a custom PDF brochure to the customer as a WhatsApp document.
+export function useSendBrochure(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => leadsApi.sendBrochure(id, file),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(res?.dryRun ? "Brochure sent (dry-run)" : "Brochure sent to the customer")
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Failed to send the brochure"),
   })
 }
 

@@ -22,12 +22,13 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { physicalMeetingSchema, physicalMeetingDefaults, type PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import { zoomMeetingSchema, zoomMeetingDefaults, type ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
-import { usePhysicalMeeting, useZoomMeeting, useLogAttempt } from "@/hooks/use-lead-mutations"
+import { usePhysicalMeeting, useZoomMeeting, useLogAttempt, useSendBrochure } from "@/hooks/use-lead-mutations"
 import { useSalesUsers } from "@/hooks/use-leads"
 import { SalesUserOptions } from "./sales-user-options"
 import { ApiError } from "@/lib/api/client"
@@ -166,6 +167,8 @@ export function MeetingChooserDialog({
             finish={finish}
           />
         )}
+
+        <BrochureSender leadId={leadId} />
       </DialogContent>
     </Dialog>
   )
@@ -340,6 +343,11 @@ function ZoomBody({
           <Input {...field} placeholder="e.g. manager@clinic.com, partner@clinic.com" />
         </Field>
       )} />
+      <Controller control={control} name="notes" render={({ field }) => (
+        <Field label="Conversation recap / notes" hint="Key points from the call — saved on the meeting record for follow-up.">
+          <Textarea {...field} rows={3} placeholder="What the doctor wants, objections raised, next steps…" />
+        </Field>
+      )} />
       <DialogFooter>
         <Button type="submit" disabled={isSubmitting || disabled} className="gap-1.5">
           <CheckCircle2 className="size-3.5" />
@@ -347,6 +355,37 @@ function ZoomBody({
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+// Item 10c — upload any PDF and send it to the customer as a WhatsApp document.
+function BrochureSender({ leadId }: { leadId: string | number }) {
+  const [file, setFile] = useState<File | null>(null)
+  const { mutate, isPending } = useSendBrochure(leadId)
+  return (
+    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+      <p className="text-xs font-medium">Send a brochure to the customer (optional)</p>
+      <div className="flex items-center gap-2">
+        <Input
+          type="file"
+          accept="application/pdf"
+          className="h-9 text-xs"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={!file || isPending}
+          onClick={() => { if (file) mutate(file, { onSuccess: () => setFile(null) }) }}
+        >
+          {isPending ? "Sending…" : "Send"}
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Sent as a WhatsApp document — only delivers within 24h of the customer&apos;s last WhatsApp message.
+      </p>
+    </div>
   )
 }
 
