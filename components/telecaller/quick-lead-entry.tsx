@@ -21,7 +21,7 @@ const INTEREST_LEVELS = [
   { value: "hot", label: "Hot" },
   { value: "warm", label: "Warm" },
   { value: "cold", label: "Cold" },
-  { value: "just_exploring", label: "Exploring" },
+  { value: "just_exploring", label: "Just looking" },
 ] as const
 
 const BUDGETS = [
@@ -43,7 +43,7 @@ const EQUIPMENT_OPTIONS = [
 ] as const
 
 const OUTCOMES = [
-  { value: "engaged", label: "Interested", hint: "Wants a chair" },
+  { value: "engaged", label: "Interested", hint: "Wants to buy / know more" },
   { value: "call_back_requested", label: "Call back later", hint: "Asked to call again" },
   { value: "not_interested", label: "Not interested", hint: "" },
   { value: "no_response", label: "No response", hint: "Didn't pick up" },
@@ -51,20 +51,21 @@ const OUTCOMES = [
 ] as const
 
 const NI_REASONS = [
-  { value: "timing_budget", label: "Timing / budget — nurture" },
-  { value: "already_purchased", label: "Bought elsewhere" },
-  { value: "genuine_no", label: "Not a fit / genuine no" },
+  { value: "timing_budget", label: "Interested later", hint: "Timing / budget" },
+  { value: "already_purchased", label: "Bought elsewhere", hint: "" },
+  { value: "genuine_no", label: "Not interested at all", hint: "" },
 ] as const
 
+// Plain-English version of where the lead went (no "drip" / "nurture" jargon).
 const ROUTE_LABEL: Record<string, string> = {
-  drip: "entered the nurture drip",
-  six_month_funnel: "entered the 6-month nurture drip",
+  drip: "we'll follow up automatically",
+  six_month_funnel: "we'll follow up over the next few months",
   meeting_pending: "ready for a meeting",
-  callback_scheduled: "callback scheduled",
-  first_contact_retry: "queued for a retry",
-  retry: "queued for a retry",
-  archived: "archived",
   meeting: "ready for a meeting",
+  callback_scheduled: "callback scheduled",
+  first_contact_retry: "we'll try again",
+  retry: "we'll try again",
+  archived: "saved and closed",
 }
 
 const onlyDigits = (s: string, max: number) => s.replace(/\D/g, "").slice(0, max)
@@ -72,29 +73,29 @@ const onlyDigits = (s: string, max: number) => s.replace(/\D/g, "").slice(0, max
 // Defined at module scope (NOT inside the component) so they keep a stable
 // identity across renders — otherwise every keystroke remounts the inputs and
 // the field loses focus after one character.
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
-      <div className="text-sm font-semibold">{title}</div>
-      {children}
-    </div>
-  )
+function Req() {
+  return <span className="text-destructive"> *</span>
 }
 
-function Pills({ options, value, onChange }: {
+function Optional() {
+  return <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span>
+}
+
+function Pills({ options, value, onChange, cols = 3 }: {
   options: readonly { value: string; label: string; hint?: string }[]
   value: string
   onChange: (v: string) => void
+  cols?: 2 | 3
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className={cn("grid grid-cols-2 gap-2", cols === 3 && "sm:grid-cols-3")}>
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-lg border px-3 py-2 text-left text-sm transition",
+            "rounded-lg border px-3 py-2.5 text-left text-sm transition",
             value === o.value ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40",
           )}
         >
@@ -129,32 +130,39 @@ export function QuickLeadEntry() {
 
   const [done, setDone] = useState<{ name: string; route: string | null } | null>(null)
 
+  const isEngaged = outcome === "engaged"
+  const timelineNeeded = isEngaged && !readyNow
+
+  // Changing the outcome clears the fields that no longer apply, so nothing
+  // stale is carried into the save and the form stays uncluttered.
+  const changeOutcome = (v: string) => {
+    setOutcome(v)
+    if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest("") }
+    if (v !== "not_interested") setNiReason("")
+    if (v !== "call_back_requested") setCallbackAt("")
+  }
+
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
     setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
     setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setNotes("")
   }
 
-  // Planned purchase is what drives the drip — required for an interested lead
-  // that isn't buying right now.
-  const timelineNeeded = outcome === "engaged" && !readyNow
-
   const validate = (): string | null => {
     if (leadName.trim().length < 2) return "Enter the lead's name"
-    if (!/^[6-9]\d{9}$/.test(phoneNumber)) return "Enter a valid 10-digit mobile"
+    if (!/^[6-9]\d{9}$/.test(phoneNumber)) return "Enter a valid 10-digit mobile number"
     if (!waSame && !/^[6-9]\d{9}$/.test(whatsappNumber)) return "Enter a valid WhatsApp number"
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email"
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "That email doesn't look right"
     if (!state) return "Pick a state"
     if (!city.trim()) return "Enter a city"
     if (!outcome) return "Pick what happened on the call"
-    // Interest / budget / product are call-derived — only expected when Neha
-    // actually spoke to the doctor. For a no-response, wrong-number, etc. she can
-    // still enter the lead with just the basics.
-    if (outcome === "engaged" && !interestLevel) return "Pick an interest level"
-    if (outcome === "engaged" && !budget) return "Pick a budget"
-    if (timelineNeeded && !timeline) return "Pick when they plan to buy"
-    if (outcome === "not_interested" && !niReason) return "Pick a not-interested reason"
-    if (outcome === "call_back_requested" && !callbackAt) return "Pick a callback date & time"
+    // Interest / budget / buy-timing only matter when she actually spoke to the
+    // doctor. A no-response / wrong-number lead saves with just the basics.
+    if (isEngaged && !interestLevel) return "How interested are they?"
+    if (isEngaged && !budget) return "Pick their budget"
+    if (timelineNeeded && !timeline) return "When do they plan to buy?"
+    if (outcome === "not_interested" && !niReason) return "Why aren't they interested?"
+    if (outcome === "call_back_requested" && !callbackAt) return "When should we call back?"
     return null
   }
 
@@ -163,7 +171,7 @@ export function QuickLeadEntry() {
     if (err) { toast.error(err); return }
 
     const firstResponse: QuickFirstResponse = { outcome: outcome as QuickFirstResponse["outcome"] }
-    if (outcome === "engaged") firstResponse.readyNow = readyNow
+    if (isEngaged) firstResponse.readyNow = readyNow
     if (outcome === "not_interested") firstResponse.notInterestedReason = niReason as QuickFirstResponse["notInterestedReason"]
     if (outcome === "call_back_requested") firstResponse.callbackAt = callbackAt
     if (notes.trim()) firstResponse.notes = notes.trim()
@@ -175,13 +183,13 @@ export function QuickLeadEntry() {
       email: email.trim() || undefined,
       state,
       city: city.trim(),
-      // Interest / budget are optional in the form (unknown for a no-response),
-      // but the backend requires them — fall back to safe neutral defaults.
-      interestLevel: interestLevel || "just_exploring",
-      budget: budget || "<5L",
+      // Interest / budget only captured for interested leads; the backend still
+      // requires them, so fall back to safe neutral defaults otherwise.
+      interestLevel: isEngaged && interestLevel ? interestLevel : "just_exploring",
+      budget: isEngaged && budget ? budget : "<5L",
       source: "Facebook",
-      equipmentInterest: equipmentInterest || undefined,
-      timeline: timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
+      equipmentInterest: isEngaged ? (equipmentInterest || undefined) : undefined,
+      timeline: timelineNeeded && timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
       firstResponse,
     }
 
@@ -191,7 +199,7 @@ export function QuickLeadEntry() {
       toast.success("Lead added" + (res.route ? ` — ${ROUTE_LABEL[res.route] ?? res.route}` : ""))
       setTimeout(() => { reset(); setDone(null) }, 2600)
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Failed to add lead")
+      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Couldn't add the lead — please try again")
     }
   }
 
@@ -202,152 +210,190 @@ export function QuickLeadEntry() {
           <div className="flex size-16 items-center justify-center rounded-full bg-success/10 mb-5">
             <CheckCircle2 className="size-8 text-success" />
           </div>
-          <h3 className="text-xl font-semibold">Lead added</h3>
+          <h3 className="text-xl font-semibold">Lead added ✓</h3>
           <p className="text-sm text-muted-foreground mt-1.5">
-            {done.name} is in the pipeline
+            {done.name} is saved
             {done.route ? <> — <span className="font-medium text-foreground">{ROUTE_LABEL[done.route] ?? done.route}</span>.</> : "."}
           </p>
+          <p className="text-xs text-muted-foreground mt-3">Ready for the next lead…</p>
         </CardContent>
       </Card>
     )
   }
 
+  const iconCls = "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+
   return (
     <Card className="p-0">
       <CardContent className="space-y-5 p-5 sm:p-6">
         <div>
-          <h2 className="text-base font-semibold">Add lead from call</h2>
-          <p className="text-xs text-muted-foreground">Enter the Meta lead and what happened on your call — it routes automatically.</p>
+          <h2 className="text-lg font-semibold">Add a new lead</h2>
+          <p className="text-sm text-muted-foreground">Fill the details, then log what happened on your call. We'll take care of the follow-up.</p>
         </div>
 
-        <Section title="Lead">
+        {/* ── Step 1: who is the lead ─────────────────────────────── */}
+        <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+          <div className="text-sm font-semibold">1. Lead details</div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Full name</Label>
+              <Label>Full name<Req /></Label>
               <div className="relative">
-                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <User className={iconCls} />
                 <Input className="pl-10" placeholder="Dr. Ramesh Sharma" value={leadName} onChange={(e) => setLeadName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Mobile</Label>
+              <Label>Mobile number<Req /></Label>
               <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-10" inputMode="numeric" placeholder="9876543210" value={phoneNumber} onChange={(e) => setPhoneNumber(onlyDigits(e.target.value, 10))} />
+                <Phone className={iconCls} />
+                <Input className="pl-10" inputMode="numeric" placeholder="10-digit number" value={phoneNumber} onChange={(e) => setPhoneNumber(onlyDigits(e.target.value, 10))} />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <Checkbox id="wa" checked={waSame} onCheckedChange={(c) => setWaSame(c === true)} />
-            <Label htmlFor="wa" className="cursor-pointer text-sm font-normal">WhatsApp is same as mobile</Label>
-          </div>
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <Checkbox checked={waSame} onCheckedChange={(c) => setWaSame(c === true)} />
+            <span className="text-sm">WhatsApp is the same as the mobile number</span>
+          </label>
           {!waSame && (
             <div className="space-y-1.5">
-              <Label>WhatsApp number</Label>
+              <Label>WhatsApp number<Req /></Label>
               <div className="relative">
                 <MessageSquare className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#25D366]" />
-                <Input className="pl-10" inputMode="numeric" placeholder="9876543210" value={whatsappNumber} onChange={(e) => setWhatsappNumber(onlyDigits(e.target.value, 10))} />
+                <Input className="pl-10" inputMode="numeric" placeholder="10-digit number" value={whatsappNumber} onChange={(e) => setWhatsappNumber(onlyDigits(e.target.value, 10))} />
               </div>
             </div>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Email <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Label>State<Req /></Label>
+              <Select value={state} onValueChange={setState} disabled={statesLoading}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={statesLoading ? "Loading…" : "Select state"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {(states ?? []).map((s) => <SelectItem key={s.code} value={s.name}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>City<Req /></Label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-10" type="email" placeholder="dr.name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <MapPin className={iconCls} />
+                <Input className="pl-10" placeholder="Mumbai" value={city} onChange={(e) => setCity(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Email<Optional /></Label>
+            <div className="relative">
+              <Mail className={iconCls} />
+              <Input className="pl-10" type="email" placeholder="dr.name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Step 2: what happened on the call ───────────────────── */}
+        <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+          <div>
+            <div className="text-sm font-semibold">2. What happened on the call?<Req /></div>
+            <div className="text-xs text-muted-foreground">Pick one — we'll only ask for what that needs.</div>
+          </div>
+          <Pills options={OUTCOMES} value={outcome} onChange={changeOutcome} />
+
+          {/* Interested → capture the details that drive the follow-up */}
+          {isEngaged && (
+            <div className="space-y-4 rounded-lg border bg-card p-3.5">
               <div className="space-y-1.5">
-                <Label>State</Label>
-                <Select value={state} onValueChange={setState} disabled={statesLoading}>
+                <Label>Do they want to buy now?<Req /></Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReadyNow(true)}
+                    className={cn("rounded-lg border px-3 py-2.5 text-sm font-medium transition",
+                      readyNow ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40")}
+                  >
+                    Yes — set up a meeting
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReadyNow(false)}
+                    className={cn("rounded-lg border px-3 py-2.5 text-sm font-medium transition",
+                      !readyNow ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40")}
+                  >
+                    Not yet — follow up
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Product they want<Optional /></Label>
+                <Select value={equipmentInterest} onValueChange={setEquipmentInterest}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={statesLoading ? "Loading…" : "State"} />
+                    <SelectValue placeholder="Which product?" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {(states ?? []).map((s) => <SelectItem key={s.code} value={s.name}>{s.name}</SelectItem>)}
+                  <SelectContent>
+                    {EQUIPMENT_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>City</Label>
-                <div className="relative">
-                  <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input className="pl-10" placeholder="Mumbai" value={city} onChange={(e) => setCity(e.target.value)} />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>How interested are they?<Req /></Label>
+                  <Pills options={INTEREST_LEVELS} value={interestLevel} onChange={setInterestLevel} cols={2} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Budget<Req /></Label>
+                  <Pills options={BUDGETS} value={budget} onChange={setBudget} cols={2} />
                 </div>
               </div>
-            </div>
-          </div>
-        </Section>
 
-        <Section title="Interest & budget">
-          <div className="space-y-1.5">
-            <Label>Product they want <span className="text-xs text-muted-foreground">(optional)</span></Label>
-            <Select value={equipmentInterest} onValueChange={setEquipmentInterest}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Which product are they interested in?" />
-              </SelectTrigger>
-              <SelectContent>
-                {EQUIPMENT_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Interest level {outcome === "engaged" ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(optional)</span>}</Label>
-            <Pills options={INTEREST_LEVELS} value={interestLevel} onChange={setInterestLevel} />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Budget {outcome === "engaged" ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(optional)</span>}</Label>
-              <Pills options={BUDGETS} value={budget} onChange={setBudget} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>
-                When they plan to buy {timelineNeeded ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(sets the follow-up schedule)</span>}
-              </Label>
-              <Pills options={TIMELINES} value={timeline} onChange={setTimeline} />
-            </div>
-          </div>
-        </Section>
-
-        <Section title="What happened on the call?">
-          <Pills options={OUTCOMES} value={outcome} onChange={setOutcome} />
-
-          {outcome === "engaged" && (
-            <div className="flex items-center gap-2.5 rounded-lg border bg-card p-3">
-              <Checkbox id="ready" checked={readyNow} onCheckedChange={(c) => setReadyNow(c === true)} />
-              <Label htmlFor="ready" className="cursor-pointer text-sm font-normal">
-                Ready to buy now — book a meeting (otherwise they go into the drip for their planned purchase)
-              </Label>
+              {!readyNow && (
+                <div className="space-y-1.5">
+                  <Label>When do they plan to buy?<Req /></Label>
+                  <Pills options={TIMELINES} value={timeline} onChange={setTimeline} />
+                  <p className="text-[11px] text-muted-foreground">This sets how often we follow up.</p>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Not interested → why */}
           {outcome === "not_interested" && (
-            <div className="space-y-1.5">
-              <Label>Reason</Label>
+            <div className="space-y-1.5 rounded-lg border bg-card p-3.5">
+              <Label>Why aren't they interested?<Req /></Label>
               <Pills options={NI_REASONS} value={niReason} onChange={setNiReason} />
             </div>
           )}
+
+          {/* Call back → when */}
           {outcome === "call_back_requested" && (
-            <div className="space-y-1.5">
-              <Label>Call back at</Label>
+            <div className="space-y-1.5 rounded-lg border bg-card p-3.5">
+              <Label>When should we call back?<Req /></Label>
               <Input type="datetime-local" value={callbackAt} onChange={(e) => setCallbackAt(e.target.value)} />
             </div>
           )}
 
+          {/* No response / wrong number → nothing else needed */}
+          {(outcome === "no_response" || outcome === "wrong_number") && (
+            <p className="rounded-lg border bg-card p-3 text-xs text-muted-foreground">
+              Nothing else needed — we'll save the lead{outcome === "no_response" ? " and try again later" : ""}.
+            </p>
+          )}
+
           <div className="space-y-1.5">
-            <Label>Notes <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Label>Notes<Optional /></Label>
             <Textarea rows={2} placeholder="Anything worth remembering from the call" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-        </Section>
-
-        <div className="flex justify-end">
-          <Button type="button" onClick={submit} disabled={isPending} className="gap-1.5">
-            {isPending ? <><Loader2 className="size-4 animate-spin" />Adding…</> : <><CheckCircle2 className="size-4" />Add lead</>}
-          </Button>
         </div>
+
+        <Button type="button" onClick={submit} disabled={isPending} size="lg" className="w-full gap-2">
+          {isPending ? <><Loader2 className="size-4 animate-spin" />Adding…</> : <><CheckCircle2 className="size-4" />Add lead</>}
+        </Button>
       </CardContent>
     </Card>
   )
