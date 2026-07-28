@@ -70,7 +70,9 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
           meta={
             <span className="flex flex-wrap items-center gap-1.5">
               {lead.reason === "callback" ? (
-                <span className="font-medium text-foreground">📞 Callback at {lead.scheduledAt.toLocaleString()}</span>
+                <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                  <PhoneCall className="size-3" />Callback at {lead.scheduledAt.toLocaleString()}
+                </span>
               ) : (
                 <span>Scheduled {lead.scheduledAt.toLocaleString()}</span>
               )}
@@ -119,15 +121,15 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
 
   return (
     <Tabs defaultValue="today" className="gap-4">
-      <TabsList className="grid w-full max-w-md grid-cols-2">
-        <TabsTrigger value="today" className="gap-1.5">
-          <PhoneCall className="size-3.5" />Calls Today
+      <TabsList className="h-auto w-full justify-start gap-5 rounded-none border-b bg-transparent p-0">
+        <TabsTrigger value="today" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+          <PhoneCall className="size-3.5" />Today
           {today.length > 0 && (
             <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{today.length}</Badge>
           )}
         </TabsTrigger>
-        <TabsTrigger value="upcoming" className="gap-1.5">
-          <CalendarClock className="size-3.5" />Upcoming Calls
+        <TabsTrigger value="upcoming" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+          <CalendarClock className="size-3.5" />Upcoming
           {upcomingCount > 0 && (
             <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{upcomingCount}</Badge>
           )}
@@ -138,15 +140,10 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
       <TabsContent value="today" className="mt-0 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <PhoneCall className="size-4 text-primary" />Calls Due — Today
-                </CardTitle>
-                <CardDescription>Calls scheduled for today, oldest first — first contacts, callbacks &amp; drip anchors. A call whose time has already passed turns <span className="font-medium text-rose-600">pastel red</span> so you can catch it on time. Future-dated calls live under the <span className="font-medium text-foreground">Upcoming Calls</span> tab until their day.</CardDescription>
-              </div>
-              <Badge variant="outline" className="text-[10px]">{today.length} due</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <PhoneCall className="size-4 text-primary" />Calls due today
+            </CardTitle>
+            <CardDescription>Scheduled for today, oldest first — overdue calls are highlighted in red.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {today.length === 0 ? (
