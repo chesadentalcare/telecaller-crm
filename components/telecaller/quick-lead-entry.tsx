@@ -37,6 +37,11 @@ const TIMELINES = [
   { value: "6_plus_months", label: "6+ months" },
 ] as const
 
+const EQUIPMENT_OPTIONS = [
+  "Dental Chair", "X-Ray Unit", "Autoclave", "Compressor", "Handpiece",
+  "Scaler", "Light Cure", "Imaging System", "Other",
+] as const
+
 const OUTCOMES = [
   { value: "engaged", label: "Interested", hint: "Wants a chair" },
   { value: "call_back_requested", label: "Call back later", hint: "Asked to call again" },
@@ -64,6 +69,43 @@ const ROUTE_LABEL: Record<string, string> = {
 
 const onlyDigits = (s: string, max: number) => s.replace(/\D/g, "").slice(0, max)
 
+// Defined at module scope (NOT inside the component) so they keep a stable
+// identity across renders — otherwise every keystroke remounts the inputs and
+// the field loses focus after one character.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
+      <div className="text-sm font-semibold">{title}</div>
+      {children}
+    </div>
+  )
+}
+
+function Pills({ options, value, onChange }: {
+  options: readonly { value: string; label: string; hint?: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-left text-sm transition",
+            value === o.value ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40",
+          )}
+        >
+          <div className="font-medium">{o.label}</div>
+          {o.hint ? <div className="text-[11px] text-muted-foreground">{o.hint}</div> : null}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function QuickLeadEntry() {
   const { data: states, isLoading: statesLoading } = useSapStates()
   const { mutateAsync: quickCreate, isPending } = useQuickCreateLead()
@@ -75,6 +117,7 @@ export function QuickLeadEntry() {
   const [email, setEmail] = useState("")
   const [state, setState] = useState("")
   const [city, setCity] = useState("")
+  const [equipmentInterest, setEquipmentInterest] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
   const [budget, setBudget] = useState("")
   const [timeline, setTimeline] = useState("")
@@ -88,7 +131,7 @@ export function QuickLeadEntry() {
 
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
-    setState(""); setCity(""); setInterestLevel(""); setBudget(""); setTimeline("")
+    setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
     setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setNotes("")
   }
 
@@ -103,10 +146,13 @@ export function QuickLeadEntry() {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email"
     if (!state) return "Pick a state"
     if (!city.trim()) return "Enter a city"
-    if (!interestLevel) return "Pick an interest level"
-    if (!budget) return "Pick a budget"
     if (!outcome) return "Pick what happened on the call"
-    if (timelineNeeded && !timeline) return "Pick the planned purchase timeline (drives the drip)"
+    // Interest / budget / product are call-derived — only expected when Neha
+    // actually spoke to the doctor. For a no-response, wrong-number, etc. she can
+    // still enter the lead with just the basics.
+    if (outcome === "engaged" && !interestLevel) return "Pick an interest level"
+    if (outcome === "engaged" && !budget) return "Pick a budget"
+    if (timelineNeeded && !timeline) return "Pick when they plan to buy"
     if (outcome === "not_interested" && !niReason) return "Pick a not-interested reason"
     if (outcome === "call_back_requested" && !callbackAt) return "Pick a callback date & time"
     return null
@@ -129,10 +175,12 @@ export function QuickLeadEntry() {
       email: email.trim() || undefined,
       state,
       city: city.trim(),
-      interestLevel,
-      budget,
+      // Interest / budget are optional in the form (unknown for a no-response),
+      // but the backend requires them — fall back to safe neutral defaults.
+      interestLevel: interestLevel || "just_exploring",
+      budget: budget || "<5L",
       source: "Facebook",
-      equipmentInterest: "Dental Chair",
+      equipmentInterest: equipmentInterest || undefined,
       timeline: timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
       firstResponse,
     }
@@ -163,36 +211,6 @@ export function QuickLeadEntry() {
       </Card>
     )
   }
-
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="space-y-4 rounded-xl border bg-muted/20 p-4">
-      <div className="text-sm font-semibold">{title}</div>
-      {children}
-    </div>
-  )
-
-  const Pills = ({ options, value, onChange }: {
-    options: readonly { value: string; label: string; hint?: string }[]
-    value: string
-    onChange: (v: string) => void
-  }) => (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "rounded-lg border px-3 py-2 text-left text-sm transition",
-            value === o.value ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40",
-          )}
-        >
-          <div className="font-medium">{o.label}</div>
-          {o.hint ? <div className="text-[11px] text-muted-foreground">{o.hint}</div> : null}
-        </button>
-      ))}
-    </div>
-  )
 
   return (
     <Card className="p-0">
@@ -267,17 +285,28 @@ export function QuickLeadEntry() {
 
         <Section title="Interest & budget">
           <div className="space-y-1.5">
-            <Label>Interest level</Label>
+            <Label>Product they want <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Select value={equipmentInterest} onValueChange={setEquipmentInterest}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Which product are they interested in?" />
+              </SelectTrigger>
+              <SelectContent>
+                {EQUIPMENT_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Interest level {outcome === "engaged" ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(optional)</span>}</Label>
             <Pills options={INTEREST_LEVELS} value={interestLevel} onChange={setInterestLevel} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Budget</Label>
+              <Label>Budget {outcome === "engaged" ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(optional)</span>}</Label>
               <Pills options={BUDGETS} value={budget} onChange={setBudget} />
             </div>
             <div className="space-y-1.5">
               <Label>
-                Planned purchase {timelineNeeded ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(drives the drip)</span>}
+                When they plan to buy {timelineNeeded ? <span className="text-destructive">*</span> : <span className="text-xs text-muted-foreground">(sets the follow-up schedule)</span>}
               </Label>
               <Pills options={TIMELINES} value={timeline} onChange={setTimeline} />
             </div>
