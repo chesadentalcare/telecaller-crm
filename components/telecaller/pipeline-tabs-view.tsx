@@ -16,12 +16,13 @@ interface PipelineTabsViewProps {
 }
 
 // "Pipeline" merges the telecaller's own lead book with the "Sent to Sales"
-// tracker (handed-over leads) into one screen with two tabs. Sales staff work
-// in a separate app, so the Sales tab here is a read-only visibility view — and
-// it only shows for roles that could already see the sales pipeline.
+// tracker (handed-over leads) into one screen with two tabs. Sales staff work in
+// a separate app, so the Sales tab here is a read-only visibility view. A
+// telecaller sees the leads THEY handed over (backend scopes it by handoff_from),
+// so they know where their leads went.
 export function PipelineTabsView({ onOpenLead, initialTab = "mine" }: PipelineTabsViewProps) {
   const { role, isManagerOrAbove, hasRole } = useRole()
-  const canSeeSales = isManagerOrAbove || (role !== null && hasRole("sale_staff", "coordinator", "sale_head"))
+  const canSeeSales = isManagerOrAbove || (role !== null && hasRole("telecaller", "sale_staff", "coordinator", "sale_head"))
 
   const [tab, setTab] = useState<PipeTab>(initialTab === "sales" && canSeeSales ? "sales" : "mine")
 
