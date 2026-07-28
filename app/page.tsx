@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
-import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { useSearchParams, usePathname } from "next/navigation"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { SidebarNav } from "@/components/telecaller/sidebar-nav"
 import { BottomTabNav } from "@/components/telecaller/bottom-tab-nav"
@@ -257,7 +257,6 @@ export default function TelecallerDashboard() {
 }
 
 function TelecallerDashboardInner() {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -277,6 +276,11 @@ function TelecallerDashboardInner() {
   const selectedLeadId = searchParams.get("leadId")
 
   // Stable callback identity so memoized children don't re-render needlessly.
+  // NOTE: this is a static export (output:'export') served by Apache. Using
+  // router.push() for query-only changes can intermittently trigger a hard
+  // navigation (full page reload). window.history.pushState updates the URL
+  // client-side only — Next 16 keeps useSearchParams reactive to it — so view
+  // switching stays a true SPA transition (no reload, no scroll jump).
   const setActiveView = useMemo(
     () => (view: string) => {
       const params = new URLSearchParams(searchParams.toString())
@@ -286,9 +290,9 @@ function TelecallerDashboardInner() {
       params.set("view", view)
       if (view !== "lead-detail") params.delete("leadId")
       if (view !== "pipeline") params.delete("segment")
-      router.push(`${pathname}?${params.toString()}`)
+      window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
-    [pathname, router, searchParams],
+    [pathname, searchParams],
   )
 
   const openLead = useMemo(
@@ -296,9 +300,9 @@ function TelecallerDashboardInner() {
       const params = new URLSearchParams(searchParams.toString())
       params.set("view", "lead-detail")
       params.set("leadId", leadId)
-      router.push(`${pathname}?${params.toString()}`)
+      window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
-    [pathname, router, searchParams],
+    [pathname, searchParams],
   )
 
   const requested = VIEW_REGISTRY[activeView]

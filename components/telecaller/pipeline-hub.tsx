@@ -10,7 +10,7 @@
 
 import { useMemo } from "react"
 import dynamic from "next/dynamic"
-import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { useSearchParams, usePathname } from "next/navigation"
 import {
   Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw,
 } from "lucide-react"
@@ -59,7 +59,6 @@ interface PipelineHubProps {
 }
 
 export function PipelineHub({ onOpenLead }: PipelineHubProps) {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const counts = useQueueCounts()
@@ -76,15 +75,18 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
     if (id === "active") params.delete("segment")
     else params.set("segment", id)
     params.delete("leadId")
-    router.push(`${pathname}?${params.toString()}`)
+    // Static export served by Apache: router.push for a query-only change can
+    // intermittently hard-navigate (full page reload). pushState is a pure
+    // client-side URL update — Next 16 keeps useSearchParams reactive.
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`)
   }
 
   const current = SEGMENTS.find((s) => s.id === active) ?? SEGMENTS[0]
 
   return (
     <div className="space-y-4">
-      {/* Segmented control */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* Segmented control — single scrollable strip (no messy wrap on mobile) */}
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {SEGMENTS.map((seg) => {
           const Icon = seg.icon
           const isActive = seg.id === active
@@ -96,7 +98,7 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
               onClick={() => setSegment(seg.id)}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                 isActive
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
