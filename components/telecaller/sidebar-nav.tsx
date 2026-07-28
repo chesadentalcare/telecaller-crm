@@ -24,7 +24,6 @@ import {
   HelpCircle,
   LogOut,
   ChevronDown,
-  ChevronRight,
   Inbox,
   LayoutDashboard,
   Activity,
@@ -32,6 +31,7 @@ import {
   AlertTriangle,
   MessageSquare,
   CalendarClock,
+  type LucideIcon,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -51,23 +51,20 @@ interface SidebarNavProps {
   queueCounts: QueueCounts
 }
 
-// Hoisted: identity-stable across renders, doesn't depend on props.
-const HOME_OPTION = {
-  id: "home",
-  title: "Dashboard",
-  subtitle: "Analytics & Overview",
-  icon: LayoutDashboard,
-  color: "bg-primary",
-  textColor: "text-primary",
-  borderColor: "border-primary",
-} as const
+interface NavItem {
+  id: string
+  title: string
+  icon: LucideIcon
+  count?: number | null
+  isReplyCount?: boolean
+  roles?: UserRole[] | null
+}
 
 export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNavProps) {
-  const homeOption = HOME_OPTION
-
   const router = useRouter()
   const { user, logout } = useAuth()
   const { role, isManagerOrAbove } = useRole()
+
   const displayName = user?.fullName || user?.username || "—"
   const roleLabel = user?.role
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
@@ -85,175 +82,108 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
     router.replace("/login")
   }
 
-  // Lean navigation (Amendment): the ~12-item lifecycle list overwhelmed reps, so
-  // every status bucket (drip / no-response / idle / 6-month / re-qualify /
-  // reactivation / archived) now lives behind the in-page segment switcher inside
-  // Pipeline. The sidebar keeps only the genuinely-distinct work surfaces.
-  // "New Lead" moved to a header button; "Qualification" is contextual (lead cockpit).
-  // Each stage declares which roles can see it. null = all roles.
-  const allStages = useMemo(
+  // Lean navigation: every status bucket lives behind the in-page segment switcher
+  // inside Pipeline; the sidebar keeps only the genuinely-distinct work surfaces.
+  const allStages = useMemo<NavItem[]>(
     () => [
-      // Badge counts now reflect un-replied WhatsApp responses (NOT queue size): a lead
-      // counts the moment its customer replies and clears only when the rep replies back.
-      { id: "due",            title: "Due",            subtitle: "Your calls & meetings",   icon: CalendarClock, color: "bg-blue-500",   textColor: "text-blue-500",   borderColor: "border-blue-500",   count: queueCounts.callsDueAwaitingReply, isReplyCount: true, isAction: false, roles: ["telecaller"] as UserRole[] },
-      { id: "pipeline",       title: "Pipeline",       subtitle: "Your full lead book",     icon: Inbox,        color: "bg-indigo-500", textColor: "text-indigo-500", borderColor: "border-indigo-500", count: queueCounts.pipelineAwaitingReply, isReplyCount: true, isAction: false, roles: null },
-      { id: "flow-oversight", title: "Flow Oversight", subtitle: "Team analytics & health", icon: Activity,     color: "bg-amber-500",  textColor: "text-amber-500",  borderColor: "border-amber-500",  count: null,                 isReplyCount: false, isAction: false, roles: ["manager", "admin"] as UserRole[] },
-      { id: "approvals",      title: "Approvals",      subtitle: "Discount requests",       icon: ClipboardCheck, color: "bg-violet-500", textColor: "text-violet-500", borderColor: "border-violet-500", count: null,                 isReplyCount: false, isAction: false, roles: ["manager", "admin"] as UserRole[] },
+      { id: "due",            title: "Due",            icon: CalendarClock,  count: queueCounts.callsDueAwaitingReply, isReplyCount: true,  roles: ["telecaller"] },
+      { id: "pipeline",       title: "Pipeline",       icon: Inbox,          count: queueCounts.pipelineAwaitingReply, isReplyCount: true,  roles: null },
+      { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       count: null,                              isReplyCount: false, roles: ["manager", "admin"] },
+      { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, count: null,                              isReplyCount: false, roles: ["manager", "admin"] },
     ],
     [queueCounts],
   )
 
-  // Manager/admin see everything. Other roles see only their permitted items.
-  const lifecycleStages = useMemo(
-    () => isManagerOrAbove
-      ? allStages
-      : allStages.filter((s) => s.roles === null || (role !== null && s.roles.includes(role))),
+  const stages = useMemo(
+    () =>
+      isManagerOrAbove
+        ? allStages
+        : allStages.filter((s) => s.roles == null || (role !== null && s.roles.includes(role))),
     [allStages, role, isManagerOrAbove],
   )
 
+  const renderItem = (item: NavItem) => {
+    const active = activeView === item.id
+    const Icon = item.icon
+    return (
+      <SidebarMenuItem key={item.id}>
+        <SidebarMenuButton
+          onClick={() => onViewChange(item.id)}
+          isActive={active}
+          tooltip={item.title}
+          className={cn(
+            "relative h-9 gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+            active
+              ? "bg-sidebar-accent text-sidebar-foreground"
+              : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+          )}
+        >
+          {/* Single accent indicator instead of per-item colors + connector dots. */}
+          {active && (
+            <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+          )}
+          <Icon className={cn("size-4 shrink-0", active ? "text-sidebar-primary" : "text-sidebar-foreground/55")} />
+          <span className="flex items-center gap-1.5 truncate group-data-[collapsible=icon]:hidden">
+            {item.title}
+            {item.id === "pipeline" && queueCounts.neglected > 0 && (
+              <span
+                title="Brand-new leads with no activity (24h+) — call them"
+                className="inline-flex items-center gap-0.5 rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+              >
+                <AlertTriangle className="size-2.5" />
+                {queueCounts.neglected}
+              </span>
+            )}
+          </span>
+        </SidebarMenuButton>
+
+        {item.count != null && item.count > 0 && (
+          <SidebarMenuBadge
+            title={item.isReplyCount ? "WhatsApp replies awaiting your response" : undefined}
+            className={cn(
+              "gap-1 text-[10px] font-semibold",
+              item.isReplyCount
+                ? "bg-emerald-500 text-white"
+                : active
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                  : "bg-sidebar-accent text-sidebar-foreground",
+            )}
+          >
+            {item.isReplyCount && <MessageSquare className="size-2.5" />}
+            {item.count}
+          </SidebarMenuBadge>
+        )}
+      </SidebarMenuItem>
+    )
+  }
+
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="h-16 justify-center border-b border-sidebar-border px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
             TC
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold text-sidebar-foreground">TeleCRM</span>
-            <span className="text-[10px] text-sidebar-foreground/70 uppercase tracking-wide">Dental Equipment</span>
+            <span className="text-sm font-semibold leading-tight text-sidebar-foreground">TeleCRM</span>
+            <span className="text-[10px] uppercase tracking-wide text-sidebar-foreground/50">Dental Equipment</span>
           </div>
         </div>
       </SidebarHeader>
-      
-      <SidebarContent className="px-2">
-        {/* Home Dashboard */}
-        <SidebarGroup className="py-3">
+
+      <SidebarContent className="px-2 py-2">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => onViewChange(homeOption.id)}
-                  isActive={activeView === homeOption.id}
-                  tooltip={homeOption.title}
-                  className={cn(
-                    "h-auto py-2.5",
-                    activeView === homeOption.id && "bg-sidebar-accent"
-                  )}
-                >
-                  <div className={cn(
-                    "flex size-8 items-center justify-center rounded-md",
-                    activeView === homeOption.id ? homeOption.color : "bg-sidebar-accent",
-                    activeView === homeOption.id ? "text-white" : homeOption.textColor
-                  )}>
-                    <homeOption.icon className="size-4" />
-                  </div>
-                  <div className="flex flex-col items-start gap-0 group-data-[collapsible=icon]:hidden">
-                    <span className="text-sm font-medium">{homeOption.title}</span>
-                    <span className="text-[10px] text-sidebar-foreground/60">{homeOption.subtitle}</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarMenu>{renderItem({ id: "home", title: "Dashboard", icon: LayoutDashboard })}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Divider */}
-        <div className="mx-3 border-t border-sidebar-border" />
-
-        {/* Lead Lifecycle - Sequential Flow */}
-        <SidebarGroup className="py-3">
-          <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 px-2 mb-2">
+        <SidebarGroup className="mt-3 p-0">
+          <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 group-data-[collapsible=icon]:hidden">
             Workspace
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <div className="relative">
-              {/* Vertical connector line */}
-              <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
-              
-              <SidebarMenu className="gap-0">
-                {lifecycleStages.map((stage, index) => (
-                  <SidebarMenuItem key={stage.id} className="relative">
-                    {/* Stage connector dot */}
-                    <div 
-                      className={cn(
-                        "absolute left-2 top-1/2 -translate-y-1/2 size-3 rounded-full border-2 bg-sidebar z-10 group-data-[collapsible=icon]:hidden",
-                        activeView === stage.id ? stage.borderColor : "border-sidebar-border"
-                      )}
-                    >
-                      {activeView === stage.id && (
-                        <div className={cn("absolute inset-0.5 rounded-full", stage.color)} />
-                      )}
-                    </div>
-                    
-                    <SidebarMenuButton
-                      onClick={() => onViewChange(stage.id)}
-                      isActive={activeView === stage.id}
-                      tooltip={stage.title}
-                      className={cn(
-                        "h-auto py-2 pl-7 group-data-[collapsible=icon]:pl-2",
-                        activeView === stage.id && "bg-sidebar-accent"
-                      )}
-                    >
-                      <div className={cn(
-                        "flex size-8 items-center justify-center rounded-md",
-                        activeView === stage.id ? stage.color : "bg-sidebar-accent",
-                        activeView === stage.id ? "text-white" : stage.textColor
-                      )}>
-                        <stage.icon className="size-4" />
-                      </div>
-                      <div className="flex flex-col items-start gap-0 group-data-[collapsible=icon]:hidden">
-                        <span className="flex items-center gap-1 text-sm font-medium">
-                          {stage.title}
-                          {/* Amendment 2 (Theme 6) — pointed neglect alarm: brand-new leads
-                              with zero activity past 24h. Red so it reads as "act now". */}
-                          {stage.id === "pipeline" && queueCounts.neglected > 0 && (
-                            <span
-                              title="Brand-new leads with no activity (24h+) — call them"
-                              className="inline-flex items-center gap-0.5 rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
-                            >
-                              <AlertTriangle className="size-2.5" />
-                              {queueCounts.neglected}
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-[10px] text-sidebar-foreground/60">{stage.subtitle}</span>
-                      </div>
-                      {stage.isAction && (
-                        <ChevronRight className="ml-auto size-4 opacity-50 group-data-[collapsible=icon]:hidden" />
-                      )}
-                    </SidebarMenuButton>
-                    
-                    {stage.count !== null && stage.count > 0 && (
-                      <SidebarMenuBadge
-                        title={stage.isReplyCount ? "WhatsApp replies awaiting your response" : undefined}
-                        className={cn(
-                          "gap-1 text-[10px] font-semibold",
-                          // Reply counts read as "act now" — WhatsApp-green with a chat dot,
-                          // distinct from a neutral queue-size badge.
-                          stage.isReplyCount
-                            ? "bg-emerald-500 text-white"
-                            : activeView === stage.id
-                              ? `${stage.color} text-white`
-                              : "bg-sidebar-accent text-sidebar-foreground"
-                        )}
-                      >
-                        {stage.isReplyCount && <MessageSquare className="size-2.5" />}
-                        {stage.count}
-                      </SidebarMenuBadge>
-                    )}
-                    
-                    {/* Arrow indicator between stages */}
-                    {index < lifecycleStages.length - 1 && (
-                      <div className="absolute left-[15px] -bottom-1 text-sidebar-foreground/30 group-data-[collapsible=icon]:hidden">
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="currentColor">
-                          <path d="M5 8L0 0h10L5 8z" />
-                        </svg>
-                      </div>
-                    )}
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </div>
+            <SidebarMenu className="gap-0.5">{stages.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -261,14 +191,17 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
       <SidebarFooter className="border-t border-sidebar-border p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start gap-2 px-2 h-auto py-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground">
+            <Button
+              variant="ghost"
+              className="h-auto w-full justify-start gap-2.5 px-2 py-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
               <Avatar className="size-8">
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-medium">
+                <AvatarFallback className="bg-sidebar-primary text-xs font-medium text-sidebar-primary-foreground">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-medium">{displayName}</span>
+              <div className="flex min-w-0 flex-col items-start group-data-[collapsible=icon]:hidden">
+                <span className="w-full truncate text-sm font-medium leading-tight">{displayName}</span>
                 <span className="text-[10px] text-sidebar-foreground/60">{roleLabel}</span>
               </div>
               <ChevronDown className="ml-auto size-4 opacity-50 group-data-[collapsible=icon]:hidden" />
@@ -286,13 +219,10 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <HelpCircle className="mr-2 size-4" />
-              Help & Support
+              Help &amp; Support
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-destructive focus:text-destructive"
-            >
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 size-4" />
               Sign out
             </DropdownMenuItem>
