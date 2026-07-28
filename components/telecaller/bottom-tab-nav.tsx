@@ -56,7 +56,7 @@ export function BottomTabNav({
         : teleOnly
         ? [
             // Badge counts = un-replied WhatsApp responses, not queue size.
-            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
+            { id: "due", title: "Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
             { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipelineAwaitingReply },
             { id: "new-lead",  title: "Add Lead",  icon: UserPlus },
             { id: "home",      title: "Home",      icon: LayoutDashboard },
@@ -64,7 +64,7 @@ export function BottomTabNav({
         : [
             // Manager / admin
             { id: "home",      title: "Home",      icon: LayoutDashboard },
-            { id: "calls-due", title: "Calls Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
+            { id: "due", title: "Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
             { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipelineAwaitingReply },
           ],
     [queueCounts, salesOnly, teleOnly],
