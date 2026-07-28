@@ -63,6 +63,34 @@ export interface DripProjectionPayload {
 export interface CreateLeadResponse {
   opportunityDocEntry: number
   cardCode: string
+  // Present only for the merged "enter + first response" (quick intake) flow —
+  // where routeOutcome sent the lead: 'drip' | 'meeting_pending' | 'callback_scheduled' | 'archived' | ...
+  route?: string | null
+}
+
+// Merged daily entry (Meta-ads flow): the telecaller already called, so the
+// entry doubles as the first call disposition.
+export interface QuickFirstResponse {
+  outcome: "engaged" | "no_response" | "wrong_number" | "not_interested" | "call_back_requested"
+  readyNow?: boolean
+  notInterestedReason?: "genuine_no" | "timing_budget" | "already_purchased"
+  callbackAt?: string
+  notes?: string
+}
+
+export interface QuickLeadInput {
+  leadName: string
+  phoneNumber: string
+  whatsappNumber?: string
+  email?: string
+  state?: string
+  city?: string
+  budget: string
+  interestLevel: string
+  source?: string
+  equipmentInterest?: string
+  timeline?: "1_month" | "3_months" | "6_plus_months"
+  firstResponse?: QuickFirstResponse
 }
 
 export interface LeadExtensionRow {
@@ -633,6 +661,11 @@ export interface AttemptResponse {
 export const leadsApi = {
   create: (values: LeadIntakeValues) =>
     unwrap(api.post<Envelope<CreateLeadResponse>>(endpoints.leads, values)),
+
+  // Merged daily entry: create the lead AND record the first call response in one
+  // call — the backend routes it (drip / meeting / callback / archive) atomically.
+  quickCreate: (input: QuickLeadInput) =>
+    unwrap(api.post<Envelope<CreateLeadResponse>>(endpoints.leads, input)),
 
   detail: (id: number | string) =>
     unwrap(api.get<Envelope<LeadDetail>>(endpoints.leadDetail(String(id)))),

@@ -38,8 +38,8 @@ const LeadDetailView = dynamic(
   () => import("@/components/telecaller/lead-detail-view").then((m) => ({ default: m.LeadDetailView })),
   { loading: () => <ViewSkeleton /> },
 )
-const LeadIntakeForm = dynamic(
-  () => import("@/components/telecaller/lead-intake-form").then((m) => ({ default: m.LeadIntakeForm })),
+const QuickLeadEntry = dynamic(
+  () => import("@/components/telecaller/quick-lead-entry").then((m) => ({ default: m.QuickLeadEntry })),
   { loading: () => <ViewSkeleton /> },
 )
 const RapidQualificationForm = dynamic(
@@ -158,7 +158,7 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     title: "Add New Lead",
     subtitle: "Capture lead information",
     render: () => (
-      <div className="max-w-4xl mx-auto"><LeadIntakeForm /></div>
+      <div className="max-w-4xl mx-auto"><QuickLeadEntry /></div>
     ),
   },
   qualification: {
