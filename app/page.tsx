@@ -30,8 +30,8 @@ const HomeDashboard = dynamic(
   () => import("@/components/telecaller/home-dashboard").then((m) => ({ default: m.HomeDashboard })),
   { loading: () => <ViewSkeleton /> },
 )
-const PipelineHub = dynamic(
-  () => import("@/components/telecaller/pipeline-hub").then((m) => ({ default: m.PipelineHub })),
+const PipelineTabsView = dynamic(
+  () => import("@/components/telecaller/pipeline-tabs-view").then((m) => ({ default: m.PipelineTabsView })),
   { loading: () => <ViewSkeleton /> },
 )
 const LeadDetailView = dynamic(
@@ -78,20 +78,12 @@ const ArchivedView = dynamic(
   () => import("@/components/telecaller/archived-view").then((m) => ({ default: m.ArchivedView })),
   { loading: () => <ViewSkeleton /> },
 )
-const CallsDueView = dynamic(
-  () => import("@/components/telecaller/calls-due-view").then((m) => ({ default: m.CallsDueView })),
-  { loading: () => <ViewSkeleton /> },
-)
-const MeetingsDueView = dynamic(
-  () => import("@/components/telecaller/meetings-due-view").then((m) => ({ default: m.MeetingsDueView })),
+const DueView = dynamic(
+  () => import("@/components/telecaller/due-view").then((m) => ({ default: m.DueView })),
   { loading: () => <ViewSkeleton /> },
 )
 const PendingApprovalsView = dynamic(
   () => import("@/components/telecaller/pending-approvals"),
-  { loading: () => <ViewSkeleton /> },
-)
-const SalesPipelineView = dynamic(
-  () => import("@/components/telecaller/sales-pipeline-view").then((m) => ({ default: m.SalesPipelineView })),
   { loading: () => <ViewSkeleton /> },
 )
 const FlowOversightView = dynamic(
@@ -144,8 +136,8 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   },
   pipeline: {
     title: "Pipeline",
-    subtitle: "Your full book of leads — switch segments to filter",
-    render: ({ openLead }) => <PipelineHub onOpenLead={openLead} />,
+    subtitle: "Your leads — and the ones sent to sales",
+    render: ({ openLead }) => <PipelineTabsView onOpenLead={openLead} initialTab="mine" />,
   },
   "lead-detail": {
     title: "Lead Detail",
@@ -200,16 +192,23 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Long-cycle nurture pool",
     render: ({ openLead }) => <SixMonthFunnelView onOpenLead={openLead} />,
   },
-  "calls-due": {
-    title: "Calls Due",
-    subtitle: "Your call worklist",
+  due: {
+    title: "Due",
+    subtitle: "Your calls & meetings",
     roles: ["telecaller"],
-    render: ({ openLead }) => <CallsDueView onOpenLead={openLead} />,
+    render: ({ openLead }) => <DueView onOpenLead={openLead} initialTab="calls" />,
+  },
+  // Legacy links keep working — both land on the merged "Due" screen on the right tab.
+  "calls-due": {
+    title: "Due",
+    subtitle: "Your calls & meetings",
+    roles: ["telecaller"],
+    render: ({ openLead }) => <DueView onOpenLead={openLead} initialTab="calls" />,
   },
   "meetings-due": {
-    title: "Meetings Due",
-    subtitle: "Your upcoming meeting worklist",
-    render: ({ openLead }) => <MeetingsDueView onOpenLead={openLead} />,
+    title: "Due",
+    subtitle: "Your calls & meetings",
+    render: ({ openLead }) => <DueView onOpenLead={openLead} initialTab="meetings" />,
   },
   requalification: {
     title: "Re-qualification",
@@ -228,11 +227,12 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     roles: ["manager", "admin"],
     render: () => <PendingApprovalsView />,
   },
+  // Legacy link — lands on the merged Pipeline, on the "Sent to Sales" tab.
   "sales-pipeline": {
-    title: "Sales Pipeline",
-    subtitle: "Leads handed over for quotation & closure",
+    title: "Pipeline",
+    subtitle: "Your leads — and the ones sent to sales",
     roles: ["sale_staff", "coordinator", "sale_head", "manager", "admin"],
-    render: ({ openLead }) => <SalesPipelineView onOpenLead={openLead} />,
+    render: ({ openLead }) => <PipelineTabsView onOpenLead={openLead} initialTab="sales" />,
   },
   "flow-oversight": {
     title: "Flow Oversight",
@@ -271,7 +271,7 @@ function TelecallerDashboardInner() {
 
   // Worklist-first: a pure telecaller lands on Calls Due (where fresh leads now
   // appear), not the analytics dashboard. Everyone else defaults to Home.
-  const defaultView = role === "telecaller" && !isManagerOrAbove ? "calls-due" : "home"
+  const defaultView = role === "telecaller" && !isManagerOrAbove ? "due" : "home"
   // Source of truth: URL. Lets refresh / browser-back / bookmark / share work.
   const activeView = searchParams.get("view") ?? defaultView
   const selectedLeadId = searchParams.get("leadId")
@@ -358,7 +358,7 @@ function TelecallerDashboardInner() {
             <Button
               size="sm"
               className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
-              onClick={() => setActiveView("calls-due")}
+              onClick={() => setActiveView("due")}
             >
               <Phone className="size-4" />
               <span className="hidden sm:inline">Quick Dial</span>
