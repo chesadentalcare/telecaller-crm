@@ -69,14 +69,14 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
 
   return (
     <Tabs defaultValue="today" className="gap-4">
-      <TabsList className="grid w-full max-w-md grid-cols-2">
-        <TabsTrigger value="today" className="gap-1.5">
+      <TabsList className="h-auto w-full justify-start gap-5 rounded-none border-b bg-transparent p-0">
+        <TabsTrigger value="today" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
           <CalendarClock className="size-3.5" />Today
           {today.length > 0 && (
             <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{today.length}</Badge>
           )}
         </TabsTrigger>
-        <TabsTrigger value="upcoming" className="gap-1.5">
+        <TabsTrigger value="upcoming" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
           <CalendarClock className="size-3.5" />Upcoming
           {upcoming.length > 0 && (
             <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{upcoming.length}</Badge>
@@ -87,15 +87,10 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
       <TabsContent value="today" className="mt-0 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CalendarClock className="size-4 text-primary" />Meetings Due — Today
-                </CardTitle>
-                <CardDescription>Zoom and physical meetings scheduled for today, earliest first. A meeting whose time has passed with no summary turns <span className="font-medium text-rose-600">pastel red</span>. Future meetings live under <span className="font-medium text-foreground">Upcoming</span> until their day.</CardDescription>
-              </div>
-              <Badge variant="outline" className="text-[10px]">{today.length} due</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="size-4 text-primary" />Meetings today
+            </CardTitle>
+            <CardDescription>Zoom &amp; physical meetings for today, earliest first — a passed meeting with no summary is highlighted in red.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {today.length === 0 ? (
@@ -110,15 +105,10 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
       <TabsContent value="upcoming" className="mt-0">
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CalendarClock className="size-4 text-primary" />Upcoming Meetings
-                </CardTitle>
-                <CardDescription>Every future-dated meeting, earliest first.</CardDescription>
-              </div>
-              <Badge variant="outline" className="text-[10px]">{upcoming.length} upcoming</Badge>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="size-4 text-primary" />Upcoming meetings
+            </CardTitle>
+            <CardDescription>Every future-dated meeting, earliest first.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {upcoming.length === 0 ? (
