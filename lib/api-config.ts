@@ -117,6 +117,10 @@ export const endpoints = {
   quotationPreviewPdf: (id: string) => `/quotations/${id}/preview-pdf`,
   quotationSendWhatsapp: (id: string) => `/quotations/${id}/send-whatsapp`,
   quotationRetrySend: (id: string) => `/quotations/${id}/retry-send`,
+  // Ashva quotation builder (Phase 4 rebuild)
+  quotationPackages: `/quotation/packages`,      // GET — 4 curated Ashva packages (jwala/ninja/vayu/o2)
+  quotationDocument: `/quotation/document`,      // POST ?format=pdf|xlsx — returns the generated FILE (binary)
+  quotationSend: `/quotation/send`,              // POST — send the generated quote on WhatsApp (built by another agent)
   leadQuotations: (id: string) => `/leads/${id}/quotations`,
   leadFollowUps: (id: string) => `/leads/${id}/follow-ups`,
   pendingFollowUps: `/follow-ups/pending`,
