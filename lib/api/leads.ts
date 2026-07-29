@@ -91,6 +91,13 @@ export interface QuickLeadInput {
   equipmentInterest?: string
   timeline?: "1_month" | "3_months" | "6_plus_months"
   firstResponse?: QuickFirstResponse
+  purchaseType?: string
+  decisionMaker?: string
+  dentistType?: string
+  practiceType?: string
+  fundingMethod?: string
+  competitors?: string
+  qualifyRoute?: "physical_meeting" | "online_meeting" | "drip_info"
 }
 
 export interface LeadExtensionRow {

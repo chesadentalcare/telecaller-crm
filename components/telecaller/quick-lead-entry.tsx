@@ -16,6 +16,9 @@ import { useQuickCreateLead } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import type { QuickLeadInput, QuickFirstResponse } from "@/lib/api/leads"
 import { cn } from "@/lib/utils"
+import {
+  DENTIST_TYPES, PRACTICE_TYPES, FUNDING_METHODS, COMPETITOR_OPTIONS, PURCHASE_TYPES,
+} from "@/lib/schemas/qualification"
 
 const INTEREST_LEVELS = [
   { value: "hot", label: "Hot" },
@@ -128,16 +131,27 @@ export function QuickLeadEntry() {
   const [callbackAt, setCallbackAt] = useState("")
   const [notes, setNotes] = useState("")
 
+  const [decisionMaker, setDecisionMaker] = useState("")
+  const [dentistType, setDentistType] = useState("")
+  const [practiceType, setPracticeType] = useState("")
+  const [fundingMethod, setFundingMethod] = useState("")
+  const [competitors, setCompetitors] = useState("")
+  const [purchaseType, setPurchaseType] = useState("")
+
   const [done, setDone] = useState<{ name: string; route: string | null } | null>(null)
 
   const isEngaged = outcome === "engaged"
-  const timelineNeeded = isEngaged && !readyNow
+  const timelineNeeded = isEngaged
 
   // Changing the outcome clears the fields that no longer apply, so nothing
   // stale is carried into the save and the form stays uncluttered.
+  const clearQualification = () => {
+    setDecisionMaker(""); setDentistType(""); setPracticeType(""); setFundingMethod(""); setCompetitors(""); setPurchaseType("")
+  }
+
   const changeOutcome = (v: string) => {
     setOutcome(v)
-    if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest("") }
+    if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest(""); clearQualification() }
     if (v !== "not_interested") setNiReason("")
     if (v !== "call_back_requested") setCallbackAt("")
   }
@@ -145,7 +159,7 @@ export function QuickLeadEntry() {
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
     setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
-    setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setNotes("")
+    setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setNotes(""); clearQualification()
   }
 
   const validate = (): string | null => {
@@ -161,10 +175,28 @@ export function QuickLeadEntry() {
     if (isEngaged && !interestLevel) return "How interested are they?"
     if (isEngaged && !budget) return "Pick their budget"
     if (timelineNeeded && !timeline) return "When do they plan to buy?"
+    if (isEngaged && !decisionMaker.trim()) return "Who's the decision maker?"
+    if (isEngaged && !dentistType) return "Pick the dentist type"
+    if (isEngaged && !practiceType) return "Pick the practice type"
+    if (isEngaged && !fundingMethod) return "Pick the funding method"
+    if (isEngaged && !competitors) return "Pick the competitor (or 'None')"
+    if (isEngaged && !purchaseType) return "Pick the purchase type"
     if (outcome === "not_interested" && !niReason) return "Why aren't they interested?"
     if (outcome === "call_back_requested" && !callbackAt) return "When should we call back?"
     return null
   }
+
+  const qualificationPayload = () => ({
+    purchaseType,
+    decisionMaker: decisionMaker.trim(),
+    dentistType,
+    practiceType,
+    fundingMethod,
+    competitors,
+  })
+
+  const errorText = (e: unknown) =>
+    e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Couldn't add the lead — please try again"
 
   const submit = async () => {
     const err = validate()
@@ -183,13 +215,12 @@ export function QuickLeadEntry() {
       email: email.trim() || undefined,
       state,
       city: city.trim(),
-      // Interest / budget only captured for interested leads; the backend still
-      // requires them, so fall back to safe neutral defaults otherwise.
       interestLevel: isEngaged && interestLevel ? interestLevel : "just_exploring",
       budget: isEngaged && budget ? budget : "<5L",
       source: "Facebook",
       equipmentInterest: isEngaged ? (equipmentInterest || undefined) : undefined,
       timeline: timelineNeeded && timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
+      ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: readyNow ? "physical_meeting" : "drip_info" } : {}),
       firstResponse,
     }
 
@@ -199,7 +230,7 @@ export function QuickLeadEntry() {
       toast.success("Lead added" + (res.route ? ` — ${ROUTE_LABEL[res.route] ?? res.route}` : ""))
       setTimeout(() => { reset(); setDone(null) }, 2600)
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Couldn't add the lead — please try again")
+      toast.error(errorText(e))
     }
   }
 
@@ -352,13 +383,71 @@ export function QuickLeadEntry() {
                 </div>
               </div>
 
-              {!readyNow && (
+              <div className="space-y-1.5">
+                <Label>When do they plan to buy?<Req /></Label>
+                <Pills options={TIMELINES} value={timeline} onChange={setTimeline} />
+                <p className="text-[11px] text-muted-foreground">
+                  {readyNow ? "Their expected purchase timeline." : "This sets how often we follow up."}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Decision maker<Req /></Label>
+                <Input placeholder="Name / role of who decides" value={decisionMaker} onChange={(e) => setDecisionMaker(e.target.value)} />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>When do they plan to buy?<Req /></Label>
-                  <Pills options={TIMELINES} value={timeline} onChange={setTimeline} />
-                  <p className="text-[11px] text-muted-foreground">This sets how often we follow up.</p>
+                  <Label>Dentist type<Req /></Label>
+                  <Select value={dentistType} onValueChange={setDentistType}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {DENTIST_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
+                <div className="space-y-1.5">
+                  <Label>Practice type<Req /></Label>
+                  <Select value={practiceType} onValueChange={setPracticeType}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select practice" /></SelectTrigger>
+                    <SelectContent>
+                      {PRACTICE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Funding method<Req /></Label>
+                  <Select value={fundingMethod} onValueChange={setFundingMethod}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select funding" /></SelectTrigger>
+                    <SelectContent>
+                      {FUNDING_METHODS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Purchase type<Req /></Label>
+                  <Select value={purchaseType} onValueChange={setPurchaseType}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {PURCHASE_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Competitor evaluated<Req /></Label>
+                <Select value={competitors} onValueChange={setCompetitors}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select competitor" /></SelectTrigger>
+                  <SelectContent>
+                    {COMPETITOR_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
             </div>
           )}
 
