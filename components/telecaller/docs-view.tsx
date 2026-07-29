@@ -61,6 +61,14 @@ const STAGES = [
   ["Archived", "Closed — not interested / retries exhausted / follow-up finished. Can be revived."],
 ]
 
+const STAGE_WHEN = [
+  { stage: "Idle", when: "You sent a quote, then 14+ days passed with no activity on it.", act: "Call them — re-quote, book a meeting, or close it. You + your manager get pinged." },
+  { stage: "Long-cycle", when: "You marked Not interested → “Bought elsewhere.”", act: "Nothing — the system drips gently for ~2 years in case they need another chair." },
+  { stage: "Re-qualify", when: "A nurtured lead replies / changes details, OR a timing-budget lead's wait ends, OR you revive an archived lead.", act: "Open it and re-check need, budget & timeline — saving that clears the flag." },
+  { stage: "Reactivation", when: "A “timing/budget” lead's 6-month wait is due within a week.", act: "Call them fresh — a warm second chance now their timing may be right." },
+  { stage: "Archived", when: "Not interested “at all”, OR no answer after 4 attempts, OR a follow-up finished with no reply.", act: "Usually nothing. Revive with “Bring back as No Response” if needed." },
+]
+
 export function DocsView() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-8">
@@ -238,7 +246,32 @@ follow-up       check-ins          (no follow-up)`}</Chart>
         </div>
       </Section>
 
-      <Section n="9" title="Cheat sheet — keep this handy">
+      <Section n="9" title="When a lead moves to Idle / Long-cycle / Re-qualify / Reactivation / Archived" icon={Repeat}>
+        <p>You never move leads into these yourself — the system files them based on what you logged. Here&rsquo;s exactly when each happens:</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Stage</th>
+                <th className="p-2 text-left font-medium">When it happens</th>
+                <th className="p-2 text-left font-medium">What you do</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {STAGE_WHEN.map((row) => (
+                <tr key={row.stage}>
+                  <td className="p-2 align-top font-medium text-foreground">{row.stage}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row.when}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row.act}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">Only <b>Idle</b>, <b>Re-qualify</b> and <b>Reactivation</b> need your hands — and all three <b>come to you</b> (notification / pipeline). You never have to hunt for them.</p>
+      </Section>
+
+      <Section n="10" title="Cheat sheet — keep this handy">
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-xs">
             <thead className="bg-muted/50 text-muted-foreground">
