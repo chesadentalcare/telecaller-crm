@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { PhoneCall, CalendarClock } from "lucide-react"
+import { PhoneCall, CalendarClock, FileSpreadsheet } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CallsDueView } from "./calls-due-view"
 import { MeetingsDueView } from "./meetings-due-view"
+import { DueExportDialog } from "./due-export-dialog"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
 
@@ -22,6 +24,7 @@ interface DueViewProps {
 // Today / Past / Upcoming views (rendered by CallsDueView / MeetingsDueView).
 export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
   const [tab, setTab] = useState<DueTab>(initialTab)
+  const [exportOpen, setExportOpen] = useState(false)
   const counts = useQueueCounts()
   const { data: meetings = [] } = useMeetingsDueLeads()
 
@@ -32,6 +35,15 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-muted-foreground">Calls &amp; meetings due</p>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+          <FileSpreadsheet className="size-4" />Export to Excel
+        </Button>
+      </div>
+
+      <DueExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+
       <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1">
         {tabs.map((t) => {
           const active = tab === t.key
