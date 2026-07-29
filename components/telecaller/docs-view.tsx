@@ -50,6 +50,17 @@ const CHEATS = [
   ["Wrong number", "Wrong number", "Flags it (fix to re-open)"],
 ]
 
+const STAGES = [
+  ["Active", "Working now — freshly entered, being called. Your live pile."],
+  ["Nurturing", "On an automatic follow-up plan — the system sends reminders on their buy-timeline."],
+  ["No Response", "In the retry cycle — the system re-times the next call; it comes back to your Calls Due."],
+  ["Idle", "Went quiet — stalled with no activity for a while. Give it a nudge."],
+  ["Long-cycle", "Very long timeline (e.g. bought elsewhere) — occasional check-ins over a long horizon."],
+  ["Re-qualify", "Came back / replied — re-check their need & budget before moving it forward."],
+  ["Reactivation", "A dormant lead brought back for a fresh attempt — a cold lead being re-warmed."],
+  ["Archived", "Closed — not interested / retries exhausted / follow-up finished. Can be revived."],
+]
+
 export function DocsView() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-8">
@@ -87,9 +98,25 @@ export function DocsView() {
           <li>Tap <b>Add lead</b> — saved and routed.</li>
         </ol>
         <p className="rounded-md bg-primary/5 p-2 text-foreground/80">💡 You call first, then enter — so you already know what happened. You&rsquo;re just telling the system.</p>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ <b>No number verification step</b> — a lead you add here is call-ready right away. And if you pick the wrong outcome, just open the lead and log a corrected call. Nothing is lost.</p>
       </Section>
 
       <Section n="3" title="The 5 things that can happen on a call">
+        <p>Not sure which to pick? Just follow this ladder:</p>
+        <Chart>{`Did they pick up?
+  │
+  ├─ NO ───────────────►  "No response"    → just save (system retries)
+  │                        wrong person?    → "Wrong number"  → just save
+  │
+  └─ YES ─ interested?
+             │
+             ├─ "call me later" ─►  "Call back later"  → pick date & time
+             │
+             ├─ NO ──────────────►  "Not interested"   → pick the reason
+             │
+             └─ YES ─────────────►  "Interested"       → buying now?
+                                       ├─ Yes → book a meeting
+                                       └─ No  → set WHEN they'll buy`}</Chart>
         <div className="divide-y rounded-lg border">
           {OUTCOMES.map((o) => (
             <div key={o.pick} className="flex items-start gap-3 p-2.5">
@@ -190,6 +217,25 @@ follow-up       check-ins          (no follow-up)`}</Chart>
 └─ Pipeline  →  full lead book: [ My Leads ]  [ Sent to Sales ]
                   • My Leads   = all your leads, by stage
                   • Sent to Sales = leads you handed over (tracking)`}</Chart>
+        <p className="pt-1 font-medium text-foreground">What the stages mean:</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Stage</th>
+                <th className="p-2 text-left font-medium">What it means</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {STAGES.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 font-medium text-foreground">{row[0]}</td>
+                  <td className="p-2 text-muted-foreground">{row[1]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
 
       <Section n="9" title="Cheat sheet — keep this handy">
