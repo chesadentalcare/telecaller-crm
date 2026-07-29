@@ -42,6 +42,10 @@ const QuickLeadEntry = dynamic(
   () => import("@/components/telecaller/quick-lead-entry").then((m) => ({ default: m.QuickLeadEntry })),
   { loading: () => <ViewSkeleton /> },
 )
+const DocsView = dynamic(
+  () => import("@/components/telecaller/docs-view").then((m) => ({ default: m.DocsView })),
+  { loading: () => <ViewSkeleton /> },
+)
 const RapidQualificationForm = dynamic(
   () => import("@/components/telecaller/rapid-qualification-form").then((m) => ({ default: m.RapidQualificationForm })),
   { loading: () => <ViewSkeleton /> },
@@ -152,6 +156,11 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     render: () => (
       <div className="max-w-4xl mx-auto"><QuickLeadEntry /></div>
     ),
+  },
+  docs: {
+    title: "Guide",
+    subtitle: "How the telecaller flow works",
+    render: () => <DocsView />,
   },
   qualification: {
     title: "Rapid Qualification",
