@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   MessageSquare,
   CalendarClock,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react"
 import {
@@ -90,6 +91,7 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
       { id: "pipeline",       title: "Pipeline",       icon: Inbox,          count: queueCounts.pipelineAwaitingReply, isReplyCount: true,  roles: null },
       { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       count: null,                              isReplyCount: false, roles: ["manager", "admin"] },
       { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, count: null,                              isReplyCount: false, roles: ["manager", "admin"] },
+      { id: "docs",           title: "Guide",          icon: BookOpen,      count: null,                              isReplyCount: false, roles: null },
     ],
     [queueCounts],
   )

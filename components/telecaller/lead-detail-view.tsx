@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BookOpen,
   CalendarClock,
+  FileText,
   IndianRupee,
   Phone,
   Mail,
@@ -64,7 +65,7 @@ import {
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
-import { QuotationListCard } from "./quotation-builder"
+import { QuotationAshvaBuilder } from "./quotation-ashva-builder"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
@@ -2728,13 +2729,34 @@ function QuotesTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-4">
       <HandToSalesCard lead={lead} />
-      <QuotationListCard
-        opportunityDocEntry={Number(lead.id)}
-        customerCardCode={lead.customerCardCode || ""}
-        customerName={lead.customerName || lead.name}
-        customerPhone={lead.phone !== "—" ? lead.phone : undefined}
-        meetingId={lead.latestPhysicalMeetingId}
-      />
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="size-4" />
+              Quotation
+            </CardTitle>
+            <QuotationAshvaBuilder
+              leadId={lead.id}
+              customerName={lead.customerName || lead.name}
+              customerContact={
+                lead.phone !== "—" ? lead.phone : (lead.email ?? undefined)
+              }
+              customerAddress={
+                [lead.address, lead.city, lead.state, lead.pincode]
+                  .filter(Boolean)
+                  .join(", ") || undefined
+              }
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">
+            Build an Ashva quotation — pick a package or add products, then download the
+            PDF / Excel or send it on WhatsApp.
+          </p>
+        </CardContent>
+      </Card>
       <FollowUpListCard opportunityDocEntry={Number(lead.id)} />
       <ClosureCard opportunityDocEntry={Number(lead.id)} />
     </div>
