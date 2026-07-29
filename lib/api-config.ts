@@ -166,6 +166,8 @@ export const endpoints = {
   queueDripCalls: "/queue/drip-calls",
   queueMeetingsDue: "/queue/meetings-due",
   queueCounts: "/queue/counts",
+  dueExport: "/queue/export",
+  dueExportAgents: "/queue/export/agents",
 } as const
 
 /**
