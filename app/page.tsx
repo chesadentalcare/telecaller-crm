@@ -120,8 +120,11 @@ function RapidQualificationScreen({ leadId }: { leadId?: string }) {
 
 interface ViewContext {
   selectedLeadId: string | null
+  // Optional deep-link action for the lead-detail view (e.g. "book-physical" / "book-zoom"),
+  // which auto-opens the matching meeting modal.
+  selectedAction: string | null
   setActiveView: (view: string) => void
-  openLead: (id: string) => void
+  openLead: (id: string, action?: string) => void
 }
 
 interface ViewDefinition {
@@ -146,8 +149,8 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   "lead-detail": {
     title: "Lead Detail",
     subtitle: "Full lifecycle view",
-    render: ({ selectedLeadId, setActiveView }) => (
-      <LeadDetailView leadId={selectedLeadId ?? undefined} onBack={() => setActiveView("pipeline")} />
+    render: ({ selectedLeadId, selectedAction, setActiveView }) => (
+      <LeadDetailView leadId={selectedLeadId ?? undefined} action={selectedAction} onBack={() => setActiveView("pipeline")} />
     ),
   },
   "new-lead": {
@@ -283,6 +286,7 @@ function TelecallerDashboardInner() {
   // Source of truth: URL. Lets refresh / browser-back / bookmark / share work.
   const activeView = searchParams.get("view") ?? defaultView
   const selectedLeadId = searchParams.get("leadId")
+  const selectedAction = searchParams.get("action")
 
   // Stable callback identity so memoized children don't re-render needlessly.
   // NOTE: this is a static export (output:'export') served by Apache. Using
@@ -297,7 +301,7 @@ function TelecallerDashboardInner() {
       // Calls Due on a bare URL, so clearing `view` would bounce them off the
       // Dashboard right back to Calls Due. Explicit ?view=home lets Home stick.
       params.set("view", view)
-      if (view !== "lead-detail") params.delete("leadId")
+      if (view !== "lead-detail") { params.delete("leadId"); params.delete("action") }
       if (view !== "pipeline") params.delete("segment")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
@@ -305,10 +309,12 @@ function TelecallerDashboardInner() {
   )
 
   const openLead = useMemo(
-    () => (leadId: string) => {
+    () => (leadId: string, action?: string) => {
       const params = new URLSearchParams(searchParams.toString())
       params.set("view", "lead-detail")
       params.set("leadId", leadId)
+      if (action) params.set("action", action)
+      else params.delete("action")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
     [pathname, searchParams],
@@ -325,7 +331,7 @@ function TelecallerDashboardInner() {
       ? requested
       : FALLBACK_VIEW
   const pageInfo = { title: view.title, subtitle: view.subtitle }
-  const renderContent = () => view.render({ selectedLeadId, setActiveView, openLead })
+  const renderContent = () => view.render({ selectedLeadId, selectedAction, setActiveView, openLead })
 
   return (
     <SidebarProvider>

@@ -110,7 +110,7 @@ function Pills({ options, value, onChange, cols = 3 }: {
   )
 }
 
-export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) => void }) {
+export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, action?: string) => void }) {
   const { data: states, isLoading: statesLoading } = useSapStates()
   const { mutateAsync: quickCreate, isPending } = useQuickCreateLead()
 
@@ -127,6 +127,8 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
   const [timeline, setTimeline] = useState("")
   const [outcome, setOutcome] = useState("")
   const [readyNow, setReadyNow] = useState(false)
+  // When "Not yet — follow up" is chosen: Zoom consult (a virtual meeting) vs Add to Drip.
+  const [nurtureRoute, setNurtureRoute] = useState<"zoom" | "drip">("drip")
   const [niReason, setNiReason] = useState("")
   const [callbackAt, setCallbackAt] = useState("")
   const [predictedClosingDate, setPredictedClosingDate] = useState("")
@@ -139,7 +141,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
   const [competitors, setCompetitors] = useState("")
   const [purchaseType, setPurchaseType] = useState("")
 
-  const [done, setDone] = useState<{ name: string; route: string | null; leadId: number } | null>(null)
+  const [done, setDone] = useState<{ name: string; route: string | null; leadId: number; meetingType?: "physical" | "zoom" | null } | null>(null)
 
   const isEngaged = outcome === "engaged"
   const timelineNeeded = isEngaged
@@ -167,6 +169,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
     setOutcome(v)
     // Reset the close date so the per-outcome default re-applies.
     setPredictedClosingDate("")
+    setNurtureRoute("drip")
     if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest(""); clearQualification() }
     if (v !== "not_interested") setNiReason("")
     if (v !== "call_back_requested") setCallbackAt("")
@@ -175,7 +178,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
     setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
-    setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
+    setOutcome(""); setReadyNow(false); setNurtureRoute("drip"); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
   }
 
   const validate = (): string | null => {
@@ -218,8 +221,17 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
     const err = validate()
     if (err) { toast.error(err); return }
 
+    // Engaged meeting choice → physical (ready) / zoom (nurture consult) / drip (nurture).
+    // Physical + Zoom are meetings → route to meeting_pending (readyNow); drip nurtures.
+    const engagedMeeting: "physical" | "zoom" | null = !isEngaged
+      ? null
+      : readyNow ? "physical"
+      : nurtureRoute === "zoom" ? "zoom"
+      : null
+    const wantsMeeting = engagedMeeting === "physical" || engagedMeeting === "zoom"
+
     const firstResponse: QuickFirstResponse = { outcome: outcome as QuickFirstResponse["outcome"] }
-    if (isEngaged) firstResponse.readyNow = readyNow
+    if (isEngaged) firstResponse.readyNow = wantsMeeting
     if (outcome === "not_interested") firstResponse.notInterestedReason = niReason as QuickFirstResponse["notInterestedReason"]
     if (outcome === "call_back_requested") firstResponse.callbackAt = callbackAt
     if (showClose && effectiveClose) {
@@ -240,13 +252,13 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
       source: "Facebook",
       equipmentInterest: isEngaged ? (equipmentInterest || undefined) : undefined,
       timeline: timelineNeeded && timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
-      ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: readyNow ? "physical_meeting" : "drip_info" } : {}),
+      ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: engagedMeeting === "physical" ? "physical_meeting" : engagedMeeting === "zoom" ? "online_meeting" : "drip_info" } : {}),
       firstResponse,
     }
 
     try {
       const res = await quickCreate(payload)
-      const created = { name: leadName.trim(), route: res.route ?? null, leadId: res.opportunityDocEntry }
+      const created = { name: leadName.trim(), route: res.route ?? null, leadId: res.opportunityDocEntry, meetingType: engagedMeeting }
       setDone(created)
       toast.success("Lead added" + (res.route ? ` — ${ROUTE_LABEL[res.route] ?? res.route}` : ""))
       // Engaged + ready routes to a meeting — hold the success card up with a
@@ -273,8 +285,8 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
           </p>
           {done.route === "meeting_pending" ? (
             <div className="mt-6 flex flex-col items-center gap-2">
-              <Button size="lg" className="gap-2" onClick={() => onOpenLead?.(String(done.leadId))}>
-                📅 Book the meeting now →
+              <Button size="lg" className="gap-2" onClick={() => onOpenLead?.(String(done.leadId), done.meetingType === "zoom" ? "book-zoom" : "book-physical")}>
+                {done.meetingType === "zoom" ? "📹 Book the Zoom consult now →" : "📅 Book the meeting now →"}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => { reset(); setDone(null) }}>
                 Add another lead
@@ -396,6 +408,32 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) =
                   </button>
                 </div>
               </div>
+
+              {!readyNow && (
+                <div className="space-y-1.5">
+                  <Label>How do you want to follow up?<Req /></Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNurtureRoute("zoom")}
+                      className={cn("rounded-lg border px-3 py-2.5 text-left text-sm transition",
+                        nurtureRoute === "zoom" ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40")}
+                    >
+                      <div className="font-medium">Zoom consult</div>
+                      <div className="text-[11px] text-muted-foreground">Online demo with the designer</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNurtureRoute("drip")}
+                      className={cn("rounded-lg border px-3 py-2.5 text-left text-sm transition",
+                        nurtureRoute === "drip" ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "border-border bg-card hover:bg-muted/40")}
+                    >
+                      <div className="font-medium">Add to Drip</div>
+                      <div className="text-[11px] text-muted-foreground">Nurture over time</div>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label>Product they want<Optional /></Label>

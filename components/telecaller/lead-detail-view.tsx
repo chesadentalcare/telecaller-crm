@@ -476,13 +476,25 @@ const mockLead: LeadDetail = {
 interface LeadDetailViewProps {
   leadId?: string
   onBack: () => void
+  // Deep-link action (e.g. "book-physical" / "book-zoom") that jumps to the Meetings tab
+  // and auto-opens the matching modal — used by the new-lead "Book the meeting now" CTA.
+  action?: string | null
 }
 
-export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
+export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) {
   const { data: detail, isLoading, error } = useLeadFullDetail(leadId)
   // Active tab is controlled so the header "Call" quick-action can switch the
   // user straight to the Calls tab (dial → log) instead of being a dead button.
   const [activeTab, setActiveTab] = useState("overview")
+  // Deep-link: a `book-physical` / `book-zoom` action jumps to the Meetings tab and
+  // auto-opens the matching modal (cleared once opened so it fires only once).
+  const [autoOpenMeeting, setAutoOpenMeeting] = useState<"physical" | "zoom" | null>(null)
+  useEffect(() => {
+    if (action === "book-physical" || action === "book-zoom") {
+      setActiveTab("meetings")
+      setAutoOpenMeeting(action === "book-zoom" ? "zoom" : "physical")
+    }
+  }, [action])
   // Map backend payload → rich UI shape. useMemo so child tabs see stable
   // identity and don't re-render when sibling state changes.
   const lead: LeadDetail | null = useMemo(
@@ -616,7 +628,7 @@ export function LeadDetailView({ leadId, onBack }: LeadDetailViewProps) {
         </TabsContent>
 
         <TabsContent value="meetings" className="mt-4">
-          <MeetingsTab lead={lead} />
+          <MeetingsTab lead={lead} autoOpen={autoOpenMeeting} onAutoOpened={() => setAutoOpenMeeting(null)} />
         </TabsContent>
 
         <TabsContent value="quotes" className="mt-4">
@@ -2715,11 +2727,16 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
 }
 
 // ─── Meetings Tab — Gap #4 Zoom Form + Gap #5 Physical Meeting + Handoff ──
-export function MeetingsTab({ lead }: { lead: LeadDetail }) {
+export function MeetingsTab({ lead, autoOpen, onAutoOpened }: {
+  lead: LeadDetail
+  /** Deep-link: auto-open one of the meeting modals on mount. */
+  autoOpen?: "physical" | "zoom" | null
+  onAutoOpened?: () => void
+}) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ZoomMeetingCard lead={lead} />
-      <PhysicalMeetingCard lead={lead} />
+      <ZoomMeetingCard lead={lead} autoOpen={autoOpen === "zoom"} onAutoOpened={onAutoOpened} />
+      <PhysicalMeetingCard lead={lead} autoOpen={autoOpen === "physical"} onAutoOpened={onAutoOpened} />
     </div>
   )
 }
@@ -2856,8 +2873,12 @@ type ZoomResult = {
   zoomPasscode: string | null
 }
 
-function ZoomMeetingCard({ lead }: { lead: LeadDetail }) {
+function ZoomMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; autoOpen?: boolean; onAutoOpened?: () => void }) {
   const [open, setOpen] = useState(false)
+  // Deep-link auto-open (from the new-lead "Book the Zoom consult" CTA); fires once.
+  useEffect(() => {
+    if (autoOpen) { setOpen(true); onAutoOpened?.() }
+  }, [autoOpen])
   // Hold the join link/passcode returned by the schedule mutation so the rep
   // can copy/send it after the dialog closes (the dialog only collects input).
   const [zoomResult, setZoomResult] = useState<ZoomResult | null>(null)
@@ -3314,10 +3335,14 @@ function ZoomManagePanel({
 // location go through RHF. The salesperson is chosen server-side (round-robin)
 // and read back from the response, so there is no client-side roster.
 
-function PhysicalMeetingCard({ lead }: { lead: LeadDetail }) {
+function PhysicalMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; autoOpen?: boolean; onAutoOpened?: () => void }) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [handoffOpen, setHandoffOpen] = useState(false)
   const [assignedSalesperson, setAssignedSalesperson] = useState<string | null>(null)
+  // Deep-link auto-open (from the new-lead "Book the meeting now" CTA); fires once.
+  useEffect(() => {
+    if (autoOpen) { setScheduleOpen(true); onAutoOpened?.() }
+  }, [autoOpen])
 
   const { control, handleSubmit, reset, getValues, formState } = useForm<PhysicalMeetingValues>({
     resolver: zodResolver(physicalMeetingSchema),
