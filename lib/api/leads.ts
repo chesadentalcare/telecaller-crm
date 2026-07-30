@@ -488,6 +488,9 @@ export interface PipelineRow extends ReplyRowFields {
   last_attempt_time: string | null
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null
+  // 1 when the lead's route is a meeting (physical/online) but no meeting is booked yet —
+  // drives the "Meeting pending" list badge so an engaged lead can't be forgotten.
+  meeting_pending?: 0 | 1 | boolean
 }
 
 export interface NoResponseRow extends ReplyRowFields {

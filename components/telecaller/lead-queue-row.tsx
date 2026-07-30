@@ -12,7 +12,7 @@
 // component owns identity + the cross-cutting reply indicator.
 
 import type { ReactNode } from "react"
-import { MessageSquare, AlertTriangle } from "lucide-react"
+import { MessageSquare, AlertTriangle, CalendarClock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
@@ -38,6 +38,9 @@ export interface LeadQueueRowProps {
   /** Urgent flag shown as a red badge next to the name (e.g. a wrong-number lead whose
       calling is locked and needs recovery). Undefined = not urgent. */
   urgent?: { label: string }
+  /** Amber "attention" flag next to the name (e.g. engaged lead with no meeting booked
+      yet). Less severe than `urgent`. Undefined = no flag. */
+  flag?: { label: string }
   /** Row actions (call, WhatsApp, menu). */
   actions?: ReactNode
   onOpen?: (id: string) => void
@@ -46,7 +49,7 @@ export interface LeadQueueRowProps {
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, meta, badge, replied, urgent, actions, onOpen, className,
+  id, name, phone, equipment, meta, badge, replied, urgent, flag, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
@@ -72,6 +75,11 @@ export function LeadQueueRow({
             {urgent && (
               <Badge className="gap-1 bg-destructive/15 text-destructive border-destructive/40 text-[10px] font-semibold">
                 <AlertTriangle className="size-3" />URGENT · {urgent.label}
+              </Badge>
+            )}
+            {flag && (
+              <Badge className="gap-1 bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px] font-semibold">
+                <CalendarClock className="size-3" />{flag.label}
               </Badge>
             )}
             {/* Awaiting reply (customer messaged, rep hasn't replied back) takes

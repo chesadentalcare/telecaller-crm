@@ -104,6 +104,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   value: r.budget_range || undefined,
   replied: toReplied(r),
   lastOutcome: r.last_outcome ?? null,
+  meetingPending: !!r.meeting_pending,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {
