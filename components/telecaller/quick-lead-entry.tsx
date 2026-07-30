@@ -129,6 +129,7 @@ export function QuickLeadEntry() {
   const [readyNow, setReadyNow] = useState(false)
   const [niReason, setNiReason] = useState("")
   const [callbackAt, setCallbackAt] = useState("")
+  const [predictedClosingDate, setPredictedClosingDate] = useState("")
   const [notes, setNotes] = useState("")
 
   const [decisionMaker, setDecisionMaker] = useState("")
@@ -143,6 +144,19 @@ export function QuickLeadEntry() {
   const isEngaged = outcome === "engaged"
   const timelineNeeded = isEngaged
 
+  // Predicted closing date — parity with the Call Log tab. Pre-filled from the buy
+  // timeline (engaged) or a neutral +6mo default so it's never blank, then pushed to
+  // SAP + saved on lead_extensions on create (replacing the old "tomorrow" placeholder).
+  const autoClose = (() => {
+    const m = isEngaged ? (timeline === "1_month" ? 1 : timeline === "3_months" ? 3 : 6) : 6
+    const d = new Date(); d.setMonth(d.getMonth() + m)
+    return d.toISOString().slice(0, 10)
+  })()
+  const effectiveClose = predictedClosingDate || autoClose
+  // Shown for every reached/attempted outcome except a hard "not interested"
+  // (genuine_no / already_purchased) — matching the Call Log tab exactly.
+  const showClose = !!outcome && (outcome !== "not_interested" || niReason === "timing_budget")
+
   // Changing the outcome clears the fields that no longer apply, so nothing
   // stale is carried into the save and the form stays uncluttered.
   const clearQualification = () => {
@@ -151,6 +165,8 @@ export function QuickLeadEntry() {
 
   const changeOutcome = (v: string) => {
     setOutcome(v)
+    // Reset the close date so the per-outcome default re-applies.
+    setPredictedClosingDate("")
     if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest(""); clearQualification() }
     if (v !== "not_interested") setNiReason("")
     if (v !== "call_back_requested") setCallbackAt("")
@@ -159,7 +175,7 @@ export function QuickLeadEntry() {
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
     setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
-    setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setNotes(""); clearQualification()
+    setOutcome(""); setReadyNow(false); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
   }
 
   const validate = (): string | null => {
@@ -206,6 +222,10 @@ export function QuickLeadEntry() {
     if (isEngaged) firstResponse.readyNow = readyNow
     if (outcome === "not_interested") firstResponse.notInterestedReason = niReason as QuickFirstResponse["notInterestedReason"]
     if (outcome === "call_back_requested") firstResponse.callbackAt = callbackAt
+    if (showClose && effectiveClose) {
+      firstResponse.predictedClosingDate = effectiveClose
+      firstResponse.predictedCloseSource = predictedClosingDate && predictedClosingDate !== autoClose ? "manual" : "auto_track"
+    }
     if (notes.trim()) firstResponse.notes = notes.trim()
 
     const payload: QuickLeadInput = {
@@ -467,11 +487,31 @@ export function QuickLeadEntry() {
             </div>
           )}
 
-          {/* No response / wrong number → nothing else needed */}
+          {/* No response / wrong number → we still capture a predicted close below */}
           {(outcome === "no_response" || outcome === "wrong_number") && (
             <p className="rounded-lg border bg-card p-3 text-xs text-muted-foreground">
-              Nothing else needed — we'll save the lead{outcome === "no_response" ? " and try again later" : ""}.
+              We'll save the lead{outcome === "no_response" ? " and try again later" : ""}.
             </p>
+          )}
+
+          {/* Predicted closing date — parity with the Call Log tab. Auto-filled, pushed
+              to SAP + saved on the lead so the pipeline forecast isn't left at a placeholder. */}
+          {showClose && (
+            <div className="space-y-1.5 rounded-lg border bg-card p-3.5">
+              <Label>
+                Predicted closing date
+                {outcome === "not_interested" ? <Optional /> : <Req />}
+              </Label>
+              <Input
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                value={effectiveClose}
+                onChange={(e) => setPredictedClosingDate(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Auto-set from the buy timeline — adjust only if the customer confirmed a different date. Synced to SAP.
+              </p>
+            </div>
           )}
 
           <div className="space-y-1.5">
