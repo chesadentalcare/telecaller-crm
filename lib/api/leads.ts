@@ -845,7 +845,11 @@ export const leadsApi = {
   // Amendment 2 (Theme 8) — send the ₹5,000 designer-fee payment link (stubbed seam).
   sendDesignerFeeLink: (meetingId: number | string) =>
     unwrap(
-      api.post<Envelope<{ meetingId: number; amount: number; url: string | null; ref: string | null; provider: string; enabled: boolean }>>(
+      api.post<Envelope<{
+        meetingId: number; amount: number; url: string | null; ref: string | null; provider: string; enabled: boolean
+        // Best-effort WhatsApp delivery result — ok:false means the rep should copy the URL and send manually.
+        whatsapp?: { ok: boolean; via?: string; messageId?: string | null; dryRun?: boolean; reason?: string }
+      }>>(
         endpoints.meetingDesignFeeLink(String(meetingId)),
         {},
       ),
