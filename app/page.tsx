@@ -153,8 +153,8 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   "new-lead": {
     title: "Add New Lead",
     subtitle: "Capture lead information",
-    render: () => (
-      <div className="max-w-4xl mx-auto"><QuickLeadEntry /></div>
+    render: ({ openLead }) => (
+      <div className="max-w-4xl mx-auto"><QuickLeadEntry onOpenLead={openLead} /></div>
     ),
   },
   docs: {

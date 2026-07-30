@@ -110,7 +110,7 @@ function Pills({ options, value, onChange, cols = 3 }: {
   )
 }
 
-export function QuickLeadEntry() {
+export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string) => void }) {
   const { data: states, isLoading: statesLoading } = useSapStates()
   const { mutateAsync: quickCreate, isPending } = useQuickCreateLead()
 
@@ -139,7 +139,7 @@ export function QuickLeadEntry() {
   const [competitors, setCompetitors] = useState("")
   const [purchaseType, setPurchaseType] = useState("")
 
-  const [done, setDone] = useState<{ name: string; route: string | null } | null>(null)
+  const [done, setDone] = useState<{ name: string; route: string | null; leadId: number } | null>(null)
 
   const isEngaged = outcome === "engaged"
   const timelineNeeded = isEngaged
@@ -246,9 +246,14 @@ export function QuickLeadEntry() {
 
     try {
       const res = await quickCreate(payload)
-      setDone({ name: leadName.trim(), route: res.route ?? null })
+      const created = { name: leadName.trim(), route: res.route ?? null, leadId: res.opportunityDocEntry }
+      setDone(created)
       toast.success("Lead added" + (res.route ? ` — ${ROUTE_LABEL[res.route] ?? res.route}` : ""))
-      setTimeout(() => { reset(); setDone(null) }, 2600)
+      // Engaged + ready routes to a meeting — hold the success card up with a
+      // "book the meeting" CTA instead of auto-resetting for the next lead.
+      if (created.route !== "meeting_pending") {
+        setTimeout(() => { reset(); setDone(null) }, 2600)
+      }
     } catch (e) {
       toast.error(errorText(e))
     }
@@ -266,7 +271,19 @@ export function QuickLeadEntry() {
             {done.name} is saved
             {done.route ? <> — <span className="font-medium text-foreground">{ROUTE_LABEL[done.route] ?? done.route}</span>.</> : "."}
           </p>
-          <p className="text-xs text-muted-foreground mt-3">Ready for the next lead…</p>
+          {done.route === "meeting_pending" ? (
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <Button size="lg" className="gap-2" onClick={() => onOpenLead?.(String(done.leadId))}>
+                📅 Book the meeting now →
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => { reset(); setDone(null) }}>
+                Add another lead
+              </Button>
+              <p className="text-[11px] text-muted-foreground mt-1">Not now? It’ll show as “Meeting pending” in your list.</p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-3">Ready for the next lead…</p>
+          )}
         </CardContent>
       </Card>
     )
