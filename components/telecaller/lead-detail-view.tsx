@@ -3142,6 +3142,7 @@ function ZoomMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; a
 // transition or meeting notifications (it's a pure edit of the call-log row).
 function ZoomOutcomePanel({ meetingId, locked }: { meetingId: number; locked?: boolean }) {
   const [notes, setNotes] = useState("")
+  const [linkResult, setLinkResult] = useState<{ url: string; whatsappOk: boolean } | null>(null)
   const { mutateAsync: saveOutcome, isPending: saving } = useUpdateZoomOutcome(meetingId)
   const { mutateAsync: sendLink, isPending: sending } = useSendDesignerFeeLink(meetingId)
 
@@ -3157,11 +3158,15 @@ function ZoomOutcomePanel({ meetingId, locked }: { meetingId: number; locked?: b
   const onSendLink = async () => {
     try {
       const res = await sendLink()
-      toast[res.enabled ? "success" : "info"](
-        res.enabled
-          ? `Design-fee link (₹${res.amount}) sent`
-          : `Payment provider not enabled yet — recorded a ₹${res.amount} placeholder (ref ${res.ref}).`,
-      )
+      if (!res.enabled) {
+        toast.info(`Payment provider not enabled yet — recorded a ₹${res.amount} placeholder (ref ${res.ref}).`)
+        return
+      }
+      const waOk = !!res.whatsapp?.ok
+      if (res.url) setLinkResult({ url: res.url, whatsappOk: waOk })
+      toast.success(waOk
+        ? `Design-fee link (₹${res.amount}) sent on WhatsApp`
+        : `Design-fee link (₹${res.amount}) created — copy it below to send manually`)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to send design-fee link")
     }
@@ -3186,6 +3191,24 @@ function ZoomOutcomePanel({ meetingId, locked }: { meetingId: number; locked?: b
           {sending ? "Sending…" : "Send ₹5,000 design-fee link"}
         </Button>
       </div>
+      {linkResult && (
+        <div className="rounded-md border bg-card p-2 space-y-1">
+          <p className={cn("text-[10px] font-medium", linkResult.whatsappOk ? "text-success" : "text-warning")}>
+            {linkResult.whatsappOk ? "✓ Sent on WhatsApp" : "⚠ Not sent on WhatsApp — copy & send it manually"}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <a href={linkResult.url} target="_blank" rel="noreferrer" className="truncate text-[11px] text-primary underline">
+              {linkResult.url}
+            </a>
+            <Button
+              type="button" size="sm" variant="ghost" className="h-6 px-2 shrink-0 text-[10px]"
+              onClick={() => { navigator.clipboard?.writeText(linkResult.url); toast.success("Link copied") }}
+            >
+              Copy
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
