@@ -2887,7 +2887,9 @@ function ZoomMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; a
 
   const { control, handleSubmit, reset, watch, formState } = useForm<ZoomMeetingValues>({
     resolver: zodResolver(zoomMeetingSchema),
-    defaultValues: zoomMeetingDefaults,
+    // Prefill the customer email from the lead — the schema REQUIRES a valid email for the
+    // Zoom invite, so without this the form silently fails to submit (no field to show it on).
+    defaultValues: { ...zoomMeetingDefaults, customerEmail: lead.email ?? "" },
     mode: "onChange",
   })
   const { errors, isSubmitting } = formState
@@ -2950,6 +2952,18 @@ function ZoomMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; a
                       <Label className="text-xs">Meeting date &amp; time</Label>
                       <Input type="datetime-local" {...field} />
                       {errors.meetingAt && <p className="text-[11px] text-destructive">{errors.meetingAt.message}</p>}
+                    </div>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="customerEmail"
+                  render={({ field }) => (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Customer email (for the Zoom invite)</Label>
+                      <Input type="email" {...field} placeholder="doctor@clinic.com" />
+                      {errors.customerEmail && <p className="text-[11px] text-destructive">{errors.customerEmail.message}</p>}
                     </div>
                   )}
                 />
