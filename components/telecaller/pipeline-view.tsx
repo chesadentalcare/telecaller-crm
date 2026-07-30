@@ -159,6 +159,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     replied={lead.replied}
                     onOpen={onOpenLead}
                     urgent={lead.lastOutcome === "wrong_number" ? { label: "Wrong number" } : undefined}
+                    flag={lead.meetingPending ? { label: "Meeting pending" } : undefined}
                     className={lead.lastOutcome === "wrong_number" ? "bg-destructive/[0.04]" : undefined}
                     meta={
                       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">

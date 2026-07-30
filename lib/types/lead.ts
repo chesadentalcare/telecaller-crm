@@ -54,6 +54,8 @@ export interface PipelineLead extends LeadBase {
   value?: string
   // Most recent (non-superseded) call disposition — drives the URGENT "Wrong number" flag.
   lastOutcome?: CallOutcome | null
+  // Engaged/qualified for a meeting but none booked yet — drives the "Meeting pending" badge.
+  meetingPending?: boolean
 }
 
 // Drip campaign queue
