@@ -76,6 +76,11 @@ export interface QuickFirstResponse {
   notInterestedReason?: "genuine_no" | "timing_budget" | "already_purchased"
   callbackAt?: string
   notes?: string
+  // Predicted close (YYYY-MM-DD) captured on first entry — becomes the SAP opportunity's
+  // PredictedClosingDate instead of the old "tomorrow" placeholder. `manual` = rep set it,
+  // `auto_track` = they accepted the timeline-derived default.
+  predictedClosingDate?: string
+  predictedCloseSource?: "manual" | "auto_track"
 }
 
 export interface QuickLeadInput {
