@@ -1,12 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import {
   BookOpen, PhoneCall, CalendarClock, Repeat, XCircle, PhoneOff, PhoneMissed,
+  Droplets, Clock, Send, Route, LogOut,
 } from "lucide-react"
 
-// In-app training guide for the telecaller flow (mirrors Telecaller_Flow_Guide.md).
-// Plain language + flow charts so Neha can read "what happens when I enter a lead".
+// In-app training guide. Two tabs:
+//   • Telecaller Flow — what happens when Neha enters a lead (plain language).
+//   • Drip Engine     — how the automatic follow-up engine works in the backend,
+//                       plus the exact schedule of every track.
 
 function Chart({ children }: { children: string }) {
   return (
@@ -69,9 +74,26 @@ const STAGE_WHEN = [
   { stage: "Archived", when: "Not interested “at all”, OR no answer after 4 attempts, OR a follow-up finished with no reply.", act: "Usually nothing. Revive with “Bring back as No Response” if needed." },
 ]
 
-export function DocsView() {
+// ── Drip Engine tab data ─────────────────────────────────────────────
+const TRACKS_GLANCE = [
+  ["1-Month", "9 touches · ~17 days", "Fast & high-intent — buying within a month", "☎ Anchor call"],
+  ["3-Month", "19 touches · 90 days", "Steady education, a touch every ~5 days", "☎ Anchor call"],
+  ["6-Month+", "13 touches · 24 weeks", "Gentle nurture, a touch every 2 weeks", "💬 WhatsApp re-open"],
+  ["24-Month", "16 touches · ~24 months", "Post-purchase care, then win the re-buy", "💬 Thank-you"],
+]
+
+const ENTRY_MAP = [
+  ["Interested — buying within a month", "1-Month track"],
+  ["Interested — 1 to 3 months", "3-Month track"],
+  ["Interested — 6+ months away", "6-Month+ track"],
+  ["Not interested — timing / budget (wants it, not now)", "6-Month+ track (nurture)"],
+  ["Not interested — already bought elsewhere", "24-Month track (post-purchase)"],
+  ["Callback chased but never answered", "Their timeline track (or 6-Month+ if unknown)"],
+]
+
+function TelecallerFlowGuide() {
   return (
-    <div className="mx-auto max-w-3xl space-y-4 pb-8">
+    <div className="space-y-4">
       <div className="rounded-xl border bg-muted/20 p-4">
         <div className="flex items-center gap-2 text-base font-semibold">
           <BookOpen className="size-5 text-primary" /> Telecaller Flow — How it works
@@ -164,7 +186,7 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
         <p><b>Ready now</b> → a <b>meeting</b> is set up and the lead is <b>handed to Sales</b> (you can still see it under
           Pipeline → &ldquo;Sent to Sales&rdquo;).</p>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
-          how often the system follows up. <b>Always set it</b> for an interested-but-later lead.</p>
+          which <b>drip track</b> the lead goes on (see the Drip Engine tab). <b>Always set it</b> for an interested-but-later lead.</p>
       </Section>
 
       <Section n="5" title="Not interested — pick the reason" icon={XCircle}>
@@ -180,7 +202,7 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
 follow-up       check-ins          (no follow-up)`}</Chart>
         <ul className="ml-4 list-disc space-y-1">
           <li><b>Interested later (timing/budget)</b> → they do want it, not now → <b>6-month follow-up</b>.</li>
-          <li><b>Bought elsewhere</b> → <b>long-term occasional check-ins</b>.</li>
+          <li><b>Bought elsewhere</b> → <b>long-term occasional check-ins</b> (24-month track).</li>
           <li><b>Not interested at all</b> → <b>closed</b>.</li>
         </ul>
       </Section>
@@ -188,7 +210,7 @@ follow-up       check-ins          (no follow-up)`}</Chart>
       <Section n="6" title="The follow-up plan (automatic reminders)" icon={Repeat}>
         <p>A follow-up plan means the system <b>automatically sends WhatsApp / call reminders</b> on a schedule, so no lead
           is forgotten. If the doctor <b>replies</b>, the lead <b>comes back to you</b> to re-engage. If the plan finishes
-          with no reply, the lead is <b>parked</b> (and can re-open later).</p>
+          with no reply, the lead is <b>parked</b> (and can re-open later). The exact schedule lives in the <b>Drip Engine</b> tab.</p>
         <Chart>{`Interested-but-later ──► Follow-up plan ──► reminders go out on schedule
                                  │
                      ┌───────────┴───────────┐
@@ -300,6 +322,232 @@ follow-up       check-ins          (no follow-up)`}</Chart>
           </ol>
         </div>
       </Section>
+    </div>
+  )
+}
+
+function DripEngineGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <Droplets className="size-5 text-primary" /> Drip Engine — the automatic follow-up robot
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The drip engine is a background robot on the server. Once a lead is <b>interested-but-later</b> (or
+          <b> not-interested for a reason we can nurture</b>), the engine takes over and keeps in touch on a fixed
+          calendar — sending WhatsApp messages and dropping reminder calls into your Calls Due — so no lead is ever forgotten.
+        </p>
+      </div>
+
+      <Section n="1" title="What it is (in one line)" icon={Droplets}>
+        <p>A <b>drip</b> is a pre-planned sequence of <b>touches</b>. Each touch is either a
+          <b> WhatsApp message</b> (sent automatically) or a <b>reminder call</b> (added to your Calls Due for you to make).
+          Which sequence a lead gets is called its <b>track</b>. There are four tracks: <b>1-Month, 3-Month, 6-Month+ and 24-Month</b>.</p>
+      </Section>
+
+      <Section n="2" title="When it runs — the 5-minute heartbeat" icon={Clock}>
+        <p>The engine starts with the backend and then <b>wakes up every 5 minutes</b>, all day. On each wake-up it asks one
+          question: <b>&ldquo;Is any lead due for its next touch right now?&rdquo;</b> — and handles the ones that are.</p>
+        <Chart>{`Backend starts  ──►  drip worker turns on  (every 5 minutes) ⏱
+                                   │
+                                   ▼
+        Find leads where  next-touch time ≤ now  (and not closed / stopped)
+                                   │
+                        ┌──────────┴───────────┐
+                        ▼                      ▼
+                  It's a CALL touch      It's a WhatsApp touch
+                        │                      │
+                        ▼                      ▼
+          Drop a reminder call        Send the WhatsApp template
+          into Calls Due (AM/PM)      automatically
+                        │                      │
+                        └──────────┬───────────┘
+                                   ▼
+              Book the NEXT touch on the track's calendar`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">A lead only moves <b>one touch per due-time</b> — the engine never blasts the whole sequence at once. Gaps between touches are set by each track (below).</p>
+      </Section>
+
+      <Section n="3" title="How a lead gets onto a track" icon={Route}>
+        <p>The moment you log the outcome, the system picks the track automatically, starts it at <b>touch 1</b>, and writes a
+          <b> predicted closing date</b> (also pushed to SAP). You never pick a track by hand.</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">What you logged on the call</th>
+                <th className="p-2 text-left font-medium">Track the lead enters</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {ENTRY_MAP.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 text-muted-foreground">{row[0]}</td>
+                  <td className="p-2 font-medium text-foreground">{row[1]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-amber-500/10 p-2 text-foreground/80">If a lead already had an older plan, entering a new one <b>replaces</b> it (the old one is filed in history). Logging a fresh call outcome later also cancels the current drip and re-routes the lead.</p>
+      </Section>
+
+      <Section n="4" title="What happens at each touch" icon={Send}>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li><b>☎ Call touch</b> → a reminder call appears in your <b>Calls Due</b> (morning or evening slot), assigned to the lead&rsquo;s owner. You make the call; the engine has done its job by reminding you.</li>
+          <li><b>💬 WhatsApp touch</b> → the engine sends the approved template itself. It is <b>de-duplicated</b>, so the same touch can never send twice.</li>
+          <li><b>Template not approved yet?</b> The engine <b>waits</b> on that touch (it does not skip ahead) until the template is live in Meta.</li>
+          <li><b>Send keeps failing?</b> After <b>5 tries</b> the lead is <b>parked</b> for a human to look at, instead of looping forever.</li>
+        </ul>
+        <p>After a touch succeeds, the engine schedules the next one by adding the track&rsquo;s gap (in days) to today, and refreshes the predicted closing date.</p>
+      </Section>
+
+      <Section n="5" title="The four tracks at a glance" icon={Repeat}>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Track</th>
+                <th className="p-2 text-left font-medium">Size</th>
+                <th className="p-2 text-left font-medium">Feel</th>
+                <th className="p-2 text-left font-medium">Opens with</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {TRACKS_GLANCE.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 font-medium text-foreground">{row[0]}</td>
+                  <td className="p-2 text-muted-foreground">{row[1]}</td>
+                  <td className="p-2 text-muted-foreground">{row[2]}</td>
+                  <td className="p-2 text-muted-foreground">{row[3]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          <b>Why the shapes differ:</b> the sooner someone plans to buy, the <b>harder and faster</b> we push (calls + WhatsApp,
+          every few days). The further out they are, the <b>gentler and slower</b> (mostly WhatsApp, weeks apart).
+        </p>
+      </Section>
+
+      <Section n="6" title="Track by track — exactly what goes out, and when">
+        <p className="font-medium text-foreground">① 1-Month track — 9 touches over ~17 days (fast, alternating call &amp; WhatsApp)</p>
+        <Chart>{`Day 0   ☎  Anchor call — warm re-open
+Day 1   💬  Recap + brochure
+Day 2   ☎  Nudge call — handle the objection you captured
+Day 3   💬  Social proof — a nearby clinic / model
+Day 6   ☎  Decision call — offer a meeting
+Day 9   💬  Offer — financing / demo slot
+Day 12  ☎  Last-value call — final objection handling
+Day 15  💬  Soft close — hold a demo slot this week
+Day 17  💬  Breakup — "closing your enquiry"`}</Chart>
+
+        <p className="pt-2 font-medium text-foreground">② 3-Month track — 19 touches over 90 days (a touch every ~5 days)</p>
+        <Chart>{`Day 0   ☎  Anchor call — confirm the 3-month timeline
+Day 5   💬  Education — product deep-dive
+Day 10  💬  Education — ROI
+Day 15  💬  Education — clinic story
+Day 20  💬  Education — comparison guide
+Day 25  ☎  Check-in call — timeline / budget
+Day 30  💬  Nurture — comparison
+Day 35  💬  Nurture — demo invite
+Day 40  💬  Nurture — feature spotlight
+Day 45  💬  Nurture — financing
+Day 50  ☎  Mid-cycle call — objections / Zoom walkthrough
+Day 55  💬  Nurture — seasonal offer
+Day 60  💬  Nurture — case study
+Day 65  💬  Nurture — event invite
+Day 70  💬  Nurture — reminder
+Day 75  💬  Nurture — value recap
+Day 80  ☎  Pre-close call — lock a visit before quarter-end
+Day 85  💬  Soft close
+Day 90  💬  Breakup — "closing your enquiry"`}</Chart>
+
+        <p className="pt-2 font-medium text-foreground">③ 6-Month+ track — 13 touches over 24 weeks (a touch every 2 weeks, mostly WhatsApp)</p>
+        <Chart>{`Day 0    💬  Seeded re-open — low pressure
+Day 14   💬  Education — long-horizon value
+Day 28   💬  Education — no ask
+Day 42   ☎  Anchor call — confirm still 6m+
+Day 56   💬  Nurture — new models
+Day 70   💬  Nurture — events
+Day 84   💬  Nurture — clinic features
+Day 98   💬  Nurture — case study
+Day 112  ☎  Anchor call — timeline firming up?
+Day 126  💬  Nurture — seasonal offer
+Day 140  💬  Nurture — financing
+Day 154  💬  Nurture — reminder
+Day 168  💬  Breakup — "closing your enquiry"`}</Chart>
+
+        <p className="pt-2 font-medium text-foreground">④ 24-Month track — 16 touches over ~24 months (post-purchase care, for &ldquo;bought elsewhere&rdquo;)</p>
+        <Chart>{`Day 0    💬  Thank-you & welcome
+Day 10   💬  Onboarding & setup tips
+Day 28   💬  Daily-use & maintenance guide
+Day 60   ☎  Satisfaction check-in call
+Day 105  💬  AMC & warranty reassurance
+Day 160  💬  Consumables & accessories reorder
+Day 220  💬  Referral & testimonial ask
+Day 285  💬  Clinical education / CDE invite
+Day 320  ☎  Mid-cycle relationship call
+Day 390  💬  1-year loyalty + new-model awareness
+Day 470  💬  Expansion / second operatory
+Day 545  💬  Upgrade ROI story
+Day 600  ☎  Replacement-window warm-up call
+Day 645  💬  Trade-in & financing offer
+Day 685  💬  Seasonal / year-end upgrade offer
+Day 715  ☎  24-month replacement re-open call
+   │
+   └─►  then the lead RESTARTS as a fresh enquiry (re-purchase cycle)`}</Chart>
+      </Section>
+
+      <Section n="7" title="How a lead leaves a drip" icon={LogOut}>
+        <Chart>{`A lead comes OFF a drip when ANY of these happen:
+
+  Doctor REPLIES on WhatsApp      ──►  pulled out, comes back to YOU (re-qualify)
+  You log a NEW call outcome      ──►  old drip cancelled, lead re-routed
+  Doctor sends STOP / opts out    ──►  removed from all messaging
+  Lead is won / lost / closed     ──►  removed
+  Track FINISHES with no reply    ──►  parked as dormant (Long-cycle)
+                                        …EXCEPT 24-Month, which loops back
+                                        to a fresh start for the re-buy`}</Chart>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ The golden rule still holds: the second a doctor engages, the robot steps aside and the lead is back in your hands.</p>
+      </Section>
+    </div>
+  )
+}
+
+const TABS = [
+  { key: "flow" as const, label: "Telecaller Flow", icon: BookOpen },
+  { key: "drip" as const, label: "Drip Engine", icon: Droplets },
+]
+
+export function DocsView() {
+  const [tab, setTab] = useState<"flow" | "drip">("flow")
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 pb-8">
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1">
+        {TABS.map((t) => {
+          const active = tab === t.key
+          const Icon = t.icon
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition",
+                active ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {tab === "flow" ? <TelecallerFlowGuide /> : <DripEngineGuide />}
     </div>
   )
 }
