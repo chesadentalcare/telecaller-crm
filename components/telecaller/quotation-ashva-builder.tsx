@@ -304,7 +304,7 @@ export function QuotationAshvaBuilder({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[95vw] 2xl:max-w-[1600px] max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
         <div className="px-5 pt-5 pb-3 border-b">
           <DialogHeader>
             <DialogTitle className="text-base">Ashva Quotation Builder</DialogTitle>
@@ -454,7 +454,7 @@ export function QuotationAshvaBuilder({
 
           {/* ── Live preview ─────────────────────────────────────── */}
           <div className="p-5 bg-muted/20">
-            <div className="mx-auto max-w-xl rounded-lg border bg-white text-black shadow-sm p-6 text-[11px] leading-relaxed">
+            <div className="mx-auto max-w-3xl rounded-lg border bg-white text-black shadow-sm p-6 text-xs leading-relaxed">
               <div className="text-center border-b pb-3 mb-3">
                 <h2 className="text-base font-bold tracking-wide">ASHVA HEALTH TECH LIMITED</h2>
                 <p className="text-[10px] text-gray-600">Quotation</p>
