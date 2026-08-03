@@ -20,6 +20,7 @@ import { Search, Phone, UserPlus } from "lucide-react"
 import { NotificationBell } from "@/components/telecaller/notification-bell"
 import { AuthGate } from "@/components/auth/auth-gate"
 import { UserMenu } from "@/components/auth/user-menu"
+import { EngagementModeProvider, EngagementSwitcher } from "@/lib/engagement-mode"
 
 // ─── Lazy-loaded views ──────────────────────────────────────────────────
 // Each view is split into its own chunk so the initial bundle only contains
@@ -261,9 +262,11 @@ const FALLBACK_VIEW = VIEW_REGISTRY.home
 export default function TelecallerDashboard() {
   return (
     <AuthGate>
-      <Suspense fallback={<ShellSkeleton />}>
-        <TelecallerDashboardInner />
-      </Suspense>
+      <EngagementModeProvider>
+        <Suspense fallback={<ShellSkeleton />}>
+          <TelecallerDashboardInner />
+        </Suspense>
+      </EngagementModeProvider>
     </AuthGate>
   )
 }
@@ -352,6 +355,7 @@ function TelecallerDashboardInner() {
           </div>
 
           <div className="flex items-center gap-3">
+            <EngagementSwitcher />
             <div className="relative hidden md:block">
               <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
