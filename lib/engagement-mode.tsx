@@ -34,10 +34,10 @@ export function EngagementModeProvider({ children }: { children: React.ReactNode
 
 export const useEngagementMode = () => useContext(EngagementModeContext)
 
-// A call belongs to the "engaged" side when the lead was reached/interested
-// (drip nurture calls + requested callbacks). first-contact / re-qualification
-// calls are the "not engaged" chase side.
-export const ENGAGED_REASONS = new Set(["drip_anchor", "callback"])
+// Engaged = interested leads being nurtured — drip (1/3/6-month) anchor/nudge
+// calls. Everything else on the worklist (callback / first-contact / re-qual) is
+// the "not engaged" chase side: no-response, wrong-number, call-back-later, not-interested.
+export const ENGAGED_REASONS = new Set(["drip_anchor"])
 export const isEngagedReason = (reason: string) => ENGAGED_REASONS.has(reason)
 
 export function EngagementSwitcher() {
