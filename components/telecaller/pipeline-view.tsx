@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
+import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import type { PipelineLead } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
@@ -46,6 +47,7 @@ interface PipelineViewProps {
 
 export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const { data: leads = [], isLoading } = usePipelineLeads()
+  const { mode } = useEngagementMode()
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
   // Inline cockpit (Amendment 2 Theme 1) — expand a lead in place to log/qualify/edit
@@ -64,6 +66,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   )
   const activeFilters = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
   const filteredLeads = [...(activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))]
+    .filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
     .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
