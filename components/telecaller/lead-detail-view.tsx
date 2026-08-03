@@ -39,6 +39,7 @@ import {
   Pencil,
   Check,
   CheckCheck,
+  ExternalLink,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -254,10 +255,21 @@ type InboundReply = {
 // Outbound WhatsApp for the conversation thread: free-text replies the rep sent
 // ('manual', text in `text`) plus the system template sends (recovery / drip /
 // quotation) the customer received, so the rep sees both sides of the exchange.
+type SentMessageButton = { type: string; text?: string | null; url?: string | null; phoneNumber?: string | null }
+type SentMessage = {
+  body?: string | null
+  headerFormat?: string | null
+  headerText?: string | null
+  footer?: string | null
+  buttons?: SentMessageButton[]
+  documentUrl?: string | null
+  documentName?: string | null
+}
 type WhatsappOutbound = {
   id: number
   kind: "recovery" | "drip" | "manual" | "quotation" | "meeting"
   text: string | null
+  message: SentMessage | null
   templateName: string
   sentBy: string | null
   sentAt: Date
@@ -281,12 +293,12 @@ type ZoomMeetingSummary = {
 // reuse the exact same mapping + tab components instead of duplicating them.
 // whatsapp_messages.payload arrives as a JSON object (mysql2) or a JSON string
 // (depending on the driver/column) — normalise both to { text, sentBy } | null.
-function parsePayload(p: unknown): { text?: string; sentBy?: string | null } | null {
+function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null } | null {
   if (!p) return null
   if (typeof p === "string") {
     try { return JSON.parse(p) } catch { return null }
   }
-  return p as { text?: string; sentBy?: string | null }
+  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null }
 }
 
 export function mapDetail(d: ApiLeadDetail): LeadDetail {
@@ -325,9 +337,8 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     return {
       id: w.id,
       kind: w.message_type,
-      // Manual replies + meeting confirmations carry a human-readable line in payload.text;
-      // other template sends (recovery/drip/quotation) render by label only.
-      text: w.message_type === "manual" || w.message_type === "meeting" ? (p?.text ?? null) : null,
+      text: p?.message?.body ?? (w.message_type === "manual" || w.message_type === "meeting" ? (p?.text ?? null) : null),
+      message: p?.message ?? null,
       templateName: w.template_name,
       sentBy: p?.sentBy ?? null,
       sentAt: new Date(w.sent_at),
@@ -2271,32 +2282,60 @@ function InboundBubble({
 // Our outbound bubble (right): a manual free-text reply (filled) or a system template
 // send the customer received (outlined). Footer shows sender, time + delivery receipt.
 function OutboundBubble({ m }: { m: WhatsappOutbound }) {
-  const isManual = m.kind === "manual"
+  const isFreeText = m.kind === "manual" && !m.message
   const receipt = m.readAt ? "Read" : m.deliveredAt ? "Delivered" : "Sent"
   const ReceiptIcon = m.readAt || m.deliveredAt ? CheckCheck : Check
+  const msg = m.message
+  const hasDoc = !!(msg?.documentUrl || msg?.headerFormat === "DOCUMENT")
   return (
     <div className="flex flex-col items-end space-y-1">
       <div className={cn(
         "max-w-[85%] rounded-2xl rounded-tr-sm px-3 py-2",
-        isManual ? "bg-primary text-primary-foreground" : "border bg-background",
+        isFreeText ? "bg-primary text-primary-foreground" : "border bg-background",
       )}>
-        {isManual ? (
+        {isFreeText ? (
           <p className="text-sm whitespace-pre-wrap break-words">
             {m.text || <span className="italic opacity-80">(no text)</span>}
           </p>
         ) : (
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1.5 text-xs">
             <p>
               <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
               <span className="text-muted-foreground"> · {m.templateName}</span>
             </p>
-            {/* Meeting confirmations carry the venue/link + date-time line the customer received. */}
+            {hasDoc && (
+              <a
+                href={msg?.documentUrl || undefined}
+                target="_blank"
+                rel="noreferrer"
+                className="flex max-w-full items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-[11px] hover:bg-muted"
+              >
+                <FileText className="size-3.5 shrink-0" />
+                <span className="truncate">{msg?.documentName || "Attachment.pdf"}</span>
+              </a>
+            )}
             {m.text && <p className="whitespace-pre-wrap break-words text-foreground/90">{m.text}</p>}
+            {msg?.footer && <p className="text-[10px] text-muted-foreground">{msg.footer}</p>}
+            {msg?.buttons && msg.buttons.length > 0 && (
+              <div className="mt-1 flex flex-col gap-1 border-t pt-1.5">
+                {msg.buttons.map((b, i) => (
+                  <div
+                    key={i}
+                    title="Customer's WhatsApp button — preview only"
+                    className="flex items-center justify-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-[11px] font-medium text-muted-foreground opacity-70"
+                  >
+                    {b.type === "URL" && <ExternalLink className="size-3" />}
+                    {b.type === "PHONE_NUMBER" && <Phone className="size-3" />}
+                    {b.text || b.url || b.phoneNumber || "Button"}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
       <div className="flex items-center gap-1.5 pr-1 text-[10px] text-muted-foreground">
-        {isManual && m.sentBy && <span>{m.sentBy} ·</span>}
+        {m.sentBy && <span>{m.sentBy} ·</span>}
         <span>{m.sentAt.toLocaleString()}</span>
         <span className={cn("inline-flex items-center gap-0.5", m.readAt ? "text-sky-500" : "")}>
           <ReceiptIcon className="size-3" />{receipt}
