@@ -3,21 +3,21 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 
-export type EngagementMode = "engaged" | "not_engaged"
+export type EngagementMode = "all" | "engaged" | "not_engaged"
 
 const STORAGE_KEY = "telecaller-engagement-mode"
 
 const EngagementModeContext = createContext<{
   mode: EngagementMode
   setMode: (m: EngagementMode) => void
-}>({ mode: "engaged", setMode: () => {} })
+}>({ mode: "all", setMode: () => {} })
 
 export function EngagementModeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<EngagementMode>("engaged")
+  const [mode, setModeState] = useState<EngagementMode>("all")
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null
-    if (saved === "engaged" || saved === "not_engaged") setModeState(saved)
+    if (saved === "all" || saved === "engaged" || saved === "not_engaged") setModeState(saved)
   }, [])
 
   const setMode = useCallback((m: EngagementMode) => {
@@ -39,10 +39,12 @@ export const useEngagementMode = () => useContext(EngagementModeContext)
 // the "not engaged" chase side: no-response, wrong-number, call-back-later, not-interested.
 export const ENGAGED_REASONS = new Set(["drip_anchor"])
 export const isEngagedReason = (reason: string) => ENGAGED_REASONS.has(reason)
+export const isEngagedOutcome = (outcome: string | null | undefined) => outcome === "engaged"
 
 export function EngagementSwitcher() {
   const { mode, setMode } = useEngagementMode()
   const opts: { key: EngagementMode; label: string }[] = [
+    { key: "all", label: "All" },
     { key: "engaged", label: "Engaged" },
     { key: "not_engaged", label: "Not Engaged" },
   ]

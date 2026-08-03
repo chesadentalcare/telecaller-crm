@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
@@ -17,6 +18,7 @@ import {
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
+import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import type { PipelineLead } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
@@ -45,19 +47,35 @@ interface PipelineViewProps {
 
 export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const { data: leads = [], isLoading } = usePipelineLeads()
+  const { mode } = useEngagementMode()
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
   // Inline cockpit (Amendment 2 Theme 1) — expand a lead in place to log/qualify/edit
   // without leaving the pipeline, mirroring the Calls-Due worklist.
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
+  const [repliedOnly, setRepliedOnly] = useState(false)
+  const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
+  const [unverifiedOnly, setUnverifiedOnly] = useState(false)
+  const [sortBy, setSortBy] = useState("recent")
 
   if (isLoading) return <PipelineViewSkeleton />
 
   const leadWithNoResponse = leads.find(
     (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
-  const filteredLeads = activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab)
+  const activeFilters = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
+  const filteredLeads = [...(activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))]
+    .filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
+    .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
+    .filter((l) => !meetingPendingOnly || !!l.meetingPending)
+    .filter((l) => !unverifiedOnly || !l.phoneVerified)
+    .sort((a, b) => {
+      if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "status") return a.status.localeCompare(b.status)
+      return b.createdAt.getTime() - a.createdAt.getTime()
+    })
 
   const stats = [
     { label: "Total Pipeline", value: leads.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
@@ -119,12 +137,55 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                   )}
                 </TabsList>
               </Tabs>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <Filter className="size-3.5" />Filter
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <ArrowUpDown className="size-3.5" />Sort
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                    <Filter className="size-3.5" />Filter
+                    {activeFilters > 0 && (
+                      <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{activeFilters}</Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs">Filter leads</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem checked={repliedOnly} onCheckedChange={(v) => setRepliedOnly(!!v)} className="text-xs">
+                    Replied on WhatsApp
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={meetingPendingOnly} onCheckedChange={(v) => setMeetingPendingOnly(!!v)} className="text-xs">
+                    Meeting pending
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={unverifiedOnly} onCheckedChange={(v) => setUnverifiedOnly(!!v)} className="text-xs">
+                    Unverified number
+                  </DropdownMenuCheckboxItem>
+                  {activeFilters > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-xs"
+                        onClick={() => { setRepliedOnly(false); setMeetingPendingOnly(false); setUnverifiedOnly(false) }}
+                      >
+                        Clear filters
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5">
+                    <ArrowUpDown className="size-3.5" />Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={sortBy} onValueChange={setSortBy}>
+                    <DropdownMenuRadioItem value="recent" className="text-xs">Newest added</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="oldest" className="text-xs">Oldest added</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="name" className="text-xs">Name (A–Z)</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="status" className="text-xs">Status</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>

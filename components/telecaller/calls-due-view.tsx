@@ -44,7 +44,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const now = new Date()
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
-  const modeLeads = leads.filter((l) => isEngagedReason(l.reason) === (mode === "engaged"))
+  const modeLeads = mode === "all" ? leads : leads.filter((l) => isEngagedReason(l.reason) === (mode === "engaged"))
   const today = modeLeads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
   const pastDue = modeLeads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
 
