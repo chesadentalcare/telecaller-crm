@@ -1,0 +1,19 @@
+# Canonical Apache config for /var/www/html/telecaller-crm/out
+# Deploy with:  bash deploy.sh --htaccess
+# The vhost has AllowOverride All, and the CI deploy preserves out/.htaccess,
+# so one push persists across code deploys.
+
+<IfModule mod_headers.c>
+  # Content-hashed Next build assets never change → cache forever (also fixes Safari lag).
+  <FilesMatch "\.(js|css|woff2?)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  # HTML must revalidate so a new deploy is picked up on reload.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "public, max-age=0, must-revalidate"
+  </FilesMatch>
+  # version.json drives the auto-update watcher — never cache it.
+  <FilesMatch "version\.json$">
+    Header set Cache-Control "no-store"
+  </FilesMatch>
+</IfModule>

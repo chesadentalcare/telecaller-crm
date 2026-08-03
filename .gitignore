@@ -9,3 +9,6 @@ out
 
 # Build-emitted version stamp (scripts/gen-version.mjs, prebuild hook)
 public/version.json
+
+# Deploy creds (SSH key path + server) — never commit
+deploy.config.sh
