@@ -6,3 +6,6 @@ node_modules
 .next/
 .DS_Store
 out
+
+# Build-emitted version stamp (scripts/gen-version.mjs, prebuild hook)
+public/version.json

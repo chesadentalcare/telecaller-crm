@@ -7,6 +7,7 @@
     "dev:local": "node scripts/run.mjs dev dev",
     "dev:staging": "node scripts/run.mjs dev staging",
     "dev:prod": "node scripts/run.mjs dev prod",
+    "prebuild": "node scripts/gen-version.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."
