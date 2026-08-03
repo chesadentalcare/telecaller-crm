@@ -353,6 +353,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                     stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     fill="url(#callsGradient)"
+                    isAnimationActive={false}
                   />
                   <Area
                     type="monotone"
@@ -360,6 +361,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                     stroke="hsl(var(--success))"
                     strokeWidth={2}
                     fill="url(#connectedGradient)"
+                    isAnimationActive={false}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -385,6 +387,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
                     outerRadius={60}
                     paddingAngle={3}
                     dataKey="value"
+                    isAnimationActive={false}
                   >
                     {pipelineDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />

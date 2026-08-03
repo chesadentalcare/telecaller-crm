@@ -20,6 +20,7 @@ import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { UpcomingCallsCalendar } from "./upcoming-calls-calendar"
 import { useCallsDueLeads, useUpcomingCalls } from "@/hooks/use-leads"
 import { REASON_LABEL, lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
+import { useEngagementMode, isEngagedReason } from "@/lib/engagement-mode"
 import type { CallsDueLead } from "@/lib/types/lead"
 
 interface CallsDueViewProps {
@@ -29,6 +30,7 @@ interface CallsDueViewProps {
 export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const { data: leads = [], isLoading } = useCallsDueLeads()
   const { data: upcoming } = useUpcomingCalls()
+  const { mode } = useEngagementMode()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   if (isLoading) return <ViewSkeleton />
 
@@ -42,8 +44,9 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const now = new Date()
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
-  const today = leads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
-  const pastDue = leads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
+  const modeLeads = leads.filter((l) => isEngagedReason(l.reason) === (mode === "engaged"))
+  const today = modeLeads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
+  const pastDue = modeLeads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
 
   // Shared row renderer. `tone` drives the pastel-red highlight:
   //   'overdue' — due today but the scheduled time has passed (call it on time, not called).

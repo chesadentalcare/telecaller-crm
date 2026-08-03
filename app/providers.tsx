@@ -25,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             // Fallback live-refresh when the SSE stream is down or the tab was backgrounded:
             // re-sync stale queries on refocus / network reconnect. (The SSE-driven
             // invalidateQueries is the primary real-time path; these just cover the gaps.)
-            refetchOnWindowFocus: true,
+            refetchOnWindowFocus: false,
             refetchOnReconnect: true,
           },
         },
