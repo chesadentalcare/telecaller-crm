@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
   DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -16,7 +15,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
   ChevronRight, ChevronDown, SlidersHorizontal, Calendar, MessageSquare, ShieldCheck, ShieldAlert,
-  Search, X,
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
@@ -60,7 +58,6 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
   const [unverifiedOnly, setUnverifiedOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
-  const [search, setSearch] = useState("")
 
   if (isLoading) return <PipelineViewSkeleton />
 
@@ -68,16 +65,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
   const activeFilters = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
-  const q = search.trim().toLowerCase()
-  const qDigits = q.replace(/\D/g, "")
   const filteredLeads = [...(activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))]
     .filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
-    .filter((l) =>
-      !q ||
-      l.name.toLowerCase().includes(q) ||
-      l.id.toLowerCase().includes(q) ||
-      (qDigits.length > 0 && l.phone.replace(/\D/g, "").includes(qDigits)),
-    )
     .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
@@ -133,32 +122,9 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
       </div>
 
       <Card className="shadow-sm">
-        <CardHeader className="pb-3 border-b space-y-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, phone, or lead ID…"
-              className="h-9 pl-8 pr-8 text-sm"
-              inputMode="search"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
+        <CardHeader className="pb-3 border-b">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base font-semibold">
-              Active Leads
-              {q && <span className="ml-2 text-xs font-normal text-muted-foreground">{filteredLeads.length} match{filteredLeads.length === 1 ? "" : "es"}</span>}
-            </CardTitle>
+            <CardTitle className="text-base font-semibold">Active Leads</CardTitle>
             <div className="flex items-center gap-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="h-8 bg-muted/50">
@@ -225,9 +191,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         </CardHeader>
         <CardContent className="p-0">
           {filteredLeads.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-10">
-              {q ? `No leads match "${search.trim()}"` : "No leads in this view"}
-            </p>
+            <p className="text-sm text-muted-foreground text-center py-10">No leads in this view</p>
           ) : (
             <div className="divide-y">
               {filteredLeads.map((lead) => {

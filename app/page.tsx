@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
@@ -14,13 +14,13 @@ import { useConversationStream } from "@/hooks/use-conversation-stream"
 import { useLeadFullDetail } from "@/hooks/use-leads"
 import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Phone, UserPlus } from "lucide-react"
+import { Phone, UserPlus } from "lucide-react"
 import { NotificationBell } from "@/components/telecaller/notification-bell"
 import { AuthGate } from "@/components/auth/auth-gate"
 import { UserMenu } from "@/components/auth/user-menu"
 import { EngagementModeProvider, EngagementSwitcher } from "@/lib/engagement-mode"
+import { GlobalLeadSearch } from "@/components/telecaller/global-lead-search"
 
 // ─── Lazy-loaded views ──────────────────────────────────────────────────
 // Each view is split into its own chunk so the initial bundle only contains
@@ -275,7 +275,6 @@ function TelecallerDashboardInner() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [searchQuery, setSearchQuery] = useState("")
   const queueCounts = useQueueCounts()
   const { role, hasRole, isManagerOrAbove } = useRole()
 
@@ -356,15 +355,7 @@ function TelecallerDashboardInner() {
 
           <div className="flex items-center gap-3">
             <EngagementSwitcher />
-            <div className="relative hidden md:block">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search leads..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-64 pl-9 bg-background"
-              />
-            </div>
+            <GlobalLeadSearch onOpenLead={openLead} className="hidden md:block" />
 
             {(isManagerOrAbove || (role !== null && hasRole("telecaller"))) && (
               <Button
