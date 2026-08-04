@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useLeadFullDetail } from "@/hooks/use-leads"
-import { mapDetail, OverviewTab, CallsTab, MeetingsTab, DripTab, InboundRepliesTab } from "./lead-detail-view"
+import { mapDetail, OverviewTab, CallsTab, MeetingsTab, DripTab, InboundRepliesTab, QuotesTab } from "./lead-detail-view"
 import { EditLeadForm } from "./edit-lead-form"
 
 export function LeadCockpitPanel({
@@ -52,11 +52,12 @@ export function LeadCockpitPanel({
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="log" className="text-xs">Call Log</TabsTrigger>
           <TabsTrigger value="meetings" className="text-xs">Meetings</TabsTrigger>
           <TabsTrigger value="drip" className="text-xs">Drip</TabsTrigger>
+          <TabsTrigger value="quotes" className="text-xs">Quotes</TabsTrigger>
           <TabsTrigger value="replies" className="text-xs gap-1">
             Replies
             {inboundCount > 0 && (
@@ -80,6 +81,9 @@ export function LeadCockpitPanel({
         </TabsContent>
         <TabsContent value="drip" className="mt-3">
           <DripTab lead={lead} />
+        </TabsContent>
+        <TabsContent value="quotes" className="mt-3">
+          <QuotesTab lead={lead} />
         </TabsContent>
         {/* Same two-way WhatsApp conversation + composer as the full lead-detail page.
             Live-updates via the global SSE stream (this panel reads useLeadFullDetail). */}
