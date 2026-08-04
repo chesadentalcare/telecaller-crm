@@ -2781,7 +2781,7 @@ export function MeetingsTab({ lead, autoOpen, onAutoOpened }: {
 }
 
 // ── Quotes Tab (Phase 4 + 5 + 6) ────────────────────────────────────
-function QuotesTab({ lead }: { lead: LeadDetail }) {
+export function QuotesTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-4">
       <HandToSalesCard lead={lead} />
