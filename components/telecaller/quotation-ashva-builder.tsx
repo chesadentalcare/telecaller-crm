@@ -84,14 +84,21 @@ function amountInWords(amount: number): string {
 }
 
 // ── Editable line-item shape (unit price stays a string while typing) ─
+// Each row carries a STABLE id so React keys the inputs by row identity, not by
+// array index — otherwise adding/removing rows makes a controlled input (the
+// price) reject edits because the value prop snaps back to the wrong row.
+let _lineSeq = 0
+const nextLineId = () => `ln${++_lineSeq}`
+
 interface EditableLine {
+  id: string
   spec: string
   warranty: string
   qty: number
   unitPrice: number | string
 }
 
-const emptyLine = (): EditableLine => ({ spec: "", warranty: "", qty: 1, unitPrice: "" })
+const emptyLine = (): EditableLine => ({ id: nextLineId(), spec: "", warranty: "", qty: 1, unitPrice: "" })
 
 // Coerce editable lines → the backend line shape (numeric price unless "Included").
 function toApiLines(lines: EditableLine[]): QuotationLine[] {
@@ -218,6 +225,7 @@ export function QuotationAshvaBuilder({
     setPackageTitle(pkg.packageTitle)
     setLines(
       pkg.lines.map((l) => ({
+        id: nextLineId(),
         spec: l.spec,
         warranty: l.warranty,
         qty: Number(l.qty) || 1,
@@ -231,7 +239,7 @@ export function QuotationAshvaBuilder({
     setLines((prev) => {
       // Drop a single leading empty row so the first pick doesn't leave a blank line.
       const base = prev.length === 1 && !prev[0].spec && prev[0].unitPrice === "" ? [] : prev
-      return [...base, { spec: name, warranty: "", qty: 1, unitPrice: "" }]
+      return [...base, { id: nextLineId(), spec: name, warranty: "", qty: 1, unitPrice: "" }]
     })
   }
 
@@ -385,7 +393,7 @@ export function QuotationAshvaBuilder({
                     {lines.map((line, idx) => {
                       const lt = lineTotal(line.unitPrice, line.qty)
                       return (
-                        <tr key={idx} className="align-top">
+                        <tr key={line.id} className="align-top">
                           <td className="px-2 py-1.5 text-muted-foreground tabular-nums">{idx + 1}</td>
                           <td className="px-1 py-1.5">
                             <Textarea
