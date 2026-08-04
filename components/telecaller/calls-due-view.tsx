@@ -9,9 +9,10 @@
 //                      full schedule (UpcomingCallsCalendar).
 
 import { useState } from "react"
-import { PhoneCall, ChevronDown, ChevronRight, SlidersHorizontal, CalendarClock, History, AlertCircle } from "lucide-react"
+import { PhoneCall, ChevronDown, ChevronRight, SlidersHorizontal, CalendarClock, History, AlertCircle, Search, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ViewSkeleton } from "./view-skeleton"
@@ -32,6 +33,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const { data: upcoming } = useUpcomingCalls()
   const { mode } = useEngagementMode()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
   if (isLoading) return <ViewSkeleton />
 
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
@@ -45,8 +47,16 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
   const modeLeads = mode === "all" ? leads : leads.filter((l) => isEngagedReason(l.reason) === (mode === "engaged"))
-  const today = modeLeads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
-  const pastDue = modeLeads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
+  const q = search.trim().toLowerCase()
+  const qDigits = q.replace(/\D/g, "")
+  const matchLead = (l: CallsDueLead) =>
+    !q ||
+    l.name.toLowerCase().includes(q) ||
+    l.id.toLowerCase().includes(q) ||
+    (qDigits.length > 0 && l.phone.replace(/\D/g, "").includes(qDigits))
+  const searchLeads = modeLeads.filter(matchLead)
+  const today = searchLeads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
+  const pastDue = searchLeads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
 
   // Shared row renderer. `tone` drives the pastel-red highlight:
   //   'overdue' — due today but the scheduled time has passed (call it on time, not called).
@@ -141,6 +151,26 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
 
       {/* ── Calls Today ─────────────────────────────────────────────────────── */}
       <TabsContent value="today" className="mt-0 space-y-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search calls by name, phone, or lead ID…"
+            className="h-9 pl-8 pr-8 text-sm"
+            inputMode="search"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -150,7 +180,9 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
           </CardHeader>
           <CardContent className="p-0">
             {today.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">No calls due today</p>
+              <p className="text-sm text-muted-foreground text-center py-10">
+                {q ? `No calls due today match "${search.trim()}"` : "No calls due today"}
+              </p>
             ) : (
               <div className="divide-y">
                 {today.map((lead) =>
