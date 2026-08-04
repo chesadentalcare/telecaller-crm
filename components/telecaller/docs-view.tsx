@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import {
   BookOpen, PhoneCall, CalendarClock, Repeat, XCircle, PhoneOff, PhoneMissed,
   Droplets, Clock, Send, Route, LogOut,
+  CheckCircle2, Search, PhoneForwarded,
 } from "lucide-react"
 
 // In-app training guide. Two tabs:
@@ -516,17 +517,200 @@ Day 715  ☎  24-month replacement re-open call
   )
 }
 
-const TABS = [
-  { key: "flow" as const, label: "Telecaller Flow", icon: BookOpen },
-  { key: "drip" as const, label: "Drip Engine", icon: Droplets },
+// ── No Response tab ──────────────────────────────────────────────────
+function NoResponseGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <PhoneOff className="size-5 text-primary" /> No Response — the retry cycle, day by day
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          When a doctor doesn&rsquo;t pick up and you log <b>&ldquo;No response&rdquo;</b>, the lead is <b>not lost</b> — the
+          system keeps trying for you on a fixed calendar and drops the next reminder <b>call</b> into your Calls Due on set
+          days. It tries up to <b>4 calls</b>, then closes the lead.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <b>Important — it does NOT come back the same day.</b> After your first no-answer call, the next reminder call
+        (<b>call #2</b>) is scheduled for <b>Day 3</b> — so a lead you enter today shows up again in Calls Due about
+        <b> 3–4 days later</b>, then again around Day 9 and Day 12. That gap is normal, not a bug.
+      </div>
+
+      <Section n="1" title="The full timeline" icon={CalendarClock}>
+        <Chart>{`Day 0   ☎  You call (call #1) — no answer  →  log "No response"
+              Lead saved · retry cycle starts (counts as attempt 1 of 4)
+Day 1   💬  System sends a light WhatsApp follow-up (automatic)
+Day 3   ☎  CALL #2  ← first time it returns to your CALLS DUE   → you call
+Day 6   💬  System sends a WhatsApp follow-up (automatic)
+Day 9   ☎  CALL #3  → appears in your Calls Due                 → you call
+Day 12  ☎  CALL #4  → appears in your Calls Due                 → you call
+   │
+   └─►  still no answer after call #4  ──►  CLOSED (archived)
+                                            "No response — attempts exhausted"`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          You never schedule these — each call appears in <b>Calls Due</b> automatically on its day (overdue ones stay at the
+          top until you clear them). Days are <b>working days</b>: a weekend/holiday pushes the touch to the next working morning.
+        </p>
+      </Section>
+
+      <Section n="2" title="What you do at each return" icon={PhoneCall}>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">On the retry call…</th>
+                <th className="p-2 text-left font-medium">You pick</th>
+                <th className="p-2 text-left font-medium">System does</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              <tr><td className="p-2">They finally pick up &amp; are interested</td><td className="p-2 font-medium text-foreground">Interested</td><td className="p-2 text-muted-foreground">Books a meeting / starts a follow-up plan</td></tr>
+              <tr><td className="p-2">&ldquo;Call me later&rdquo;</td><td className="p-2 font-medium text-foreground">Call back later</td><td className="p-2 text-muted-foreground">Schedules the callback at your time</td></tr>
+              <tr><td className="p-2">Still no answer</td><td className="p-2 font-medium text-foreground">No response</td><td className="p-2 text-muted-foreground">Waits for the next scheduled call day</td></tr>
+              <tr><td className="p-2">Not interested</td><td className="p-2 font-medium text-foreground">Not interested</td><td className="p-2 text-muted-foreground">Routes by reason (closed / nurture)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      <Section n="3" title="How it ends" icon={LogOut}>
+        <Chart>{`Leaves the No-Response cycle when ANY of these happen:
+
+  You reach the doctor          ──►  log the real outcome → routed
+  Doctor REPLIES on WhatsApp    ──►  pulled out, comes back to YOU (re-qualify)
+  4 calls made, still no answer ──►  CLOSED (archived) — revivable`}</Chart>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">
+          ✅ A closed no-response lead isn&rsquo;t gone — you can <b>revive</b> it (&ldquo;Bring back as No Response&rdquo;) and it
+          re-enters the cycle from the top.
+        </p>
+      </Section>
+    </div>
+  )
+}
+
+// ── Wrong Number tab ─────────────────────────────────────────────────
+function WrongNumberGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <PhoneMissed className="size-5 text-primary" /> Wrong Number — flagged, with a 7-day fix window
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          When the number is wrong and you log <b>&ldquo;Wrong number&rdquo;</b>, the lead is <b>paused</b> — no calls or
+          WhatsApps go out. You get <b>7 days</b> to find a correct number; add one and it re-opens like new. If not, it closes.
+        </p>
+      </div>
+
+      <Section n="1" title="The full timeline" icon={CalendarClock}>
+        <Chart>{`Day 0      ☎  You call — number is wrong  →  log "Wrong number"
+                 Lead is FLAGGED & PAUSED (no automation runs on it)
+
+Day 0–7    🔎  Recovery window — find a correct number
+                 (from the ad / Facebook / an alternate contact)
+               Add the corrected number  ──►  lead RE-OPENS
+                                               → fresh first call, cadence
+                                                 restarts from Day 0
+
+Day 7      ⛔  Still no correct number
+               ──►  CLOSED (archived)
+                    "Wrong number — not recovered within 7 days"`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          While it&rsquo;s flagged, the lead sits out of Calls Due on purpose — there&rsquo;s no point calling a number you
+          know is wrong. Fixing the number is the only thing that brings it back.
+        </p>
+      </Section>
+
+      <Section n="2" title="What you do" icon={Search}>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>Open the lead and <b>add a corrected mobile number</b> if you can find one — it re-opens for a fresh first call immediately.</li>
+          <li>No better number? Do nothing — the system <b>auto-closes</b> it after 7 days so it doesn&rsquo;t clutter your list.</li>
+          <li>Closed by mistake / found a number later? <b>Revive</b> it and add the number.</li>
+        </ul>
+      </Section>
+    </div>
+  )
+}
+
+// ── Call Back Later tab ──────────────────────────────────────────────
+function CallBackGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <PhoneForwarded className="size-5 text-primary" /> Call Back Later — scheduled to the minute you set
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          When a doctor says &ldquo;call me later&rdquo; and you log <b>&ldquo;Call back later&rdquo;</b> with a date &amp; time,
+          the system drops the callback into your Calls Due <b>at that exact time</b>. Miss it, and it gives you <b>one</b>
+          automatic retry before moving the lead onto a follow-up plan.
+        </p>
+      </div>
+
+      <Section n="1" title="The full timeline" icon={CalendarClock}>
+        <Chart>{`Day 0          ☎  Doctor: "call me later"  →  log "Call back later"
+                     + pick the DATE & TIME
+                   System schedules the callback for that exact time
+
+At your time   ☎  The CALLBACK appears in your Calls Due  → you call
+                     ├─ reached      ──►  log the real outcome → routed
+                     │                     (meeting / follow-up / etc.)
+                     └─ no answer    ──►  system schedules ONE more callback
+
+2nd callback   ☎  Callback appears again in Calls Due  → you call
+                     ├─ reached      ──►  log outcome → routed
+                     └─ no answer    ──►  lead moves to an automatic
+                                          FOLLOW-UP PLAN (drip)`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          Unlike a no-response retry (which uses morning/evening slots), a callback lands at the <b>exact date &amp; time you
+          chose</b>. If you set no time, it defaults to the next evening call slot.
+        </p>
+      </Section>
+
+      <Section n="2" title="After two misses — the follow-up plan" icon={Repeat}>
+        <p>
+          If the doctor doesn&rsquo;t answer <b>either</b> callback, the lead stops being chased by phone and goes onto an
+          automatic <b>follow-up plan</b> (drip) based on the buy-timeline you captured — or the <b>6-Month+</b> plan if no
+          timeline was set. From there the Drip Engine keeps in touch by WhatsApp and reminder calls (see the <b>Drip Engine</b> tab).
+        </p>
+        <Chart>{`Callback missed twice ──► automatic follow-up plan
+                              │
+              ┌───────────────┴───────────────┐
+        timeline known                 no timeline set
+              │                               │
+              ▼                               ▼
+     their timeline track              6-Month+ nurture track`}</Chart>
+      </Section>
+
+      <Section n="3" title="Good to know" icon={CheckCircle2}>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>The moment you <b>reach</b> them on any callback, log the true outcome — it routes like any normal call.</li>
+          <li>The callback is assigned to <b>you</b> (the lead&rsquo;s owner) and shows in <b>Calls Due</b> when its time comes.</li>
+          <li>Setting an accurate time matters — the reminder is only as good as the time you enter.</li>
+        </ul>
+      </Section>
+    </div>
+  )
+}
+
+type DocTab = "flow" | "drip" | "no_response" | "wrong_number" | "callback"
+
+const TABS: { key: DocTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: "flow", label: "Telecaller Flow", icon: BookOpen },
+  { key: "drip", label: "Drip Engine", icon: Droplets },
+  { key: "no_response", label: "No Response", icon: PhoneOff },
+  { key: "wrong_number", label: "Wrong Number", icon: PhoneMissed },
+  { key: "callback", label: "Call Back Later", icon: CalendarClock },
 ]
 
 export function DocsView() {
-  const [tab, setTab] = useState<"flow" | "drip">("flow")
+  const [tab, setTab] = useState<DocTab>("flow")
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-8">
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1">
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-3 lg:grid-cols-5">
         {TABS.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -536,7 +720,7 @@ export function DocsView() {
               type="button"
               onClick={() => setTab(t.key)}
               className={cn(
-                "flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition",
+                "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition",
                 active ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -547,7 +731,11 @@ export function DocsView() {
         })}
       </div>
 
-      {tab === "flow" ? <TelecallerFlowGuide /> : <DripEngineGuide />}
+      {tab === "flow" ? <TelecallerFlowGuide />
+        : tab === "drip" ? <DripEngineGuide />
+        : tab === "no_response" ? <NoResponseGuide />
+        : tab === "wrong_number" ? <WrongNumberGuide />
+        : <CallBackGuide />}
     </div>
   )
 }
