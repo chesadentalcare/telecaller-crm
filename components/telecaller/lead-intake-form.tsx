@@ -36,7 +36,7 @@ import {
 // useSapStates() (Ashva uses non-standard codes like Karnataka='KT').
 
 const EQUIPMENT_OPTIONS = [
-  "Dental Chair","X-Ray Unit","Autoclave","Compressor","Handpiece","Scaler",
+  "Dental Chair","Full Chair Setup","X-Ray Unit","Autoclave","Compressor","Handpiece","Scaler",
   "Light Cure","Imaging System","Other",
 ] as const
 
