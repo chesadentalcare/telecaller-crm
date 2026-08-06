@@ -60,8 +60,8 @@ const NI_REASONS = [
 ] as const
 
 const BUYER_SOURCE = [
-  { value: "us", label: "From us", hint: "Existing customer" },
-  { value: "other", label: "Another brand", hint: "Lost" },
+  { value: "us", label: "Bought from us", hint: "Existing customer" },
+  { value: "other", label: "Bought from other", hint: "Lost" },
 ] as const
 
 // Plain-English version of where the lead went (no "drip" / "nurture" jargon).
