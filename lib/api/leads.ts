@@ -74,6 +74,7 @@ export interface QuickFirstResponse {
   outcome: "engaged" | "no_response" | "wrong_number" | "not_interested" | "call_back_requested"
   readyNow?: boolean
   notInterestedReason?: "genuine_no" | "timing_budget" | "already_purchased"
+  boughtFromUs?: boolean
   callbackAt?: string
   notes?: string
   // Predicted close (YYYY-MM-DD) captured on first entry — becomes the SAP opportunity's

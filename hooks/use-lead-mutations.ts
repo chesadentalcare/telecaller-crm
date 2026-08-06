@@ -79,6 +79,7 @@ export function useLogAttempt(id: string | number) {
       predicted_close_source?: "manual" | "auto_track"
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
+      bought_from_us?: boolean
       callback_at?: string
     }) => leadsApi.logAttempt(id, body),
     onSuccess: (res) => {

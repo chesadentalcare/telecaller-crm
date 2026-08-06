@@ -1628,8 +1628,8 @@ export function CallsTab({
                 <Label className="text-xs">Where did they buy? <span className="text-destructive">*</span></Label>
                 <div className="grid gap-2">
                   {[
-                    { value: true, label: "From us (existing customer)" },
-                    { value: false, label: "From another brand" },
+                    { value: true, label: "Bought from us" },
+                    { value: false, label: "Bought from other" },
                   ].map((o) => (
                     <button
                       key={String(o.value)}

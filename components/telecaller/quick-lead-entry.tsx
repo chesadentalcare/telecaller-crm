@@ -55,8 +55,13 @@ const OUTCOMES = [
 
 const NI_REASONS = [
   { value: "timing_budget", label: "Interested later", hint: "Timing / budget" },
-  { value: "already_purchased", label: "Bought elsewhere", hint: "" },
+  { value: "already_purchased", label: "Already purchased", hint: "Already has a chair" },
   { value: "genuine_no", label: "Not interested at all", hint: "" },
+] as const
+
+const BUYER_SOURCE = [
+  { value: "us", label: "Bought from us", hint: "Existing customer" },
+  { value: "other", label: "Bought from other", hint: "Lost" },
 ] as const
 
 // Plain-English version of where the lead went (no "drip" / "nurture" jargon).
@@ -130,6 +135,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   // When "Not yet — follow up" is chosen: Zoom consult (a virtual meeting) vs Add to Drip.
   const [nurtureRoute, setNurtureRoute] = useState<"zoom" | "drip">("drip")
   const [niReason, setNiReason] = useState("")
+  const [boughtFrom, setBoughtFrom] = useState("")
   const [callbackAt, setCallbackAt] = useState("")
   const [predictedClosingDate, setPredictedClosingDate] = useState("")
   const [notes, setNotes] = useState("")
@@ -171,7 +177,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
     setPredictedClosingDate("")
     setNurtureRoute("drip")
     if (v !== "engaged") { setReadyNow(false); setInterestLevel(""); setBudget(""); setTimeline(""); setEquipmentInterest(""); clearQualification() }
-    if (v !== "not_interested") setNiReason("")
+    if (v !== "not_interested") { setNiReason(""); setBoughtFrom("") }
     if (v !== "call_back_requested") setCallbackAt("")
   }
 
@@ -201,6 +207,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
     if (isEngaged && !competitors) return "Pick the competitor (or 'None')"
     if (isEngaged && !purchaseType) return "Pick the purchase type"
     if (outcome === "not_interested" && !niReason) return "Why aren't they interested?"
+    if (outcome === "not_interested" && niReason === "already_purchased" && !boughtFrom) return "Where did they buy — from us or another brand?"
     if (outcome === "call_back_requested" && !callbackAt) return "When should we call back?"
     return null
   }
@@ -233,6 +240,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
     const firstResponse: QuickFirstResponse = { outcome: outcome as QuickFirstResponse["outcome"] }
     if (isEngaged) firstResponse.readyNow = wantsMeeting
     if (outcome === "not_interested") firstResponse.notInterestedReason = niReason as QuickFirstResponse["notInterestedReason"]
+    if (outcome === "not_interested" && niReason === "already_purchased" && boughtFrom) firstResponse.boughtFromUs = boughtFrom === "us"
     if (outcome === "call_back_requested") firstResponse.callbackAt = callbackAt
     if (showClose && effectiveClose) {
       firstResponse.predictedClosingDate = effectiveClose
@@ -530,7 +538,13 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
           {outcome === "not_interested" && (
             <div className="space-y-1.5 rounded-lg border bg-card p-3.5">
               <Label>Why aren't they interested?<Req /></Label>
-              <Pills options={NI_REASONS} value={niReason} onChange={setNiReason} />
+              <Pills options={NI_REASONS} value={niReason} onChange={(v) => { setNiReason(v); setBoughtFrom("") }} />
+              {niReason === "already_purchased" && (
+                <div className="space-y-1.5 pt-1.5">
+                  <Label>Where did they buy?<Req /></Label>
+                  <Pills options={BUYER_SOURCE} value={boughtFrom} onChange={setBoughtFrom} />
+                </div>
+              )}
             </div>
           )}
 
