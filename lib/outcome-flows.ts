@@ -205,11 +205,11 @@ export const OUTCOME_FLOWS: Record<string, OutcomeFlow> = {
     outcome: "not_interested",
     subState: "already_purchased",
     title: "Not interested — already purchased",
-    whatThisDoes: "Parks the lead for 24 months; a scanner re-seeds first contact at term.",
+    whatThisDoes: "Asks where they bought: from us → existing customer on a 24-month retention drip; another brand → closed as Lost.",
     guidedAction: "none",
     mandatoryBeforeCommit: false,
     predictedClose: "hidden",
-    thresholds: ["Re-touch in 24 months", "Stays reactivation-surfaceable; not a hard archive"],
+    thresholds: ["From us → existing_customer + 24-month retention drip", "Another brand → closed_lost (formal Lost in SAP)"],
     nodes: [
       n("s", "fe", "start", "Not interested · already purchased"),
       n("a", "fe", "api", "Log attempt (reason: already_purchased)"),

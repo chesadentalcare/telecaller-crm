@@ -701,6 +701,7 @@ export const leadsApi = {
       // Phase 6 routing inputs (honored when ROUTE_OUTCOMES=true; additive, ignored otherwise)
       ready_now?: boolean
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
+      bought_from_us?: boolean
       callback_at?: string
     },
   ) => unwrap(api.post<Envelope<AttemptResponse>>(endpoints.leadAttempt(String(id)), body)),

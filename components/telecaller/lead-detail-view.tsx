@@ -1283,6 +1283,7 @@ export function CallsTab({
   const [meetingType, setMeetingType] = useState<"physical" | "zoom">("physical") // which meeting the modal books
   const [nurtureQualifyOpen, setNurtureQualifyOpen] = useState(false)  // engaged + not-ready → qualification (Zoom/Drip route)
   const [niReason, setNiReason] = useState<NotInterestedReason | "">("") // not_interested 3-way
+  const [boughtFromUs, setBoughtFromUs] = useState<boolean | null>(null)
   const [callbackAt, setCallbackAt] = useState("")                     // call_back_requested
 
   // ── Outcome-driven layer ──────────────────────────────────────────────────
@@ -1314,7 +1315,7 @@ export function CallsTab({
 
   const resetForm = () => {
     reset({ ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: autoPredictedClose })
-    setReadyNow(false); setNiReason(""); setCallbackAt("")
+    setReadyNow(false); setNiReason(""); setBoughtFromUs(null); setCallbackAt("")
   }
 
   // Provenance of the date the rep is submitting: 'manual' if they changed it from the
@@ -1340,6 +1341,10 @@ export function CallsTab({
   const onSubmit = async (values: CallAttemptValues) => {
     if (values.outcome === "not_interested" && !niReason) {
       toast.error("Pick a reason for ‘Not interested’")
+      return
+    }
+    if (values.outcome === "not_interested" && niReason === "already_purchased" && boughtFromUs === null) {
+      toast.error("Pick where they bought — from us or another brand")
       return
     }
     const submittedFlow = resolveFlow(values.outcome, { readyNow, niReason: niReason || undefined, attemptNumber })
@@ -1386,6 +1391,9 @@ export function CallsTab({
           : {}),
         ...(values.outcome === "engaged" ? { ready_now: readyNow } : {}),
         ...(values.outcome === "not_interested" ? { not_interested_reason: niReason as NotInterestedReason } : {}),
+        ...(values.outcome === "not_interested" && niReason === "already_purchased" && boughtFromUs !== null
+          ? { bought_from_us: boughtFromUs }
+          : {}),
         // datetime-local ("YYYY-MM-DDTHH:mm") → mysql datetime
         ...(values.outcome === "call_back_requested" && callbackAt
           ? { callback_at: callbackAt.replace("T", " ") + ":00" }
@@ -1602,13 +1610,37 @@ export function CallsTab({
                     <button
                       key={r.value}
                       type="button"
-                      onClick={() => setNiReason(r.value)}
+                      onClick={() => { setNiReason(r.value); setBoughtFromUs(null) }}
                       className={cn(
                         "rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors",
                         niReason === r.value ? "border-primary bg-primary/10 text-primary" : "border-input hover:bg-muted",
                       )}
                     >
                       {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {outcome === "not_interested" && niReason === "already_purchased" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Where did they buy? <span className="text-destructive">*</span></Label>
+                <div className="grid gap-2">
+                  {[
+                    { value: true, label: "From us (existing customer)" },
+                    { value: false, label: "From another brand" },
+                  ].map((o) => (
+                    <button
+                      key={String(o.value)}
+                      type="button"
+                      onClick={() => setBoughtFromUs(o.value)}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-left text-xs font-medium transition-colors",
+                        boughtFromUs === o.value ? "border-primary bg-primary/10 text-primary" : "border-input hover:bg-muted",
+                      )}
+                    >
+                      {o.label}
                     </button>
                   ))}
                 </div>
