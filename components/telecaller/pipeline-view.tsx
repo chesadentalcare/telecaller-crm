@@ -66,6 +66,19 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
   const activeFilters = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
+  const repliedCount = leads.filter((l) => !!(l.replied?.hasUnread || l.replied?.awaitingReply)).length
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const newTodayCount = leads.filter((l) => l.createdAt.getTime() >= startOfToday.getTime()).length
+  // Re-engaged today: an older lead (not created today) whose doctor replied today —
+  // i.e. it came back into Active from drip/nurture. Reply exiting the drip is what
+  // pulls these back, so a same-day inbound is the signal.
+  const returnedTodayCount = leads.filter((l) => {
+    if (l.createdAt.getTime() >= startOfToday.getTime()) return false
+    const repliedAt = l.replied?.at ? new Date(l.replied.at).getTime() : NaN
+    return !Number.isNaN(repliedAt) && repliedAt >= startOfToday.getTime()
+  }).length
+  const newTodayTotal = newTodayCount + returnedTodayCount
   const filteredLeads = [...(activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))]
     .filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
     .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
@@ -79,12 +92,14 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     })
 
   const stats = [
-    { label: "Total Pipeline", value: leads.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "New Today", value: leads.filter((l) => l.status === "new").length, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
-    { label: "Qualified", value: leads.filter((l) => l.status === "qualified" || l.status === "meeting-scheduled").length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+    { label: "Total Pipeline", value: leads.length, sub: null as string | null, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: "New Today", value: newTodayTotal, sub: `${newTodayCount} new + ${returnedTodayCount} re-engaged`, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
+    { label: "Qualified", value: leads.filter((l) => l.status === "qualified" || l.status === "meeting-scheduled").length, sub: null as string | null, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+    { label: "WhatsApp Replies", value: repliedCount, sub: null as string | null, icon: MessageSquare, color: "text-chart-1", bg: "bg-chart-1/10" },
     {
       label: "Conversion",
       value: leads.length ? `${Math.round((leads.filter((l) => l.status === "meeting-scheduled").length / leads.length) * 100)}%` : "0%",
+      sub: null as string | null,
       icon: TrendingUp,
       color: "text-chart-2",
       bg: "bg-chart-2/10",
@@ -104,7 +119,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         />
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.label} className="border shadow-sm">
             <CardContent className="p-4">
@@ -115,6 +130,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stat.value}</p>
                   <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+                  {stat.sub && <p className="text-[10px] text-muted-foreground/70">{stat.sub}</p>}
                 </div>
               </div>
             </CardContent>
@@ -126,7 +142,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         <CardHeader className="pb-3 border-b">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base font-semibold">Active Leads</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="h-8 bg-muted/50">
                   <TabsTrigger value="all" className="text-xs px-3 h-6">All ({leads.length})</TabsTrigger>
@@ -138,6 +154,19 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                   )}
                 </TabsList>
               </Tabs>
+              <Button
+                variant={repliedOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRepliedOnly((v) => !v)}
+                className="h-8 gap-1.5"
+                title="Show only leads that replied on WhatsApp"
+              >
+                <MessageSquare className="size-3.5" />
+                Replies
+                {repliedCount > 0 && (
+                  <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{repliedCount}</Badge>
+                )}
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 gap-1.5">
