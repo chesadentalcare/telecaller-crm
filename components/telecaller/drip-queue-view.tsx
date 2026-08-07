@@ -11,6 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { SendCatalogueButton } from "./send-catalogue-button"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -211,6 +212,13 @@ function DripRowActions({ lead }: { lead: DripLead }) {
             <Send className="size-3" />Send Now
           </Button>
         )}
+        <SendCatalogueButton
+          leadId={lead.id}
+          phone={lead.phone}
+          iconOnly
+          variant="outline"
+          className="h-9 w-9 md:h-7 md:w-7 p-0"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0">
