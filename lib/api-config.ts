@@ -122,6 +122,9 @@ export const endpoints = {
   quotationPackages: `/quotation/packages`,      // GET — 4 curated Ashva packages (jwala/ninja/vayu/o2)
   quotationDocument: `/quotation/document`,      // POST ?format=pdf|xlsx — returns the generated FILE (binary)
   quotationSend: `/quotation/send`,              // POST — send the generated quote on WhatsApp (built by another agent)
+  // Catalogue / brochure — manual on-demand send of the approved Ashva catalogue.
+  catalogueInfo: `/catalogue`,                   // GET — hosted catalogue PDF url/name/label (for preview)
+  catalogueSend: (id: string) => `/leads/${id}/send-catalogue`,  // POST — send the approved catalogue on WhatsApp
   leadQuotations: (id: string) => `/leads/${id}/quotations`,
   leadFollowUps: (id: string) => `/leads/${id}/follow-ups`,
   pendingFollowUps: `/follow-ups/pending`,

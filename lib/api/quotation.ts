@@ -97,3 +97,33 @@ export const quotationApi = {
       })
       .then((res) => res.data),
 }
+
+// ─── Catalogue / brochure ────────────────────────────────────────────────
+// The approved Ashva catalogue is a single hosted PDF sent via an approved
+// WhatsApp template (same one the drip uses), so it delivers at any stage.
+
+export interface CatalogueInfo {
+  url: string
+  filename: string
+  label: string
+}
+
+export interface CatalogueSendResult {
+  messageId: string | null
+  dryRun: boolean
+  url: string
+}
+
+export const catalogueApi = {
+  // Hosted PDF metadata — used to render the "Preview PDF" link before sending.
+  info: () =>
+    api
+      .get<Envelope<CatalogueInfo>>(endpoints.catalogueInfo)
+      .then((res) => res.data),
+
+  // Send the approved catalogue to the lead's WhatsApp number.
+  send: (leadId: string | number) =>
+    api
+      .post<Envelope<CatalogueSendResult>>(endpoints.catalogueSend(String(leadId)))
+      .then((res) => res.data),
+}

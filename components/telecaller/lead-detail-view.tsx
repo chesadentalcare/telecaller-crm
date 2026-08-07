@@ -67,6 +67,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { QuotationAshvaBuilder } from "./quotation-ashva-builder"
+import { SendCatalogueButton } from "./send-catalogue-button"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
@@ -2842,6 +2843,26 @@ export function QuotesTab({ lead }: { lead: LeadDetail }) {
           <p className="text-xs text-muted-foreground">
             Build an Ashva quotation — pick a package or add products, then download the
             PDF / Excel or send it on WhatsApp.
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="size-4" />
+              Catalogue / Brochure
+            </CardTitle>
+            <SendCatalogueButton
+              leadId={lead.id}
+              phone={lead.phone !== "—" ? lead.phone : undefined}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">
+            Send the approved Ashva product catalogue to the doctor on WhatsApp — works at
+            any stage, and you can preview the PDF before sending.
           </p>
         </CardContent>
       </Card>

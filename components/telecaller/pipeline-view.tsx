@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
+import { SendCatalogueButton } from "./send-catalogue-button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone, MoreHorizontal, Filter, ArrowUpDown, TrendingUp, Users, CheckCircle2, Clock,
@@ -253,6 +254,13 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                           <SlidersHorizontal className="size-3.5" />Cockpit
                         </Button>
+                        <SendCatalogueButton
+                          leadId={lead.id}
+                          phone={lead.phone}
+                          iconOnly
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                        />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
