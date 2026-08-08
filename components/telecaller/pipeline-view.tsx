@@ -74,45 +74,51 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const leadWithNoResponse = leads.find(
     (lead) => lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
+  const isReplied = (l: PipelineLead) => !!(l.replied?.hasUnread || l.replied?.awaitingReply)
+  const inFocus = (l: PipelineLead) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged")
+  // Stat cards + tab counts follow the engagement focus (All / Engaged / Not-Engaged).
+  const focusLeads = leads.filter(inFocus)
   const activeFilters = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
-  const repliedCount = leads.filter((l) => !!(l.replied?.hasUnread || l.replied?.awaitingReply)).length
+  const repliedTotal = focusLeads.filter(isReplied).length
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
-  const newTodayCount = leads.filter((l) => l.createdAt.getTime() >= startOfToday.getTime()).length
+  const newTodayCount = focusLeads.filter((l) => l.createdAt.getTime() >= startOfToday.getTime()).length
   // Re-engaged today: an older lead (not created today) whose doctor replied today —
   // i.e. it came back into Active from drip/nurture. Reply exiting the drip is what
   // pulls these back, so a same-day inbound is the signal.
-  const returnedTodayCount = leads.filter((l) => {
+  const returnedTodayCount = focusLeads.filter((l) => {
     if (l.createdAt.getTime() >= startOfToday.getTime()) return false
     const repliedAt = l.replied?.at ? new Date(l.replied.at).getTime() : NaN
     return !Number.isNaN(repliedAt) && repliedAt >= startOfToday.getTime()
   }).length
   const newTodayTotal = newTodayCount + returnedTodayCount
-  // Base list = tab + chip filters (Replies / meeting-pending / unverified), WITHOUT the
-  // global engagement focus. The focus is applied separately so we can show exactly how
-  // many leads it hides — otherwise it silently guts the pipeline (the reported bug).
-  const baseLeads = (activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))
-    .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
+  // Tab + engagement focus define the population; the chips (Replies / meeting-pending /
+  // unverified) filter on top. Counting the Replies badge on this scope makes it respect
+  // the engagement focus + tab — the reported bug was it always showed the global total.
+  const tabLeads = activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab)
+  const scopeLeads = tabLeads.filter(inFocus)
+  const focusLabel = mode === "engaged" ? "Engaged" : mode === "not_engaged" ? "Not engaged" : null
+  const focusHidden = tabLeads.length - scopeLeads.length
+  const repliedInScope = scopeLeads.filter(isReplied).length
+  const filteredLeads = scopeLeads
+    .filter((l) => !repliedOnly || isReplied(l))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
-  const afterFocus = baseLeads.filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
-  const focusLabel = mode === "engaged" ? "Engaged" : mode === "not_engaged" ? "Not engaged" : null
-  const focusHidden = baseLeads.length - afterFocus.length
-  const filteredLeads = [...afterFocus].sort((a, b) => {
-    if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
-    if (sortBy === "name") return a.name.localeCompare(b.name)
-    if (sortBy === "status") return a.status.localeCompare(b.status)
-    return b.createdAt.getTime() - a.createdAt.getTime()
-  })
+    .sort((a, b) => {
+      if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "status") return a.status.localeCompare(b.status)
+      return b.createdAt.getTime() - a.createdAt.getTime()
+    })
 
   const stats = [
-    { label: "Total Pipeline", value: leads.length, sub: null as string | null, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    { label: focusLabel ? `Pipeline · ${focusLabel}` : "Total Pipeline", value: focusLeads.length, sub: null as string | null, icon: Users, color: "text-primary", bg: "bg-primary/10" },
     { label: "New Today", value: newTodayTotal, sub: `${newTodayCount} new + ${returnedTodayCount} re-engaged`, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
-    { label: "Qualified", value: leads.filter((l) => l.status === "qualified" || l.status === "meeting-scheduled").length, sub: null as string | null, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
-    { label: "WhatsApp Replies", value: repliedCount, sub: null as string | null, icon: MessageSquare, color: "text-chart-1", bg: "bg-chart-1/10" },
+    { label: "Qualified", value: focusLeads.filter((l) => l.status === "qualified" || l.status === "meeting-scheduled").length, sub: null as string | null, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+    { label: "WhatsApp Replies", value: repliedTotal, sub: null as string | null, icon: MessageSquare, color: "text-chart-1", bg: "bg-chart-1/10" },
     {
       label: "Conversion",
-      value: leads.length ? `${Math.round((leads.filter((l) => l.status === "meeting-scheduled").length / leads.length) * 100)}%` : "0%",
+      value: focusLeads.length ? `${Math.round((focusLeads.filter((l) => l.status === "meeting-scheduled").length / focusLeads.length) * 100)}%` : "0%",
       sub: null as string | null,
       icon: TrendingUp,
       color: "text-chart-2",
@@ -176,7 +182,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
             <div className="flex flex-wrap items-center gap-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="h-8 bg-muted/50">
-                  <TabsTrigger value="all" className="text-xs px-3 h-6">All ({leads.length})</TabsTrigger>
+                  <TabsTrigger value="all" className="text-xs px-3 h-6">All ({focusLeads.length})</TabsTrigger>
                   <TabsTrigger value="new" className="text-xs px-3 h-6">New</TabsTrigger>
                   <TabsTrigger value="contacted" className="text-xs px-3 h-6">Contacted</TabsTrigger>
                   <TabsTrigger value="qualified" className="text-xs px-3 h-6">Qualified</TabsTrigger>
@@ -194,8 +200,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
               >
                 <MessageSquare className="size-3.5" />
                 Replies
-                {repliedCount > 0 && (
-                  <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{repliedCount}</Badge>
+                {repliedInScope > 0 && (
+                  <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{repliedInScope}</Badge>
                 )}
               </Button>
               <DropdownMenu>
@@ -252,7 +258,16 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         </CardHeader>
         <CardContent className="p-0">
           {filteredLeads.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-10">No leads in this view</p>
+            <div className="flex flex-col items-center gap-2 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                {focusLabel ? `No ${focusLabel.toLowerCase()} leads in this view` : "No leads in this view"}
+              </p>
+              {focusLabel && tabLeads.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setMode("all")}>
+                  <Filter className="size-3.5" />Show all leads ({tabLeads.length})
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="divide-y">
               {filteredLeads.map((lead) => {
