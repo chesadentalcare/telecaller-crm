@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
@@ -48,7 +48,7 @@ interface PipelineViewProps {
 
 export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const { data: leads = [], isLoading } = usePipelineLeads()
-  const { mode } = useEngagementMode()
+  const { mode, setMode } = useEngagementMode()
   const [dismissedBanners, setDismissedBanners] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState("all")
   // Inline cockpit (Amendment 2 Theme 1) — expand a lead in place to log/qualify/edit
@@ -59,6 +59,15 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
   const [unverifiedOnly, setUnverifiedOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
+
+  // Guard: the Unqualified tab only renders when such leads exist. If we're on it
+  // and a refresh drops the count to zero, the tab unmounts and activeTab is left
+  // stranded (empty list, no tab selected) — reset to All.
+  useEffect(() => {
+    if (activeTab === "unqualified" && !leads.some((l) => l.status === "unqualified")) {
+      setActiveTab("all")
+    }
+  }, [activeTab, leads])
 
   if (isLoading) return <PipelineViewSkeleton />
 
@@ -79,17 +88,22 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     return !Number.isNaN(repliedAt) && repliedAt >= startOfToday.getTime()
   }).length
   const newTodayTotal = newTodayCount + returnedTodayCount
-  const filteredLeads = [...(activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))]
-    .filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
+  // Base list = tab + chip filters (Replies / meeting-pending / unverified), WITHOUT the
+  // global engagement focus. The focus is applied separately so we can show exactly how
+  // many leads it hides — otherwise it silently guts the pipeline (the reported bug).
+  const baseLeads = (activeTab === "all" ? leads : leads.filter((l) => l.status === activeTab))
     .filter((l) => !repliedOnly || !!(l.replied?.hasUnread || l.replied?.awaitingReply))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
-    .sort((a, b) => {
-      if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
-      if (sortBy === "name") return a.name.localeCompare(b.name)
-      if (sortBy === "status") return a.status.localeCompare(b.status)
-      return b.createdAt.getTime() - a.createdAt.getTime()
-    })
+  const afterFocus = baseLeads.filter((l) => mode === "all" || isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
+  const focusLabel = mode === "engaged" ? "Engaged" : mode === "not_engaged" ? "Not engaged" : null
+  const focusHidden = baseLeads.length - afterFocus.length
+  const filteredLeads = [...afterFocus].sort((a, b) => {
+    if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
+    if (sortBy === "name") return a.name.localeCompare(b.name)
+    if (sortBy === "status") return a.status.localeCompare(b.status)
+    return b.createdAt.getTime() - a.createdAt.getTime()
+  })
 
   const stats = [
     { label: "Total Pipeline", value: leads.length, sub: null as string | null, icon: Users, color: "text-primary", bg: "bg-primary/10" },
@@ -108,6 +122,23 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
 
   return (
     <div className="space-y-4">
+      {focusLabel && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span className="flex items-center gap-1.5">
+            <Filter className="size-3.5 shrink-0" />
+            Focus filter active: <strong className="font-semibold">{focusLabel}</strong>
+            {focusHidden > 0 && <span>— {focusHidden} lead{focusHidden === 1 ? "" : "s"} hidden</span>}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 shrink-0 border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+            onClick={() => setMode("all")}
+          >
+            Show all
+          </Button>
+        </div>
+      )}
       {leadWithNoResponse && leadWithNoResponse.lastAttemptTime && (
         <NoResponseBanner
           leadName={leadWithNoResponse.name}
