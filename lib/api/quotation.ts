@@ -23,6 +23,8 @@ export interface QuotationLine {
   qty: number
   // A rupee amount, or the literal string "Included".
   unitPrice: number | string
+  // Per-line discount as a percentage (0–100). Optional; defaults to 0.
+  discountPct?: number
 }
 
 export interface QuotationPackage {
@@ -40,10 +42,26 @@ export interface QuotationDocumentInput {
   quotationNo: string
   date: string
   packageTitle: string
+  // Flat rupee discount applied to the subtotal (after per-line discounts).
+  overallDiscount?: number
   lines: QuotationLine[]
 }
 
 export type QuotationFormat = "pdf" | "xlsx"
+
+// Result of a send attempt. `needsApproval` = the discount exceeds the limit and a
+// manager approval request was raised (or is still pending); the caller keeps the
+// returned quotationId and re-sends once approved.
+export interface QuotationSendResult {
+  sent: boolean
+  needsApproval?: boolean
+  pending?: boolean
+  quotationId?: number
+  approvalId?: number
+  discountPct?: number
+  thresholdPct?: number
+  message?: string
+}
 
 export const quotationApi = {
   // Curated Ashva packages (jwala / ninja / vayu / o2).
@@ -81,21 +99,43 @@ export const quotationApi = {
     return res.blob()
   },
 
-  // Send the generated quote on WhatsApp. Contract owned by another agent —
-  // we POST the same document body plus the format and (optional) lead id.
-  // TODO: confirm the exact request shape / response once that endpoint lands.
-  send: (
+  // Send the generated quote on WhatsApp. Raw fetch (not lib/api/client) so we can
+  // read the 409 discount-approval payload instead of just throwing. Pass quotationId
+  // on a re-send after approval so the backend lets it through.
+  send: async (
     format: QuotationFormat,
     body: QuotationDocumentInput,
     leadId?: number | string,
-  ) =>
-    api
-      .post<Envelope<unknown>>(endpoints.quotationSend, {
+    quotationId?: number,
+  ): Promise<QuotationSendResult> => {
+    const token = tokenStorage.get()
+    const res = await fetch(apiUrl(endpoints.quotationSend), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
         ...body,
         format,
         ...(leadId != null ? { leadId } : {}),
-      })
-      .then((res) => res.data),
+        ...(quotationId != null ? { quotationId } : {}),
+      }),
+    })
+    const json = (await res.json().catch(() => ({}))) as {
+      code?: string; message?: string; quotationId?: number; approvalId?: number
+      discountPct?: number; thresholdPct?: number
+    }
+    if (res.ok) return { sent: true, message: json.message }
+    if (res.status === 409 && (json.code === "DISCOUNT_APPROVAL_REQUIRED" || json.code === "DISCOUNT_APPROVAL_PENDING")) {
+      return {
+        sent: false, needsApproval: true, pending: json.code === "DISCOUNT_APPROVAL_PENDING",
+        quotationId: json.quotationId, approvalId: json.approvalId,
+        discountPct: json.discountPct, thresholdPct: json.thresholdPct, message: json.message,
+      }
+    }
+    throw new Error(json.message || `Failed to send quotation: ${res.status}`)
+  },
 }
 
 // ─── Catalogue / brochure ────────────────────────────────────────────────
