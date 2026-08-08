@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
-import { useProducts } from "@/hooks/use-products"
+import { useProductCatalogue, type CatalogueProduct } from "@/hooks/use-products"
 import {
   quotationApi,
   type QuotationLine,
@@ -135,15 +135,15 @@ function suggestQuotationNo(): string {
 }
 
 // ── Product search popover ──────────────────────────────────────────
-function ProductPicker({ onPick }: { onPick: (name: string) => void }) {
-  const { data: products, isLoading } = useProducts()
+function ProductPicker({ onPick }: { onPick: (product: CatalogueProduct) => void }) {
+  const { data: products, isLoading } = useProductCatalogue()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
   const filtered = useMemo(() => {
     if (!search) return products
     const q = search.toLowerCase()
-    return products.filter((p) => p.pname.toLowerCase().includes(q))
+    return products.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q))
   }, [products, search])
 
   return (
@@ -154,31 +154,32 @@ function ProductPicker({ onPick }: { onPick: (name: string) => void }) {
           <ChevronDown className="size-3 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent className="w-80 p-0" align="start">
         <div className="flex items-center border-b px-2.5">
           <Search className="size-3.5 shrink-0 text-muted-foreground" />
           <input
             className="flex h-9 w-full bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-            placeholder="Search products by name..."
+            placeholder="Search products by name or code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="max-h-60 overflow-y-auto p-1">
+        <div className="max-h-72 overflow-y-auto p-1">
           {isLoading ? (
             <p className="px-2 py-4 text-center text-xs text-muted-foreground">Loading products...</p>
           ) : filtered.length === 0 ? (
             <p className="px-2 py-4 text-center text-xs text-muted-foreground">No products found</p>
           ) : (
-            filtered.map((p) => (
+            filtered.map((p, i) => (
               <button
-                key={p.id}
+                key={p.code || `${p.id}-${i}`}
                 type="button"
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent"
-                onClick={() => { onPick(p.pname); setOpen(false); setSearch("") }}
+                onClick={() => { onPick(p); setOpen(false); setSearch("") }}
               >
                 <Package className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate">{p.pname}</span>
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">{p.mrp > 0 ? `₹${inr(p.mrp)}` : "—"}</span>
               </button>
             ))
           )}
@@ -253,11 +254,18 @@ export function QuotationAshvaBuilder({
   }
 
   // (b) Add a product row (name only — user fills warranty/qty/price).
-  const handleAddProduct = (name: string) => {
+  const handleAddProduct = (product: CatalogueProduct) => {
     setLines((prev) => {
       // Drop a single leading empty row so the first pick doesn't leave a blank line.
       const base = prev.length === 1 && !prev[0].spec && prev[0].unitPrice === "" ? [] : prev
-      return [...base, { id: nextLineId(), spec: name, warranty: "", qty: 1, unitPrice: "", discountPct: "" }]
+      return [...base, {
+        id: nextLineId(),
+        spec: product.name,
+        warranty: product.warranty || "1 Year",
+        qty: 1,
+        unitPrice: product.mrp > 0 ? product.mrp : "",
+        discountPct: "",
+      }]
     })
   }
 

@@ -44,3 +44,55 @@ export function useProducts(): UseProductsResult {
     },
   }
 }
+
+// Full priced catalogue (/products_all on the shared chesa gateway) — carries the
+// price tiers (mrp/msp/dp/sdp), warranty and description. Used by the quotation
+// builder's "Add product" so a picked product brings its MRP in, unlike /crmpro
+// (id + name only) which the equipment-interest dropdowns use.
+export interface CatalogueProduct {
+  id: number
+  name: string
+  code: string
+  mrp: number
+  msp: number
+  dp: number
+  sdp: number
+  warranty: string
+  description: string
+  category: string
+}
+
+async function fetchProductCatalogue(): Promise<CatalogueProduct[]> {
+  const res = await fetch(sharedApiUrl(endpoints.productsAll), { method: "GET" })
+  if (!res.ok) {
+    throw new Error(`Product catalogue fetch failed: ${res.status} ${res.statusText}`)
+  }
+  const json = (await res.json()) as Array<Record<string, unknown>>
+  if (!Array.isArray(json)) return []
+  return json
+    .map((p) => ({
+      id: Number(p.id) || 0,
+      name: String(p.name ?? ""),
+      code: String(p.code ?? ""),
+      mrp: Number(p.mrp) || 0,
+      msp: Number(p.msp) || 0,
+      dp: Number(p.dp) || 0,
+      sdp: Number(p.sdp) || 0,
+      warranty: String(p.warranty_period ?? ""),
+      description: String(p.description ?? ""),
+      category: String(p.cat_name ?? ""),
+    }))
+    .filter((p) => p.name)
+}
+
+export function useProductCatalogue() {
+  const query = useQuery({
+    queryKey: ["product-catalogue"],
+    queryFn: fetchProductCatalogue,
+  })
+  return {
+    data: query.data ?? [],
+    isLoading: query.isPending,
+    error: query.error ? (query.error as Error).message : null,
+  }
+}
