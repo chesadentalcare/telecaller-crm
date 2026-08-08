@@ -71,7 +71,8 @@ export const SHARED_API_BASE_URL: string =
  */
 export const endpoints = {
   // Reference data
-  products: "/crmpro",                    // GET — list all products
+  products: "/crmpro",                    // GET — list all products (id + name only)
+  productsAll: "/products_all",           // GET — full catalogue with prices (mrp/msp/dp/sdp)
   technicians: "/get_technicians",        // GET — list technicians
   salesEmployees: "/sales_employees",     // GET — list sales employees
 
