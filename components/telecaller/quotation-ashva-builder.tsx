@@ -219,6 +219,9 @@ export function QuotationAshvaBuilder({
   const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
   const [selectedPackage, setSelectedPackage] = useState("")
   const [overallDiscount, setOverallDiscount] = useState("")
+  // Set when a send is blocked pending manager discount approval; holds the persisted
+  // quotation id so a re-send after approval is let through.
+  const [approval, setApproval] = useState<{ quotationId: number; discountPct?: number; thresholdPct?: number } | null>(null)
 
   // Downloading / sending flags (keyed so both buttons can show spinners).
   const [busy, setBusy] = useState<null | "pdf" | "xlsx" | "send">(null)
@@ -310,8 +313,14 @@ export function QuotationAshvaBuilder({
     if (!validate()) return
     setBusy("send")
     try {
-      await quotationApi.send("pdf", buildBody(), leadId)
-      toast.success("Quotation sent on WhatsApp")
+      const r = await quotationApi.send("pdf", buildBody(), leadId, approval?.quotationId)
+      if (r.sent) {
+        toast.success("Quotation sent on WhatsApp")
+        setApproval(null)
+      } else if (r.needsApproval) {
+        setApproval({ quotationId: r.quotationId!, discountPct: r.discountPct, thresholdPct: r.thresholdPct })
+        toast.warning(r.message || `Discount ${r.discountPct}% needs manager approval (limit ${r.thresholdPct}%).`)
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send quotation")
     } finally {
@@ -608,7 +617,14 @@ export function QuotationAshvaBuilder({
         </div>
 
         {/* ── Actions ──────────────────────────────────────────── */}
-        <div className="border-t bg-muted/30 px-5 py-3 flex items-center justify-between gap-2">
+        <div className="border-t bg-muted/30 px-5 py-3 space-y-2">
+          {approval && (
+            <p className="text-[11px] font-medium text-amber-600">
+              Discount {approval.discountPct}% is over the {approval.thresholdPct}% limit — waiting for manager approval.
+              You will be notified; click Send on WhatsApp again once approved.
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="text-[10px]">Grand Total</Badge>
             <span className="font-bold tabular-nums text-foreground">₹{inr(total)}</span>
@@ -638,6 +654,7 @@ export function QuotationAshvaBuilder({
               {busy === "send" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
               Send on WhatsApp
             </Button>
+          </div>
           </div>
         </div>
       </DialogContent>
