@@ -483,6 +483,7 @@ export interface PipelineRow extends ReplyRowFields {
   customer_name: string | null
   phone: string | null
   city: string | null
+  state?: string | null
   created_at: string
   updated_at: string
   failed_attempts: number
@@ -513,6 +514,8 @@ export interface DripQueueRow extends ReplyRowFields {
   equipment: string | null
   customer_name: string | null
   phone: string | null
+  city?: string | null
+  state?: string | null
   // Issue 4 — projected completion + current stage for the queue row.
   projection?: DripProjectionPayload | null
 }
@@ -578,6 +581,8 @@ export interface CallNudgeRow extends ReplyRowFields {
   equipment: string | null
   customer_name?: string | null
   phone: string
+  city?: string | null
+  state?: string | null
   whatsapp_number?: string | null
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null

@@ -134,6 +134,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                     name={lead.name}
                     phone={lead.phone}
                     equipment={lead.equipment}
+                    location={[lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined}
                     replied={lead.replied}
                     onOpen={onOpenLead}
                     badge={

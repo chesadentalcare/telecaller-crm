@@ -46,6 +46,7 @@ export interface PipelineLead extends LeadBase {
   equipment: string
   source: string
   city: string
+  state?: string | null
   status: LeadStatus
   phoneVerified: boolean
   failedAttempts: number
@@ -60,6 +61,8 @@ export interface PipelineLead extends LeadBase {
 
 // Drip campaign queue
 export interface DripLead extends LeadBase {
+  city?: string | null
+  state?: string | null
   track: DripTrack
   nextMessageIn: number   // seconds until next scheduled message
   lastEngagement: Date
@@ -120,6 +123,8 @@ export interface RequalificationLead extends LeadBase {
 
 // P6.8 — Calls-Due worklist (call_nudges)
 export interface CallsDueLead extends LeadBase {
+  city?: string | null
+  state?: string | null
   reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
   scheduledAt: Date
   slot: string | null

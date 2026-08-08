@@ -12,7 +12,7 @@
 // component owns identity + the cross-cutting reply indicator.
 
 import type { ReactNode } from "react"
-import { MessageSquare, AlertTriangle, CalendarClock } from "lucide-react"
+import { MessageSquare, AlertTriangle, CalendarClock, MapPin } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
@@ -29,6 +29,8 @@ export interface LeadQueueRowProps {
   name: string
   phone?: string
   equipment?: string
+  /** City / state shown on the identity line (first-look card), when available. */
+  location?: string
   /** Queue-specific status line (track, attempts, idle days, …). */
   meta?: ReactNode
   /** Right-aligned status badge shown before the actions. */
@@ -49,7 +51,7 @@ export interface LeadQueueRowProps {
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, meta, badge, replied, urgent, flag, actions, onOpen, className,
+  id, name, phone, equipment, location, meta, badge, replied, urgent, flag, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
@@ -103,6 +105,14 @@ export function LeadQueueRow({
               </>
             )}
             <span className="truncate">{equipment || "—"}</span>
+            {location && (
+              <>
+                <span>•</span>
+                <span className="inline-flex items-center gap-0.5 font-medium text-foreground/80">
+                  <MapPin className="size-3" />{location}
+                </span>
+              </>
+            )}
           </div>
           {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
           {replied?.body && (

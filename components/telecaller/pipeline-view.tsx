@@ -302,6 +302,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     name={lead.name}
                     phone={lead.phone}
                     equipment={lead.equipment}
+                    location={[lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined}
                     replied={lead.replied}
                     onOpen={onOpenLead}
                     urgent={lead.lastOutcome === "wrong_number" ? { label: "Wrong number" } : undefined}
