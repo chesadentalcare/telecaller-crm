@@ -23,6 +23,8 @@ export interface QuotationLine {
   qty: number
   // A rupee amount, or the literal string "Included".
   unitPrice: number | string
+  // Per-line discount as a percentage (0–100). Optional; defaults to 0.
+  discountPct?: number
 }
 
 export interface QuotationPackage {
@@ -40,6 +42,8 @@ export interface QuotationDocumentInput {
   quotationNo: string
   date: string
   packageTitle: string
+  // Flat rupee discount applied to the subtotal (after per-line discounts).
+  overallDiscount?: number
   lines: QuotationLine[]
 }
 

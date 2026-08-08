@@ -44,13 +44,24 @@ function lineTotal(unitPrice: number | string, qty: number): number | string {
   return p * (Number(qty) || 0)
 }
 
-// Grand total ignores "Included" lines (they carry no rupee value).
-function grandTotal(lines: EditableLine[]): number {
-  return lines.reduce((sum, l) => {
-    if (isIncluded(l.unitPrice)) return sum
+// Totals: subtotal (gross, ignoring "Included" lines), per-line + overall discounts,
+// and the resulting grand total. Mirrors the backend computeLines so the preview,
+// PDF and Excel all agree.
+function computeTotals(lines: EditableLine[], overallDiscount: number) {
+  let subtotal = 0
+  let lineDiscount = 0
+  for (const l of lines) {
+    if (isIncluded(l.unitPrice)) continue
     const p = Number(l.unitPrice)
-    return sum + (Number.isFinite(p) ? p * (Number(l.qty) || 0) : 0)
-  }, 0)
+    if (!Number.isFinite(p)) continue
+    const gross = p * (Number(l.qty) || 0)
+    subtotal += gross
+    const d = Math.min(Math.max(Number(l.discountPct) || 0, 0), 100)
+    lineDiscount += gross * (d / 100)
+  }
+  const overall = Math.min(Math.max(overallDiscount || 0, 0), Math.max(0, subtotal - lineDiscount))
+  const discountTotal = lineDiscount + overall
+  return { subtotal, discountTotal, grandTotal: Math.max(0, subtotal - discountTotal) }
 }
 
 // ── Amount in words (Indian numbering) — nice-to-have preview aid ────
@@ -96,9 +107,10 @@ interface EditableLine {
   warranty: string
   qty: number
   unitPrice: number | string
+  discountPct: string
 }
 
-const emptyLine = (): EditableLine => ({ id: nextLineId(), spec: "", warranty: "", qty: 1, unitPrice: "" })
+const emptyLine = (): EditableLine => ({ id: nextLineId(), spec: "", warranty: "", qty: 1, unitPrice: "", discountPct: "" })
 
 // Coerce editable lines → the backend line shape (numeric price unless "Included").
 function toApiLines(lines: EditableLine[]): QuotationLine[] {
@@ -107,6 +119,7 @@ function toApiLines(lines: EditableLine[]): QuotationLine[] {
     warranty: l.warranty,
     qty: Number(l.qty) || 0,
     unitPrice: isIncluded(l.unitPrice) ? INCLUDED : Number(l.unitPrice) || 0,
+    discountPct: Math.min(Math.max(Number(l.discountPct) || 0, 0), 100),
   }))
 }
 
@@ -205,6 +218,7 @@ export function QuotationAshvaBuilder({
   // Line items + a selected package.
   const [lines, setLines] = useState<EditableLine[]>([emptyLine()])
   const [selectedPackage, setSelectedPackage] = useState("")
+  const [overallDiscount, setOverallDiscount] = useState("")
 
   // Downloading / sending flags (keyed so both buttons can show spinners).
   const [busy, setBusy] = useState<null | "pdf" | "xlsx" | "send">(null)
@@ -215,7 +229,7 @@ export function QuotationAshvaBuilder({
     enabled: open,
   })
 
-  const total = grandTotal(lines)
+  const { subtotal, discountTotal, grandTotal: total } = computeTotals(lines, Number(overallDiscount) || 0)
 
   // (a) Load a curated package's lines into the editable table.
   const handlePickPackage = (key: string) => {
@@ -230,6 +244,7 @@ export function QuotationAshvaBuilder({
         warranty: l.warranty,
         qty: Number(l.qty) || 1,
         unitPrice: l.unitPrice,
+        discountPct: "",
       })),
     )
   }
@@ -239,7 +254,7 @@ export function QuotationAshvaBuilder({
     setLines((prev) => {
       // Drop a single leading empty row so the first pick doesn't leave a blank line.
       const base = prev.length === 1 && !prev[0].spec && prev[0].unitPrice === "" ? [] : prev
-      return [...base, { id: nextLineId(), spec: name, warranty: "", qty: 1, unitPrice: "" }]
+      return [...base, { id: nextLineId(), spec: name, warranty: "", qty: 1, unitPrice: "", discountPct: "" }]
     })
   }
 
@@ -256,6 +271,7 @@ export function QuotationAshvaBuilder({
     quotationNo,
     date,
     packageTitle,
+    overallDiscount: Number(overallDiscount) || 0,
     lines: toApiLines(lines),
   })
 
@@ -385,6 +401,7 @@ export function QuotationAshvaBuilder({
                       <th className="px-2 py-1.5 text-left w-20">Warranty</th>
                       <th className="px-2 py-1.5 text-center w-12">Qty</th>
                       <th className="px-2 py-1.5 text-right w-24">Unit Price</th>
+                      <th className="px-2 py-1.5 text-center w-16">Disc %</th>
                       <th className="px-2 py-1.5 text-right w-24">Total</th>
                       <th className="px-2 py-1.5 w-8" />
                     </tr>
@@ -428,6 +445,18 @@ export function QuotationAshvaBuilder({
                               placeholder='0 or "Included"'
                             />
                           </td>
+                          <td className="px-1 py-1.5">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={line.discountPct}
+                              onChange={(e) => updateRow(idx, { discountPct: e.target.value })}
+                              className="h-8 text-xs text-center"
+                              placeholder="0"
+                              disabled={isIncluded(line.unitPrice)}
+                            />
+                          </td>
                           <td className="px-2 py-1.5 text-right tabular-nums font-medium">
                             {isIncluded(lt) ? (
                               <span className="text-muted-foreground">Included</span>
@@ -452,11 +481,34 @@ export function QuotationAshvaBuilder({
                 </table>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-sm font-semibold">Grand Total</span>
-                <span className="text-base font-bold tabular-nums">₹{inr(total)}</span>
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-end gap-2">
+                  <Label className="text-[11px] text-muted-foreground">Overall discount (₹)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={overallDiscount}
+                    onChange={(e) => setOverallDiscount(e.target.value)}
+                    className="h-8 w-32 text-xs text-right"
+                    placeholder="0"
+                  />
+                </div>
+                {discountTotal > 0 && (
+                  <>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Subtotal</span><span className="tabular-nums">₹{inr(subtotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-orange-600">
+                      <span>Discount</span><span className="tabular-nums">−₹{inr(discountTotal)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">Grand Total</span>
+                  <span className="text-base font-bold tabular-nums">₹{inr(total)}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground text-right">{amountInWords(total)}</p>
               </div>
-              <p className="text-[11px] text-muted-foreground text-right">{amountInWords(total)}</p>
             </div>
           </div>
 
@@ -519,6 +571,18 @@ export function QuotationAshvaBuilder({
                   )}
                 </tbody>
                 <tfoot>
+                  {discountTotal > 0 && (
+                    <>
+                      <tr>
+                        <td colSpan={5} className="border border-gray-300 px-1.5 py-1 text-right">Subtotal</td>
+                        <td className="border border-gray-300 px-1.5 py-1 text-right">₹{inr(subtotal)}</td>
+                      </tr>
+                      <tr className="text-orange-700">
+                        <td colSpan={5} className="border border-gray-300 px-1.5 py-1 text-right">Discount</td>
+                        <td className="border border-gray-300 px-1.5 py-1 text-right">−₹{inr(discountTotal)}</td>
+                      </tr>
+                    </>
+                  )}
                   <tr className="font-bold bg-gray-50">
                     <td colSpan={5} className="border border-gray-300 px-1.5 py-1 text-right">TOTAL</td>
                     <td className="border border-gray-300 px-1.5 py-1 text-right">₹{inr(total)}</td>
