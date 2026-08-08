@@ -111,6 +111,15 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
       return b.createdAt.getTime() - a.createdAt.getTime()
     })
 
+  const anyFilterActive = activeTab !== "all" || repliedOnly || meetingPendingOnly || unverifiedOnly || mode !== "all"
+  const clearAllFilters = () => {
+    setActiveTab("all")
+    setRepliedOnly(false)
+    setMeetingPendingOnly(false)
+    setUnverifiedOnly(false)
+    setMode("all")
+  }
+
   const stats = [
     { label: focusLabel ? `Pipeline · ${focusLabel}` : "Total Pipeline", value: focusLeads.length, sub: null as string | null, icon: Users, color: "text-primary", bg: "bg-primary/10" },
     { label: "New Today", value: newTodayTotal, sub: `${newTodayCount} new + ${returnedTodayCount} re-engaged`, icon: Clock, color: "text-chart-3", bg: "bg-chart-3/10" },
@@ -260,11 +269,11 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
           {filteredLeads.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <p className="text-sm text-muted-foreground">
-                {focusLabel ? `No ${focusLabel.toLowerCase()} leads in this view` : "No leads in this view"}
+                {anyFilterActive ? "No leads match the current filters" : "No leads in this view"}
               </p>
-              {focusLabel && tabLeads.length > 0 && (
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setMode("all")}>
-                  <Filter className="size-3.5" />Show all leads ({tabLeads.length})
+              {anyFilterActive && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={clearAllFilters}>
+                  <Filter className="size-3.5" />Clear all filters
                 </Button>
               )}
             </div>
