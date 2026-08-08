@@ -128,6 +128,7 @@ import { useRole } from "@/hooks/use-role"
 import { useProducts } from "@/hooks/use-products"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
 import type { DripProjection } from "@/lib/types/lead"
+import { LeadJourney } from "@/components/telecaller/lead-journey"
 
 // Some backend errors (e.g. the SAP CheckSession 500) return a body with no
 // `message` key, so ApiError.message falls back to the bare statusText
@@ -613,8 +614,9 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
           wrapping to an uneven grid. Snap to grid on sm+. The "Replies" tab is always
           present (mandatory two-way WhatsApp thread); it badges the inbound count. */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-7 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="overview"      className="shrink-0 text-xs sm:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="journey"       className="shrink-0 text-xs sm:text-sm">Journey</TabsTrigger>
           <TabsTrigger value="calls"         className="shrink-0 text-xs sm:text-sm">Call Log</TabsTrigger>
           <TabsTrigger value="drip"          className="shrink-0 text-xs sm:text-sm">Drip</TabsTrigger>
           <TabsTrigger value="meetings"      className="shrink-0 text-xs sm:text-sm">Meetings</TabsTrigger>
@@ -629,6 +631,10 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
 
         <TabsContent value="overview" className="mt-4">
           <OverviewTab lead={lead} />
+        </TabsContent>
+
+        <TabsContent value="journey" className="mt-4">
+          <LeadJourney detail={detail} />
         </TabsContent>
 
         <TabsContent value="calls" className="mt-4">
