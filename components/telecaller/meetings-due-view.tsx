@@ -1,12 +1,20 @@
 "use client"
 
-import { CalendarClock, Video, MapPin, PhoneCall, AlertCircle, CheckCircle2 } from "lucide-react"
+// Meetings page — a two-state segmented view that mirrors Calls Due exactly:
+//   • Today     — today's meetings + a "Past Meetings Due" catch-up section for
+//                 past meetings that still have no summary uploaded (not attempted /
+//                 not written up). A passed meeting shows pastel-red.
+//   • Calendar  — a big month calendar of every meeting (past / today / upcoming);
+//                 click a day for its schedule (MeetingsCalendar).
+
+import { CalendarClock, Video, MapPin, PhoneCall, AlertCircle, CheckCircle2, History, CalendarDays } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
+import { MeetingsCalendar } from "./meetings-calendar"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
 import type { MeetingsDueLead } from "@/lib/types/lead"
 
@@ -18,16 +26,33 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const { data: meetings = [], isLoading } = useMeetingsDueLeads()
   if (isLoading) return <ViewSkeleton />
 
+  // Split by the meeting's DAY (the server returns today + upcoming + past meetings
+  // that still lack a summary):
+  //   • today   — scheduled for today; a passed time shows pastel-red.
+  //   • pastDue — an earlier day with no summary yet → its own "Past Meetings Due"
+  //               catch-up section (parallel to Past Calls Due).
   const now = new Date()
+  const startOfToday = new Date(now)
+  startOfToday.setHours(0, 0, 0, 0)
   const endOfToday = new Date(now)
   endOfToday.setHours(23, 59, 59, 999)
-  const today = meetings.filter((m) => m.meetingAt.getTime() <= endOfToday.getTime())
-  const upcoming = meetings.filter((m) => m.meetingAt.getTime() > endOfToday.getTime())
+  const today = meetings.filter(
+    (m) => m.meetingAt.getTime() >= startOfToday.getTime() && m.meetingAt.getTime() <= endOfToday.getTime(),
+  )
+  const pastDue = meetings.filter((m) => m.meetingAt.getTime() < startOfToday.getTime() && !m.summaryUploaded)
 
-  const renderRow = (m: MeetingsDueLead) => {
+  // Shared row renderer. `tone` drives the pastel-red highlight, matching Calls Due:
+  //   'overdue' — due today but the time has passed.
+  //   'past'    — an earlier day, still no summary (a deeper rose).
+  const renderRow = (m: MeetingsDueLead, tone: "due" | "overdue" | "past") => {
     const tel = m.phone.replace(/\D/g, "")
     const isZoom = m.meetingType === "zoom"
-    const overdue = m.meetingAt.getTime() < now.getTime()
+    const rowClass =
+      tone === "past"
+        ? "bg-rose-100/60 hover:bg-rose-100"
+        : tone === "overdue"
+          ? "bg-rose-50 hover:bg-rose-100/70"
+          : undefined
     return (
       <LeadQueueRow
         key={m.meetingId}
@@ -36,7 +61,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
         phone={m.phone}
         equipment={m.equipment}
         onOpen={() => onOpenLead(m.id)}
-        className={overdue && !m.summaryUploaded ? "bg-rose-50 hover:bg-rose-100/70" : undefined}
+        className={rowClass}
         meta={
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1 font-medium text-foreground">
@@ -47,8 +72,10 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             {m.assignedSalesperson && <span>· with {m.assignedSalesperson}</span>}
             {m.summaryUploaded ? (
               <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="size-3" />Summary in</span>
-            ) : overdue ? (
+            ) : tone === "overdue" ? (
               <span className="inline-flex items-center gap-1 font-medium text-rose-600"><AlertCircle className="size-3" />Meeting time passed</span>
+            ) : tone === "past" ? (
+              <span className="inline-flex items-center gap-1 font-medium text-rose-700"><AlertCircle className="size-3" />Missed — no summary yet</span>
             ) : null}
           </span>
         }
@@ -76,14 +103,15 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{today.length}</Badge>
           )}
         </TabsTrigger>
-        <TabsTrigger value="upcoming" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
-          <CalendarClock className="size-3.5" />Upcoming
-          {upcoming.length > 0 && (
-            <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px]">{upcoming.length}</Badge>
+        <TabsTrigger value="calendar" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+          <CalendarDays className="size-3.5" />Calendar
+          {pastDue.length > 0 && (
+            <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 px-1 text-[10px] border-rose-300 text-rose-700">{pastDue.length}</Badge>
           )}
         </TabsTrigger>
       </TabsList>
 
+      {/* ── Meetings Today ──────────────────────────────────────────────────── */}
       <TabsContent value="today" className="mt-0 space-y-4">
         <Card>
           <CardHeader className="pb-3">
@@ -96,28 +124,40 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             {today.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-10">No meetings due today</p>
             ) : (
-              <div className="divide-y">{today.map(renderRow)}</div>
+              <div className="divide-y">
+                {today.map((m) => renderRow(m, m.meetingAt.getTime() < now.getTime() ? "overdue" : "due"))}
+              </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Past Meetings Due — an earlier day, still no summary. Kept separate from
+            Today so a stale meeting can't masquerade as a today task. */}
+        {pastDue.length > 0 && (
+          <Card className="border-rose-200">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <History className="size-4 text-rose-600" />Past Meetings Due
+                  </CardTitle>
+                  <CardDescription>Meetings from an earlier day that still have no summary — write these up to close them off.</CardDescription>
+                </div>
+                <Badge variant="outline" className="border-rose-300 text-rose-700 text-[10px]">{pastDue.length} pending</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {pastDue.map((m) => renderRow(m, "past"))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
 
-      <TabsContent value="upcoming" className="mt-0">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarClock className="size-4 text-primary" />Upcoming meetings
-            </CardTitle>
-            <CardDescription>Every future-dated meeting, earliest first.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">No upcoming meetings</p>
-            ) : (
-              <div className="divide-y">{upcoming.map(renderRow)}</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* ── Calendar ────────────────────────────────────────────────────────── */}
+      <TabsContent value="calendar" className="mt-0">
+        <MeetingsCalendar onOpenLead={onOpenLead} />
       </TabsContent>
     </Tabs>
   )
