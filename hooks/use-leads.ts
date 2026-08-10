@@ -7,6 +7,7 @@ import {
   fetchNoResponseLeads,
   fetchIdleLeads,
   fetchDormantLeads,
+  fetchLostLeads,
   fetchReactivationLeads,
   fetchSixMonthLeads,
   fetchRequalificationLeads,
@@ -28,6 +29,7 @@ export const leadKeys = {
   noResponse: () => [...leadKeys.all, "no-response"] as const,
   idle: () => [...leadKeys.all, "idle"] as const,
   dormant: () => [...leadKeys.all, "dormant"] as const,
+  lost: () => [...leadKeys.all, "lost"] as const,
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   requalification: () => [...leadKeys.all, "requalification"] as const,
@@ -69,6 +71,9 @@ export function useIdleLeads() {
 }
 export function useDormantLeads() {
   return useQuery({ queryKey: leadKeys.dormant(),     queryFn: fetchDormantLeads })
+}
+export function useLostLeads() {
+  return useQuery({ queryKey: leadKeys.lost(),        queryFn: fetchLostLeads })
 }
 export function useReactivationLeads() {
   return useQuery({ queryKey: leadKeys.reactivation(), queryFn: fetchReactivationLeads })

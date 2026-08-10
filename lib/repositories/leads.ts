@@ -14,6 +14,7 @@ import type {
   NoResponseLead,
   IdleLead,
   DormantLead,
+  LostLead,
   ReactivationLead,
   SixMonthLead,
   RequalificationLead,
@@ -33,6 +34,7 @@ import type {
   NoResponseRow,
   IdleRow,
   DormantRow,
+  LostRow,
   ReactivationRow,
   SixMonthRow,
   RequalificationRow,
@@ -159,6 +161,17 @@ const toDormant = (r: DormantRow): DormantLead => ({
   reason: r.reason ?? "no response",
   replied: toReplied(r),
 })
+const toLost = (r: LostRow): LostLead => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
+  reason: r.reason ?? "—",
+  lostReason: r.lost_reason ?? null,
+  lostDaysAgo: r.lost_days,
+  replied: toReplied(r),
+})
+
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
   id: String(r.id),
   name: r.customer_name || placeholderName(r.id),
@@ -292,6 +305,11 @@ export const fetchDormantLeads = async (): Promise<DormantLead[]> => {
   return rows.map(toDormant)
 }
 
+export const fetchLostLeads = async (): Promise<LostLead[]> => {
+  const rows = await leadsApi.queues.lost()
+  return rows.map(toLost)
+}
+
 export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {
   const rows = await leadsApi.queues.reactivation()
   return rows.map(toReactivation)
@@ -337,6 +355,7 @@ export const fetchQueueCounts = async (): Promise<QueueCounts> => {
     sixMonth: c.sixMonth,
     archived: c.archived,
     requalification: c.requalification,
+    lost: c.lost,
     callsDue: c.callsDue,
     callsDueAwaitingReply: c.callsDueAwaitingReply ?? 0,
     pipelineAwaitingReply: c.pipelineAwaitingReply ?? 0,

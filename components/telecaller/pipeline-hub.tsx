@@ -12,7 +12,7 @@ import { useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw,
+  Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -30,10 +30,11 @@ const SixMonthFunnelView = dynamic(() => import("./six-month-funnel-view").then(
 const RequalificationView = dynamic(() => import("./requalification-view").then((m) => ({ default: m.RequalificationView })), { loading: () => <ViewSkeleton /> })
 const ReactivationView = dynamic(() => import("./reactivation-view").then((m) => ({ default: m.ReactivationView })), { loading: () => <ViewSkeleton /> })
 const ArchivedView = dynamic(() => import("./archived-view").then((m) => ({ default: m.ArchivedView })), { loading: () => <ViewSkeleton /> })
+const LostView = dynamic(() => import("./lost-view").then((m) => ({ default: m.LostView })), { loading: () => <ViewSkeleton /> })
 
 type SegmentId =
   | "active" | "drip" | "no-response" | "idle"
-  | "six-month" | "requalification" | "reactivation" | "archived"
+  | "six-month" | "requalification" | "reactivation" | "archived" | "lost"
 
 interface Segment {
   id: SegmentId
@@ -52,6 +53,7 @@ const SEGMENTS: Segment[] = [
   { id: "requalification", label: "Re-qualify", icon: RefreshCw,    countKey: "requalification", render: (open) => <RequalificationView onOpenLead={open} /> },
   { id: "reactivation",   label: "Reactivation", icon: RotateCcw,   countKey: "reactivation",    render: (open) => <ReactivationView onOpenLead={open} /> },
   { id: "archived",       label: "Archived",    icon: Archive,      countKey: "archived",        render: (open) => <ArchivedView onOpenLead={open} /> },
+  { id: "lost",           label: "Lost",        icon: XCircle,      countKey: "lost",            render: (open) => <LostView onOpenLead={open} /> },
 ]
 
 interface PipelineHubProps {
