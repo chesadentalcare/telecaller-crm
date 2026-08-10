@@ -355,9 +355,9 @@ export function QuotationAshvaBuilder({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto grid lg:grid-cols-2 gap-0 divide-x">
+        <div className="flex-1 min-h-0 overflow-y-auto grid sm:grid-cols-2 gap-0 divide-x">
           {/* ── Editor ───────────────────────────────────────────── */}
-          <div className="p-5 space-y-4">
+          <div className="min-w-0 p-5 space-y-4">
             {/* Customer fields */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
@@ -530,7 +530,7 @@ export function QuotationAshvaBuilder({
           </div>
 
           {/* ── Live preview ─────────────────────────────────────── */}
-          <div className="p-5 bg-muted/20">
+          <div className="min-w-0 p-5 bg-muted/20">
             <div className="mx-auto max-w-3xl rounded-lg border bg-white text-black shadow-sm p-6 text-xs leading-relaxed">
               <div className="text-center border-b pb-3 mb-3">
                 <h2 className="text-base font-bold tracking-wide">ASHVA HEALTH TECH LIMITED</h2>
