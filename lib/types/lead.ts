@@ -96,6 +96,14 @@ export interface DormantLead extends LeadBase {
   equipment: string
 }
 
+// Closed-lost end state — the lead told us they already purchased / bought elsewhere.
+export interface LostLead extends LeadBase {
+  equipment: string
+  reason: string
+  lostReason?: string | null
+  lostDaysAgo?: number
+}
+
 // Gap #8 — sales handed this lead back to telecaller
 export interface ReactivationLead extends LeadBase {
   handedBackAt: string
@@ -192,6 +200,7 @@ export interface QueueCounts {
   // P7.6 — badge counts for the four Phase-6 views
   archived: number
   requalification: number
+  lost: number
   callsDue: number
   // WhatsApp awaiting-reply badges (replace the raw queue-size counts on the nav).
   callsDueAwaitingReply: number
