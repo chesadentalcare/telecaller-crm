@@ -454,6 +454,7 @@ export interface LeadDetail {
     id: number
     template_name: string
     message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting"
+    sent_by?: string | null
     sent_at: string
     delivered_at?: string | null
     read_at?: string | null
