@@ -345,7 +345,7 @@ export function QuotationAshvaBuilder({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] 2xl:max-w-[1600px] max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[95vw] sm:max-w-[95vw] 2xl:max-w-[1600px] max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
         <div className="px-5 pt-5 pb-3 border-b">
           <DialogHeader>
             <DialogTitle className="text-base">Ashva Quotation Builder</DialogTitle>
@@ -355,7 +355,7 @@ export function QuotationAshvaBuilder({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto grid sm:grid-cols-2 gap-0 divide-x">
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))]">
           {/* ── Editor ───────────────────────────────────────────── */}
           <div className="min-w-0 p-5 space-y-4">
             {/* Customer fields */}
@@ -409,8 +409,8 @@ export function QuotationAshvaBuilder({
                 </div>
               </div>
 
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full text-xs">
+              <div className="rounded-lg border overflow-x-auto">
+                <table className="w-full min-w-[34rem] text-xs">
                   <thead>
                     <tr className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
                       <th className="px-2 py-1.5 text-left w-8">#</th>
@@ -531,7 +531,7 @@ export function QuotationAshvaBuilder({
 
           {/* ── Live preview ─────────────────────────────────────── */}
           <div className="min-w-0 p-5 bg-muted/20">
-            <div className="mx-auto max-w-3xl rounded-lg border bg-white text-black shadow-sm p-6 text-xs leading-relaxed">
+            <div className="w-full rounded-lg border bg-white text-black shadow-sm p-6 text-xs leading-relaxed">
               <div className="text-center border-b pb-3 mb-3">
                 <h2 className="text-base font-bold tracking-wide">ASHVA HEALTH TECH LIMITED</h2>
                 <p className="text-[10px] text-gray-600">Quotation</p>
