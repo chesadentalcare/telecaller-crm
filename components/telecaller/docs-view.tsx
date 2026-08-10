@@ -215,16 +215,16 @@ follow-up       check-ins          (no follow-up)`}</Chart>
 
       <Section n="6" title="The follow-up plan (automatic reminders)" icon={Repeat}>
         <p>A follow-up plan means the system <b>automatically sends WhatsApp / call reminders</b> on a schedule, so no lead
-          is forgotten. If the doctor <b>replies</b>, the lead <b>comes back to you</b> to re-engage. If the plan finishes
-          with no reply, the lead is <b>parked</b> (and can re-open later). The exact schedule lives in the <b>Drip Engine</b> tab.</p>
+          is forgotten. Every reply the doctor sends is <b>captured and pinged to you</b> so you can jump in — but the plan
+          <b> keeps running</b>; a reply no longer stops it (not even an automated &ldquo;thanks for contacting us&rdquo;). The
+          plan stops only when the deal is <b>won / lost</b>, the doctor sends <b>STOP</b>, or the schedule <b>finishes</b>.
+          The exact schedule lives in the <b>Drip Engine</b> tab.</p>
         <Chart>{`Interested-but-later ──► Follow-up plan ──► reminders go out on schedule
-                                 │
+                                 │                    (keeps running)
                      ┌───────────┴───────────┐
                      ▼                       ▼
-              Doctor REPLIES           Plan finishes, no reply
-                     │                       │
-                     ▼                       ▼
-              Back to YOU               Parked (can re-open)`}</Chart>
+          Doctor replies → you're pinged    Ends only on:
+          (plan KEEPS running)              won / lost / STOP / finished`}</Chart>
       </Section>
 
       <Section n="7" title="Call back / No response / Wrong number" icon={PhoneOff}>
@@ -507,26 +507,21 @@ Day 715  ☎  24-month replacement re-open call
       </Section>
 
       <Section n="7" title="How a lead leaves a drip" icon={LogOut}>
-        <Chart>{`A lead comes OFF a drip when ANY of these happen:
+        <Chart>{`A drip stops ONLY when one of these happens:
 
-  Doctor REPLIES on WhatsApp      ──►  pulled out, comes back to YOU (re-qualify)
-  You log a NEW call outcome      ──►  old drip cancelled, lead re-routed
+  Lead is won / lost / closed     ──►  removed from the drip
   Doctor sends STOP / opts out    ──►  removed from all messaging
-  Lead is won / lost / closed     ──►  removed
-  Track FINISHES with no reply    ──►  parked as dormant (Long-cycle)
+  Track FINISHES                  ──►  parked as dormant (Long-cycle)
                                         …EXCEPT 24-Month, which loops back
-                                        to a fresh start for the re-buy`}</Chart>
-        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ For an ordinary follow-up plan the golden rule holds: the second a doctor <b>replies</b>, the robot steps aside and the lead is back in your hands.</p>
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-          <div className="text-sm font-semibold text-foreground">🆕 Exception — a meeting was booked (physical or Zoom)</div>
-          <p className="mt-1">When an <b>Interested → ready now</b> lead has a meeting set up, its drip is <b>special</b>: it <b>keeps sending WhatsApp nurture even after the doctor replies</b>, so sales can keep the deal warm while it&rsquo;s in progress. It <b>only</b> stops on:</p>
-          <Chart>{`  Sale marked WON or LOST       ──►  drip stops
-  Doctor sends STOP / opts out  ──►  drip stops
-  Nurture track FINISHES        ──►  drip stops
+                                        to a fresh start for the re-buy
+  You log a NEW call outcome      ──►  old drip cancelled, lead re-routed
 
-  A reply does NOT stop it — the doctor keeps getting messages,
-  and every reply still shows up for you / sales to act on.`}</Chart>
-          <p className="mt-1"><b>The sequence it follows:</b> the lead runs its <b>buy-timeline track</b> (1-Month / 3-Month / 6-Month+ — the exact schedules shown above), but it <b>starts straight into WhatsApp</b> — the opening &ldquo;call the doctor&rdquo; reminder is skipped, since the lead is already with sales.</p>
+  A doctor's REPLY does NOT stop the drip — it keeps running.
+  (Even an automated "thanks for contacting us" won't stop it.)`}</Chart>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ <b>A reply never stops a drip.</b> Whatever the doctor sends — even an automated &ldquo;thank you for contacting the clinic&rdquo; — the plan <b>keeps running</b>; the reply is still captured and pinged to you to act on. A drip stops <b>only</b> on <b>won / lost</b>, <b>STOP</b>, or the <b>schedule finishing</b>.</p>
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="text-sm font-semibold text-foreground">A meeting was booked (physical or Zoom)?</div>
+          <p className="mt-1">The doctor still runs their <b>buy-timeline track</b> (1-Month / 3-Month / 6-Month+ — the exact schedules shown above) so sales can keep the deal warm — and it <b>starts straight into WhatsApp</b> (the opening &ldquo;call the doctor&rdquo; reminder is skipped, since the lead is already with sales).</p>
         </div>
       </Section>
     </div>
