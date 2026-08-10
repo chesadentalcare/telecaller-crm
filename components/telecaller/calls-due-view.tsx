@@ -20,6 +20,7 @@ import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { UpcomingCallsCalendar } from "./upcoming-calls-calendar"
 import { useCallsDueLeads, useUpcomingCalls } from "@/hooks/use-leads"
 import { REASON_LABEL, lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
+import { repColor } from "@/lib/rep-color"
 import { useEngagementMode, isEngagedReason } from "@/lib/engagement-mode"
 import type { CallsDueLead } from "@/lib/types/lead"
 
@@ -90,10 +91,12 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               >
                 {lastOutcomeLabel(lead.lastOutcome)}
               </span>
-              {/* Accountability: who logged that last outcome and when. */}
               {lead.lastOutcome && lead.lastOutcomeBy && (
                 <span className="text-[10px] text-muted-foreground">
-                  by {lead.lastOutcomeBy}
+                  by{" "}
+                  <span className="font-bold" style={{ color: repColor(lead.lastOutcomeBy) }}>
+                    {lead.lastOutcomeBy}
+                  </span>
                   {lead.lastOutcomeAt
                     ? ` · ${new Date(lead.lastOutcomeAt).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
                     : ""}

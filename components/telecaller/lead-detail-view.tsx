@@ -72,6 +72,7 @@ import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { repColor } from "@/lib/rep-color"
 import { NOT_INTERESTED_REASONS, type NotInterestedReason } from "@/lib/schemas/not-interested"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -342,7 +343,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       text: p?.message?.body ?? (w.message_type === "manual" || w.message_type === "meeting" ? (p?.text ?? null) : null),
       message: p?.message ?? null,
       templateName: w.template_name,
-      sentBy: p?.sentBy ?? null,
+      sentBy: w.sent_by ?? p?.sentBy ?? null,
       sentAt: new Date(w.sent_at),
       deliveredAt: w.delivered_at ? new Date(w.delivered_at) : undefined,
       readAt: w.read_at ? new Date(w.read_at) : undefined,
@@ -2374,7 +2375,7 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
         )}
       </div>
       <div className="flex items-center gap-1.5 pr-1 text-[10px] text-muted-foreground">
-        {m.sentBy && <span>{m.sentBy} ·</span>}
+        {m.sentBy && <span><span className="font-semibold" style={{ color: repColor(m.sentBy) }}>{m.sentBy}</span> ·</span>}
         <span>{m.sentAt.toLocaleString()}</span>
         <span className={cn("inline-flex items-center gap-0.5", m.readAt ? "text-sky-500" : "")}>
           <ReceiptIcon className="size-3" />{receipt}
