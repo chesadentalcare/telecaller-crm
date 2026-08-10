@@ -105,6 +105,8 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   value: r.budget_range || undefined,
   replied: toReplied(r),
   lastOutcome: r.last_outcome ?? null,
+  lastOutcomeAt: r.last_outcome_at ?? null,
+  lastOutcomeBy: r.last_outcome_by ?? null,
   meetingPending: !!r.meeting_pending,
 })
 

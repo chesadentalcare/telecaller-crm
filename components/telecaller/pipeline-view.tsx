@@ -20,6 +20,8 @@ import {
 import { NoResponseBanner } from "./no-response-banner"
 import { usePipelineLeads } from "@/hooks/use-leads"
 import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
+import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
+import { repColor } from "@/lib/rep-color"
 import type { PipelineLead } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
@@ -318,6 +320,20 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                           <span className="inline-flex items-center gap-0.5 text-success"><ShieldCheck className="size-3" />verified</span>
                         ) : (
                           <span className="inline-flex items-center gap-0.5 text-destructive"><ShieldAlert className="size-3" />unverified</span>
+                        )}
+                        {lead.lastOutcome && lead.lastOutcomeBy && (
+                          <>
+                            <span>•</span>
+                            <span>
+                              {lastOutcomeLabel(lead.lastOutcome)} by{" "}
+                              <span className="font-bold" style={{ color: repColor(lead.lastOutcomeBy) }}>
+                                {lead.lastOutcomeBy}
+                              </span>
+                              {lead.lastOutcomeAt
+                                ? ` · ${new Date(lead.lastOutcomeAt).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                                : ""}
+                            </span>
+                          </>
                         )}
                       </span>
                     }
