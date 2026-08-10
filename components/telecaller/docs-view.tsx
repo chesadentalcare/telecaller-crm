@@ -191,6 +191,24 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
         <p><b>Ready now</b> → a <b>meeting</b> is set up and the lead is <b>handed to Sales</b> (you can still see it under
           Pipeline → &ldquo;Sent to Sales&rdquo;).</p>
         <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">🆕 <b>The doctor also STAYS in the WhatsApp drip.</b> Booking a physical or Zoom meeting <b>no longer stops</b> the follow-up — the system keeps sending nurture messages on the doctor&rsquo;s buy-timeline track <b>while the meeting/sale is in progress</b>, so a doctor never goes silent if the order doesn&rsquo;t close right away. It keeps running <b>even if the doctor replies</b>, and stops only when the sale is <b>won / lost</b>, they send <b>STOP</b>, or the track finishes. Full details in <b>Drip Engine → &ldquo;How a lead leaves a drip&rdquo;</b>.</p>
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-foreground/80">
+          <b>🆕 If sales doesn&rsquo;t follow up — automatic reminders to the salesperson.</b> Once a lead is <b>handed to a
+          salesperson</b> (or a <b>physical meeting</b> is booked), the system watches it. If the rep doesn&rsquo;t update the
+          lead, it <b>WhatsApps the salesperson a reminder</b> on this schedule:
+          <Chart>{`Handover / meeting booked
+        │
+        ▼  (a few hours later, no update)
+   1st WhatsApp reminder to the salesperson
+        │
+        ▼  (still no update)
+   Another reminder every day…
+        │
+        ▼  after 3 ignored reminders
+   MANAGER also gets pinged to step in
+        │
+        ▼  the moment the rep updates it (quote / won / lost / handed back)
+   Reminders STOP automatically`}</Chart>
+        </div>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
           which <b>drip track</b> the lead goes on (see the Drip Engine tab). <b>Always set it</b> for an interested-but-later lead.</p>
       </Section>
