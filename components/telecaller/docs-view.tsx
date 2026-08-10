@@ -46,7 +46,7 @@ const OUTCOMES = [
 ]
 
 const CHEATS = [
-  ["Wants to buy now", "Interested → Yes, ready now", "Books a meeting → Sales"],
+  ["Wants to buy now", "Interested → Yes, ready now", "Books meeting → Sales + keeps WhatsApp drip running"],
   ["Wants it later", "Interested → Not yet", "Follow-up plan on their buy-timeline"],
   ["“Call me later”", "Call back later (+ time)", "Schedules the callback"],
   ["Not now — money/timing", "Not interested → Interested later", "6-month follow-up"],
@@ -87,6 +87,7 @@ const ENTRY_MAP = [
   ["Interested — buying within a month", "1-Month track"],
   ["Interested — 1 to 3 months", "3-Month track"],
   ["Interested — 6+ months away", "6-Month+ track"],
+  ["Interested — ready now, meeting booked (physical or Zoom)", "Their buy-timeline track — and it keeps running through the meeting"],
   ["Not interested — timing / budget (wants it, not now)", "6-Month+ track (nurture)"],
   ["Not interested — already bought elsewhere", "24-Month track (post-purchase)"],
   ["Callback chased but never answered", "Their timeline track (or 6-Month+ if unknown)"],
@@ -183,9 +184,13 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
    (Zoom / in-person)   (based on WHEN they plan to buy)
         │                     │
         ▼                     ▼
-   Handed to SALES      System sends reminders automatically`}</Chart>
+   Handed to SALES      System sends reminders automatically
+   AND stays in drip
+   (WhatsApp nurture
+    keeps running)`}</Chart>
         <p><b>Ready now</b> → a <b>meeting</b> is set up and the lead is <b>handed to Sales</b> (you can still see it under
           Pipeline → &ldquo;Sent to Sales&rdquo;).</p>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">🆕 <b>The doctor also STAYS in the WhatsApp drip.</b> Booking a physical or Zoom meeting <b>no longer stops</b> the follow-up — the system keeps sending nurture messages on the doctor&rsquo;s buy-timeline track <b>while the meeting/sale is in progress</b>, so a doctor never goes silent if the order doesn&rsquo;t close right away. It keeps running <b>even if the doctor replies</b>, and stops only when the sale is <b>won / lost</b>, they send <b>STOP</b>, or the track finishes. Full details in <b>Drip Engine → &ldquo;How a lead leaves a drip&rdquo;</b>.</p>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
           which <b>drip track</b> the lead goes on (see the Drip Engine tab). <b>Always set it</b> for an interested-but-later lead.</p>
       </Section>
@@ -511,7 +516,18 @@ Day 715  ☎  24-month replacement re-open call
   Track FINISHES with no reply    ──►  parked as dormant (Long-cycle)
                                         …EXCEPT 24-Month, which loops back
                                         to a fresh start for the re-buy`}</Chart>
-        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ The golden rule still holds: the second a doctor engages, the robot steps aside and the lead is back in your hands.</p>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ For an ordinary follow-up plan the golden rule holds: the second a doctor <b>replies</b>, the robot steps aside and the lead is back in your hands.</p>
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="text-sm font-semibold text-foreground">🆕 Exception — a meeting was booked (physical or Zoom)</div>
+          <p className="mt-1">When an <b>Interested → ready now</b> lead has a meeting set up, its drip is <b>special</b>: it <b>keeps sending WhatsApp nurture even after the doctor replies</b>, so sales can keep the deal warm while it&rsquo;s in progress. It <b>only</b> stops on:</p>
+          <Chart>{`  Sale marked WON or LOST       ──►  drip stops
+  Doctor sends STOP / opts out  ──►  drip stops
+  Nurture track FINISHES        ──►  drip stops
+
+  A reply does NOT stop it — the doctor keeps getting messages,
+  and every reply still shows up for you / sales to act on.`}</Chart>
+          <p className="mt-1"><b>The sequence it follows:</b> the lead runs its <b>buy-timeline track</b> (1-Month / 3-Month / 6-Month+ — the exact schedules shown above), but it <b>starts straight into WhatsApp</b> — the opening &ldquo;call the doctor&rdquo; reminder is skipped, since the lead is already with sales.</p>
+        </div>
       </Section>
     </div>
   )
