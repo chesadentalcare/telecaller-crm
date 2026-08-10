@@ -205,6 +205,7 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   replied: toReplied(r),
   lastOutcome: r.last_outcome ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
+  lastOutcomeBy: r.last_outcome_by ?? null,
 })
 
 const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({

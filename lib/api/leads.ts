@@ -586,6 +586,7 @@ export interface CallNudgeRow extends ReplyRowFields {
   whatsapp_number?: string | null
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null
+  last_outcome_by?: string | null
 }
 
 // Meetings-Due worklist row (over meeting_records, enriched identity).
