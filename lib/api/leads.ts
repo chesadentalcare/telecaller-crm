@@ -453,7 +453,7 @@ export interface LeadDetail {
   whatsapp: Array<{
     id: number
     template_name: string
-    message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting"
+    message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge"
     sent_by?: string | null
     sent_at: string
     delivered_at?: string | null
@@ -464,7 +464,7 @@ export interface LeadDetail {
   }>
   quotations: QuotationRow[]
   // P6.6 — classified inbound WhatsApp replies (newest first). P6.7 — first-contact state.
-  inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string }>
+  inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string; from_sales?: 0 | 1 | boolean }>
   firstContact?: { current_touch_index: number; call_attempts_used: number; status: string } | null
   // Amendment 2 (decision #1): stage + predicted_closing_date on `extension` are read
   // LIVE from SAP. `sapLive` is false when that read failed and the values shown are the

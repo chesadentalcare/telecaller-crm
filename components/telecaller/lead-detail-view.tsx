@@ -253,6 +253,7 @@ type InboundReply = {
   intent: "stop" | "meeting" | "zoom" | "vague"
   body: string
   receivedAt: Date
+  fromSales?: boolean
 }
 
 // Outbound WhatsApp for the conversation thread: free-text replies the rep sent
@@ -270,7 +271,7 @@ type SentMessage = {
 }
 type WhatsappOutbound = {
   id: number
-  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting"
+  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge"
   text: string | null
   message: SentMessage | null
   templateName: string
@@ -431,7 +432,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     callbackRetryCount: ext.callback_retry_count ?? 0,
     lastInboundAt: ext.last_inbound_at ?? undefined,
     inbound: (d.inbound ?? []).map((m) => ({
-      id: m.id, intent: m.intent, body: m.body, receivedAt: new Date(m.received_at),
+      id: m.id, intent: m.intent, body: m.body, receivedAt: new Date(m.received_at), fromSales: !!m.from_sales,
     })),
     whatsappOutbound,
     firstContact: d.firstContact
@@ -2282,6 +2283,7 @@ const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
   drip: "Drip message",
   quotation: "Quotation",
   meeting: "Meeting confirmation",
+  sales_nudge: "Sales reminder",
 }
 
 // Customer reply bubble (left): the message, its auto-classified intent chip, and a
@@ -2388,6 +2390,19 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
 // Two-way WhatsApp conversation: the full inbound + outbound thread as chat bubbles,
 // with a composer to reply directly from the dashboard. Free text is only permitted
 // inside Meta's 24h customer-care window (composer disabled + notice otherwise).
+// Sales-rep nudge thread bubble — our reminder out (right) and the rep's reply in (left).
+function SalesBubble({ text, at, inbound }: { text: string | null; at: Date; inbound?: boolean }) {
+  return (
+    <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+      <div className={cn("max-w-[85%] rounded-lg px-3 py-2 text-xs", inbound ? "border bg-muted text-foreground" : "border border-indigo-500/20 bg-indigo-500/10 text-foreground")}>
+        <div className="mb-0.5 text-[10px] font-medium text-muted-foreground">{inbound ? "Sales rep replied" : "Reminder → sales rep"}</div>
+        <div className="whitespace-pre-wrap break-words">{text || "—"}</div>
+        <div className="mt-1 text-[10px] text-muted-foreground">{at.toLocaleString()}</div>
+      </div>
+    </div>
+  )
+}
+
 // Exported so the calls-due/pipeline cockpit panel mounts the exact same Replies surface.
 export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutateAsync: reclassify, isPending: reclassifying } = useReclassifyInbound(lead.id)
@@ -2395,20 +2410,32 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutateAsync: sendReply, isPending: sending } = useSendReply(lead.id)
   const [draft, setDraft] = useState("")
 
-  const inbound = lead.inbound ?? []
-  const outbound = lead.whatsappOutbound ?? []
+  const [tab, setTab] = useState<"doctor" | "sales">("doctor")
 
-  // Merge both directions into one chronological thread.
-  const thread = useMemo(() => {
-    const items: Array<
-      | { side: "in"; at: Date; key: string; reply: InboundReply }
-      | { side: "out"; at: Date; key: string; msg: WhatsappOutbound }
-    > = [
-      ...inbound.map((m) => ({ side: "in" as const, at: m.receivedAt, key: `in-${m.id}`, reply: m })),
-      ...outbound.map((m) => ({ side: "out" as const, at: m.sentAt, key: `out-${m.id}`, msg: m })),
-    ]
-    return items.sort((a, b) => a.at.getTime() - b.at.getTime())
-  }, [inbound, outbound])
+  const allInbound = lead.inbound ?? []
+  const allOutbound = lead.whatsappOutbound ?? []
+  // Split the doctor (customer) conversation from the sales-rep nudge thread so each gets its own tab.
+  const inbound = allInbound.filter((m) => !m.fromSales)
+  const outbound = allOutbound.filter((m) => m.kind !== "sales_nudge")
+  const salesInbound = allInbound.filter((m) => m.fromSales)
+  const salesOutbound = allOutbound.filter((m) => m.kind === "sales_nudge")
+  const hasSales = salesInbound.length > 0 || salesOutbound.length > 0
+
+  const buildThread = (
+    ins: InboundReply[],
+    outs: WhatsappOutbound[],
+    p: string,
+  ): Array<
+    | { side: "in"; at: Date; key: string; reply: InboundReply }
+    | { side: "out"; at: Date; key: string; msg: WhatsappOutbound }
+  > =>
+    [
+      ...ins.map((m) => ({ side: "in" as const, at: m.receivedAt, key: `${p}in-${m.id}`, reply: m })),
+      ...outs.map((m) => ({ side: "out" as const, at: m.sentAt, key: `${p}out-${m.id}`, msg: m })),
+    ].sort((a, b) => a.at.getTime() - b.at.getTime())
+
+  const thread = buildThread(inbound, outbound, "")
+  const salesThread = buildThread(salesInbound, salesOutbound, "s")
 
   // Awaiting = customer's latest inbound (not a STOP) with no manual reply after it.
   const lastInbound = inbound.reduce<InboundReply | null>((acc, m) => (!acc || m.receivedAt > acc.receivedAt ? m : acc), null)
@@ -2471,7 +2498,42 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {thread.length === 0 ? (
+        {hasSales && (
+          <div className="flex gap-1.5 rounded-lg border bg-muted/30 p-1">
+            <button
+              type="button"
+              onClick={() => setTab("doctor")}
+              className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "doctor" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
+            >
+              Doctor{thread.length ? ` (${thread.length})` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("sales")}
+              className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "sales" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
+            >
+              Sales rep{salesThread.length ? ` (${salesThread.length})` : ""}
+            </button>
+          </div>
+        )}
+
+        {tab === "sales" && hasSales ? (
+          salesThread.length === 0 ? (
+            <div className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">
+              No sales-rep messages yet.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
+              {salesThread.map((item) =>
+                item.side === "in" ? (
+                  <SalesBubble key={item.key} text={item.reply.body} at={item.at} inbound />
+                ) : (
+                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} />
+                ),
+              )}
+            </div>
+          )
+        ) : thread.length === 0 ? (
           <div className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">
             No WhatsApp messages yet. Sent templates and customer replies will appear here.
           </div>
@@ -2487,7 +2549,8 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
           </div>
         )}
 
-        {/* Composer + 24h window state */}
+        {/* Composer — Doctor tab only (no free-text back to the rep) */}
+        {!(tab === "sales" && hasSales) && (
         <div className="space-y-2 border-t pt-3">
           {optedOut ? (
             <p className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
@@ -2530,6 +2593,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </Button>
           </div>
         </div>
+        )}
       </CardContent>
     </Card>
   )
