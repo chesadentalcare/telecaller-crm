@@ -133,6 +133,8 @@ export interface CallsDueLead extends LeadBase {
   // Most recent call disposition (null = never called → "Fresh call").
   lastOutcome?: CallOutcome | null
   lastOutcomeAt?: string | null
+  // Who logged that most recent disposition (the accountability trail).
+  lastOutcomeBy?: string | null
 }
 
 // Meetings-Due worklist — upcoming physical/zoom meetings (parallel to Calls Due).

@@ -90,6 +90,15 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               >
                 {lastOutcomeLabel(lead.lastOutcome)}
               </span>
+              {/* Accountability: who logged that last outcome and when. */}
+              {lead.lastOutcome && lead.lastOutcomeBy && (
+                <span className="text-[10px] text-muted-foreground">
+                  by {lead.lastOutcomeBy}
+                  {lead.lastOutcomeAt
+                    ? ` · ${new Date(lead.lastOutcomeAt).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                    : ""}
+                </span>
+              )}
               {tone === "overdue" && (
                 <span className="inline-flex items-center gap-1 font-medium text-rose-600">
                   <AlertCircle className="size-3" />Overdue — due earlier today
