@@ -22,7 +22,7 @@ import { usePipelineLeads } from "@/hooks/use-leads"
 import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
-import type { PipelineLead } from "@/lib/types/lead"
+import type { PipelineLead, DripTrack } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
   switch (status) {
@@ -61,6 +61,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
   const [unverifiedOnly, setUnverifiedOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
+  const [trackFilter, setTrackFilter] = useState<"all" | DripTrack | "none">("all")
 
   // Guard: the Unqualified tab only renders when such leads exist. If we're on it
   // and a refresh drops the count to zero, the tab unmounts and activeTab is left
@@ -106,6 +107,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     .filter((l) => !repliedOnly || isReplied(l))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
+    .filter((l) => trackFilter === "all" || (trackFilter === "none" ? !l.dripTrack : l.dripTrack === trackFilter))
     .sort((a, b) => {
       if (sortBy === "oldest") return a.createdAt.getTime() - b.createdAt.getTime()
       if (sortBy === "name") return a.name.localeCompare(b.name)
@@ -113,13 +115,20 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
       return b.createdAt.getTime() - a.createdAt.getTime()
     })
 
-  const anyFilterActive = activeTab !== "all" || repliedOnly || meetingPendingOnly || unverifiedOnly || mode !== "all"
+  const trackCounts = {
+    "1-month": scopeLeads.filter((l) => l.dripTrack === "1-month").length,
+    "3-month": scopeLeads.filter((l) => l.dripTrack === "3-month").length,
+    "6-month": scopeLeads.filter((l) => l.dripTrack === "6-month").length,
+    none: scopeLeads.filter((l) => !l.dripTrack).length,
+  }
+  const anyFilterActive = activeTab !== "all" || repliedOnly || meetingPendingOnly || unverifiedOnly || mode !== "all" || trackFilter !== "all"
   const clearAllFilters = () => {
     setActiveTab("all")
     setRepliedOnly(false)
     setMeetingPendingOnly(false)
     setUnverifiedOnly(false)
     setMode("all")
+    setTrackFilter("all")
   }
 
   const stats = [
@@ -265,6 +274,18 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Drip track</span>
+            <Tabs value={trackFilter} onValueChange={(v) => setTrackFilter(v as typeof trackFilter)}>
+              <TabsList className="h-8 bg-muted/50">
+                <TabsTrigger value="all" className="text-xs px-3 h-6">All</TabsTrigger>
+                <TabsTrigger value="1-month" className="text-xs px-3 h-6">1-Month ({trackCounts["1-month"]})</TabsTrigger>
+                <TabsTrigger value="3-month" className="text-xs px-3 h-6">3-Month ({trackCounts["3-month"]})</TabsTrigger>
+                <TabsTrigger value="6-month" className="text-xs px-3 h-6">6-Month ({trackCounts["6-month"]})</TabsTrigger>
+                <TabsTrigger value="none" className="text-xs px-3 h-6">Not in drip ({trackCounts.none})</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardHeader>
         <CardContent className="p-0">
