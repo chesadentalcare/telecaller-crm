@@ -11,6 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { SendCatalogueButton } from "./send-catalogue-button"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -22,6 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Droplets, Send, MoreHorizontal, Phone, Calendar, Timer, MessageSquare, Trash2, ClipboardList, AlertTriangle,
+  SlidersHorizontal, ChevronDown, ChevronRight,
 } from "lucide-react"
 import { useDripLeads, usePendingFollowUps } from "@/hooks/use-leads"
 import { useExitDrip } from "@/hooks/use-lead-mutations"
@@ -70,6 +72,8 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
   // without thrashing the query cache. Re-syncs whenever the query updates.
   const [leads, setLeads] = useState<DripLead[]>([])
   const [activeTab, setActiveTab] = useState<"all" | DripTrack>("all")
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
 
   useEffect(() => {
     if (data) setLeads(data)
@@ -127,9 +131,10 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                 const trackConfig = getTrackConfig(lead.track)
                 const isUrgent = lead.nextMessageIn < 3600
                 const progress = (lead.messagesSent / lead.totalMessages) * 100
+                const expanded = expandedId === lead.id
                 return (
+                  <div key={lead.id}>
                   <LeadQueueRow
-                    key={lead.id}
                     id={lead.id}
                     name={lead.name}
                     phone={lead.phone}
@@ -161,8 +166,10 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                         )}
                       </div>
                     }
-                    actions={<DripRowActions lead={lead} />}
+                    actions={<DripRowActions lead={lead} expanded={expanded} onToggleCockpit={() => toggle(lead.id)} />}
                   />
+                  {expanded && <LeadCockpitPanel leadId={lead.id} onOpenFull={onOpenLead} />}
+                  </div>
                 )
               })}
             </div>
@@ -176,7 +183,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
 }
 
 // ─── Row actions — Remove from Drip (wired) + Call / WhatsApp shortcuts ──
-function DripRowActions({ lead }: { lead: DripLead }) {
+function DripRowActions({ lead, expanded, onToggleCockpit }: { lead: DripLead; expanded: boolean; onToggleCockpit: () => void }) {
   const [exitOpen, setExitOpen] = useState(false)
   const [exitReason, setExitReason] = useState("")
   const { mutateAsync: exitDrip, isPending: exiting } = useExitDrip(lead.id)
@@ -202,6 +209,10 @@ function DripRowActions({ lead }: { lead: DripLead }) {
   return (
     <>
       <div className="flex items-center justify-end gap-1">
+        <Button size="sm" variant="outline" onClick={onToggleCockpit} className="h-9 md:h-7 px-2.5 gap-1" title="Open cockpit">
+          {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          <SlidersHorizontal className="size-3.5" />Cockpit
+        </Button>
         {waNumber ? (
           <Button asChild size="sm" variant="outline" className="h-9 md:h-7 px-2.5 gap-1.5">
             <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
