@@ -1108,21 +1108,21 @@ function InfoRow({
   const isEmpty = !value || value === "—"
   const external = href?.startsWith("http")
   return (
-    <div className="flex items-center gap-2.5 text-foreground">
-      <Icon className="size-3.5 text-muted-foreground shrink-0" />
-      <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+    <div className="flex items-start gap-2.5 text-foreground">
+      <Icon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+      <span className="text-xs text-muted-foreground w-24 shrink-0 mt-0.5">{label}</span>
       {isEmpty ? (
-        <span className="text-sm italic text-muted-foreground/60 truncate">{emptyText}</span>
+        <span className="text-sm italic text-muted-foreground/60 min-w-0 break-words">{emptyText}</span>
       ) : href ? (
         <a
           href={href}
-          className="text-sm font-medium text-primary hover:underline truncate"
+          className="text-sm font-medium text-primary hover:underline min-w-0 break-words"
           {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         >
           {value}
         </a>
       ) : (
-        <span className="text-sm font-medium truncate">{value}</span>
+        <span className="text-sm font-medium min-w-0 break-words">{value}</span>
       )}
     </div>
   )
@@ -1485,7 +1485,7 @@ export function CallsTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Integrated qualification status + Update button + route CTA */}
       <QualificationStrip lead={lead} onNavigate={onNavigate} />
 
@@ -1843,7 +1843,7 @@ export function CallsTab({
       </Card>
 
       {/* History */}
-      <Card>
+      <Card className="order-first">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <History className="size-4 text-muted-foreground" />
