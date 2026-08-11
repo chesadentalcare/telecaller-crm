@@ -207,11 +207,16 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
    MANAGER + the telecaller who handed it over
    also get an in-app "rep unresponsive" alert
         │
-        ▼  the moment the rep updates it
-       (quote sent / won / lost / handed back)
-   Reminders STOP automatically`}</Chart>
-          <p className="mt-2 mb-0 text-xs text-foreground/70">The watcher checks every 2 hours, so the very first reminder
-          lands about <b>4–6 hours</b> after handover, then daily until the rep acts. The salesperson&rsquo;s WhatsApp
+        ▼  keeps chasing every day — through the meeting,
+           the quotation, the negotiation… the WHOLE deal
+   Reminders continue until the rep CLOSES it
+        │
+        ▼  rep marks it Won or Lost, or RETURNS the lead
+   Only then do the reminders STOP`}</Chart>
+          <p className="mt-2 mb-0 text-xs text-foreground/70">The whole point is to keep the rep moving the deal to a close —
+          so the reminder <b>does not stop just because the rep quotes or changes the stage</b>. It keeps going <b>every day</b>
+          until the deal is <b>Won</b>, <b>Lost</b>, or the lead is <b>handed back</b> to the telecaller. The watcher checks
+          every 2 hours, so the first reminder lands about <b>4–6 hours</b> after handover. The salesperson&rsquo;s WhatsApp
           replies come back onto the lead under the <b>&ldquo;Sales rep&rdquo;</b> tab in Replies.</p>
         </div>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
