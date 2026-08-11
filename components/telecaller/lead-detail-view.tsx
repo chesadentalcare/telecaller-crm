@@ -219,6 +219,7 @@ type LeadDetail = {
   dripMessageIndex?: number
   dripTotalMessages?: number
   dripNextMessageAt?: Date
+  dripStartedAt?: Date
   // Issue 4 — projected nurture completion + current stage (from the backend).
   dripProjection?: DripProjection
   // CRM lock (SOP §4B — quote SLA breach)
@@ -403,6 +404,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTotalMessages:
       d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
+    dripStartedAt: d.drip?.started_at ? new Date(d.drip.started_at) : undefined,
     dripProjection: d.drip?.projection ?? undefined,
     crmLocked: !!ext.crm_locked,
     crmLockedReason: ext.crm_locked_reason ?? undefined,
@@ -2712,6 +2714,24 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
     ? Math.round((lead.dripMessageIndex / lead.dripTotalMessages) * 100)
     : 0
 
+  // Real calendar date for each "Day N" touch. The schedule is relative (each touch
+  // is cadence-offset from when the previous one actually sent), so a server restart
+  // shifts the time but not the day. Anchor on the known next-send date and space the
+  // rest by their day-offsets; fall back to the enrolment date if next-send is missing.
+  const dripSeq = lead.dripTrack ? DRIP_SEQUENCE[lead.dripTrack] : undefined
+  const dripIdx = lead.dripMessageIndex ?? 0
+  const nextTouch = dripSeq?.[dripIdx]
+  let dripAnchorDate: Date | null = null
+  let dripAnchorDay = 0
+  if (lead.dripNextMessageAt && nextTouch) {
+    dripAnchorDate = lead.dripNextMessageAt
+    dripAnchorDay = nextTouch.day
+  } else if (lead.dripStartedAt) {
+    dripAnchorDate = lead.dripStartedAt
+  }
+  const touchDate = (day: number) =>
+    dripAnchorDate ? new Date(dripAnchorDate.getTime() + (day - dripAnchorDay) * 86_400_000) : null
+
   return (
     <div className="space-y-4">
       {/* P6.13 — responded-during-track one-tap CTA */}
@@ -2796,6 +2816,7 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                   const idx = lead.dripMessageIndex ?? 0
                   const state = i < idx ? "done" : i === idx ? "current" : "upcoming"
                   const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
+                  const td = touchDate(t.day)
                   return (
                     <li
                       key={i}
@@ -2812,7 +2833,14 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                       ) : (
                         <ChannelIcon className="size-3.5 text-muted-foreground shrink-0" />
                       )}
-                      <span className="font-mono text-[10px] text-muted-foreground w-12 shrink-0">Day {t.day}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground w-16 shrink-0 leading-tight">
+                        Day {t.day}
+                        {td && (
+                          <span className="block text-[9px] text-muted-foreground/70">
+                            {td.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                          </span>
+                        )}
+                      </span>
                       <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
                       <span className={cn("truncate", state === "current" && "font-medium text-foreground")}>{t.label}</span>
                       {state === "current" && <Badge className="ml-auto text-[9px] bg-primary/15 text-primary border-primary/30 shrink-0">Next</Badge>}
