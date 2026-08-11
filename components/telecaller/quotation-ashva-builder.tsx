@@ -172,7 +172,7 @@ function ProductPicker({ onPick }: { onPick: (product: CatalogueProduct) => void
           ) : (
             filtered.map((p, i) => (
               <button
-                key={p.code || `${p.id}-${i}`}
+                key={`${p.id}-${p.code}-${i}`}
                 type="button"
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent"
                 onClick={() => { onPick(p); setOpen(false); setSearch("") }}
