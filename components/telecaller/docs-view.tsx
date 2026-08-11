@@ -194,20 +194,25 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
         <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-foreground/80">
           <b>🆕 If sales doesn&rsquo;t follow up — automatic reminders to the salesperson.</b> Once a lead is <b>handed to a
           salesperson</b> (or a <b>physical meeting</b> is booked), the system watches it. If the rep doesn&rsquo;t update the
-          lead, it <b>WhatsApps the salesperson a reminder</b> on this schedule:
-          <Chart>{`Handover / meeting booked
+          lead in time, it <b>WhatsApps the salesperson&rsquo;s own phone</b> a reminder — automatically, on this schedule:
+          <Chart>{`Handover / physical meeting booked   ← clock starts
         │
-        ▼  (a few hours later, no update)
-   1st WhatsApp reminder to the salesperson
+        ▼  after ~4 hours, still no update
+   1st WhatsApp reminder  →  the salesperson
         │
-        ▼  (still no update)
-   Another reminder every day…
+        ▼  then once every 24 hours, while still no update
+   Daily WhatsApp reminder  →  the salesperson
         │
-        ▼  after 3 ignored reminders
-   MANAGER also gets pinged to step in
+        ▼  on the 3rd reminder (~2 days in)
+   MANAGER + the telecaller who handed it over
+   also get an in-app "rep unresponsive" alert
         │
-        ▼  the moment the rep updates it (quote / won / lost / handed back)
+        ▼  the moment the rep updates it
+       (quote sent / won / lost / handed back)
    Reminders STOP automatically`}</Chart>
+          <p className="mt-2 mb-0 text-xs text-foreground/70">The watcher checks every 2 hours, so the very first reminder
+          lands about <b>4–6 hours</b> after handover, then daily until the rep acts. The salesperson&rsquo;s WhatsApp
+          replies come back onto the lead under the <b>&ldquo;Sales rep&rdquo;</b> tab in Replies.</p>
         </div>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
           which <b>drip track</b> the lead goes on (see the Drip Engine tab). <b>Always set it</b> for an interested-but-later lead.</p>
