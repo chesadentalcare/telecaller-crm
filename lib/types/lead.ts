@@ -59,6 +59,8 @@ export interface PipelineLead extends LeadBase {
   lastOutcomeBy?: string | null
   // Engaged/qualified for a meeting but none booked yet — drives the "Meeting pending" badge.
   meetingPending?: boolean
+  // Active drip track this lead is on (null when not in a drip) — drives the Active-tab track filter.
+  dripTrack?: DripTrack | null
 }
 
 // Drip campaign queue

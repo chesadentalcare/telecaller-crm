@@ -110,6 +110,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
   meetingPending: !!r.meeting_pending,
+  dripTrack: r.drip_track ? trackBackToFront(r.drip_track) : null,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {

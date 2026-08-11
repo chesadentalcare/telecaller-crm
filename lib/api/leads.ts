@@ -495,6 +495,9 @@ export interface PipelineRow extends ReplyRowFields {
   // 1 when the lead's route is a meeting (physical/online) but no meeting is booked yet —
   // drives the "Meeting pending" list badge so an engaged lead can't be forgotten.
   meeting_pending?: 0 | 1 | boolean
+  // The lead's active drip track (null when not on a running drip) — powers the
+  // Active-tab drip-track filter.
+  drip_track?: "1_month" | "3_month" | "6_plus_month" | null
 }
 
 export interface NoResponseRow extends ReplyRowFields {
