@@ -45,10 +45,10 @@ export function useProducts(): UseProductsResult {
   }
 }
 
-// Full priced catalogue (/products_all on the shared chesa gateway) — carries the
-// price tiers (mrp/msp/dp/sdp), warranty and description. Used by the quotation
-// builder's "Add product" so a picked product brings its MRP in, unlike /crmpro
-// (id + name only) which the equipment-interest dropdowns use.
+// Product catalogue for the quotation builder's "Add product" — the SAME source the
+// Admin "Products & Prices" page uses (/product-price-list): the curated sellable
+// products with their SAP MRP. Only MRP is needed for a quote; the other price tiers
+// and warranty stay on the type for compatibility but are unused here.
 export interface CatalogueProduct {
   id: number
   name: string
@@ -63,25 +63,28 @@ export interface CatalogueProduct {
 }
 
 async function fetchProductCatalogue(): Promise<CatalogueProduct[]> {
-  const res = await fetch(sharedApiUrl(endpoints.productsAll), { method: "GET" })
+  const res = await fetch(sharedApiUrl(endpoints.productPriceList), { method: "GET" })
   if (!res.ok) {
     throw new Error(`Product catalogue fetch failed: ${res.status} ${res.statusText}`)
   }
-  const json = (await res.json()) as Array<Record<string, unknown>>
-  if (!Array.isArray(json)) return []
-  return json
-    .map((p) => ({
-      id: Number(p.id) || 0,
-      name: String(p.name ?? ""),
-      code: String(p.code ?? ""),
-      mrp: Number(p.mrp) || 0,
-      msp: Number(p.msp) || 0,
-      dp: Number(p.dp) || 0,
-      sdp: Number(p.sdp) || 0,
-      warranty: String(p.warranty_period ?? ""),
-      description: String(p.description ?? ""),
-      category: String(p.cat_name ?? ""),
-    }))
+  const json = (await res.json()) as { products?: Array<Record<string, unknown>> }
+  const rows = Array.isArray(json?.products) ? json.products : []
+  return rows
+    .map((p) => {
+      const prices = (p.prices ?? {}) as Record<string, { pre?: number } | null>
+      return {
+        id: 0,
+        name: String(p.name ?? ""),
+        code: String(p.code ?? ""),
+        mrp: Number(prices.MRP?.pre) || 0,
+        msp: 0,
+        dp: 0,
+        sdp: 0,
+        warranty: "",
+        description: "",
+        category: String(p.category ?? ""),
+      }
+    })
     .filter((p) => p.name)
 }
 
