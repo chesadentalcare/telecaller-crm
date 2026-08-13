@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { Inbox, Phone, RotateCcw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { ViewSkeleton } from "./view-skeleton"
 import { useReactivationLeads } from "@/hooks/use-leads"
 
@@ -15,7 +17,11 @@ interface ReactivationViewProps {
 // Gap #8 (Track1 spec): leads handed back from sales for telecaller follow-up.
 export function ReactivationView({ onOpenLead }: ReactivationViewProps) {
   const { data: leads = [], isLoading } = useReactivationLeads()
+  const [repliedOnly, setRepliedOnly] = useState(false)
   if (isLoading) return <ViewSkeleton />
+
+  const repliedCount = leads.filter(isAwaitingReply).length
+  const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
   return (
     <div className="space-y-4">
@@ -42,14 +48,15 @@ export function ReactivationView({ onOpenLead }: ReactivationViewProps) {
               </CardTitle>
               <CardDescription>Leads bounced back from sales for telecaller follow-up</CardDescription>
             </div>
+            <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {leads.length === 0 ? (
+          {shown.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">No leads returned from sales right now</p>
           ) : (
           <div className="divide-y">
-            {leads.map((lead) => {
+            {shown.map((lead) => {
               const tel = lead.phone.replace(/\D/g, "")
               return (
                 <LeadQueueRow

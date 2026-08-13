@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { ViewSkeleton } from "./view-skeleton"
 import { useNoResponseLeads, leadKeys } from "@/hooks/use-leads"
 import { leadsApi } from "@/lib/api/leads"
@@ -25,6 +26,9 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
   // and whether a bulk run is active (disables the header buttons).
   const [sendingId, setSendingId] = useState<string | null>(null)
   const [bulkRunning, setBulkRunning] = useState(false)
+  const [repliedOnly, setRepliedOnly] = useState(false)
+  const repliedCount = leads.filter(isAwaitingReply).length
+  const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
   const sendRecovery = async (lead: NoResponseLead) => {
     const res = await leadsApi.recoveryWhatsapp(lead.id, {
@@ -141,11 +145,16 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Failed Contact Attempts</CardTitle>
-          <CardDescription>Leads with 4+ failed call attempts</CardDescription>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-base">Failed Contact Attempts</CardTitle>
+              <CardDescription>Leads with 4+ failed call attempts</CardDescription>
+            </div>
+            <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {leads.length === 0 ? (
+          {shown.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                 <PhoneOff className="size-5 text-muted-foreground" />
@@ -155,7 +164,7 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
             </div>
           ) : (
             <div className="divide-y">
-              {leads.map((lead) => (
+              {shown.map((lead) => (
                 <LeadQueueRow
                   key={lead.id}
                   id={lead.id}
