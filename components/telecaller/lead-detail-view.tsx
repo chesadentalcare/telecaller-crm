@@ -124,6 +124,7 @@ import {
   useRescheduleMeeting,
   useEnterDrip,
   useSendReply,
+  useSendSalesReply,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import { useRole } from "@/hooks/use-role"
@@ -2407,12 +2408,13 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
 // Two-way WhatsApp conversation: the full inbound + outbound thread as chat bubbles,
 // with a composer to reply directly from the dashboard. Free text is only permitted
 // inside Meta's 24h customer-care window (composer disabled + notice otherwise).
-// Sales-rep nudge thread bubble — our reminder out (right) and the rep's reply in (left).
-function SalesBubble({ text, at, inbound }: { text: string | null; at: Date; inbound?: boolean }) {
+// Sales-rep thread bubble — our message out (right) and the rep's reply in (left).
+function SalesBubble({ text, at, inbound, sentBy }: { text: string | null; at: Date; inbound?: boolean; sentBy?: string | null }) {
+  const outLabel = sentBy && sentBy !== "system" ? "You → sales rep" : "Reminder → sales rep"
   return (
     <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
       <div className={cn("max-w-[85%] rounded-lg px-3 py-2 text-xs", inbound ? "border bg-muted text-foreground" : "border border-indigo-500/20 bg-indigo-500/10 text-foreground")}>
-        <div className="mb-0.5 text-[10px] font-medium text-muted-foreground">{inbound ? "Sales rep replied" : "Reminder → sales rep"}</div>
+        <div className="mb-0.5 text-[10px] font-medium text-muted-foreground">{inbound ? "Sales rep replied" : outLabel}</div>
         <div className="whitespace-pre-wrap break-words">{text || "—"}</div>
         <div className="mt-1 text-[10px] text-muted-foreground">{at.toLocaleString()}</div>
       </div>
@@ -2425,7 +2427,9 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutateAsync: reclassify, isPending: reclassifying } = useReclassifyInbound(lead.id)
   const { mutate: ackReplies } = useAckReplies(lead.id)
   const { mutateAsync: sendReply, isPending: sending } = useSendReply(lead.id)
+  const { mutateAsync: sendSalesReply, isPending: sendingSales } = useSendSalesReply(lead.id)
   const [draft, setDraft] = useState("")
+  const [salesDraft, setSalesDraft] = useState("")
   const qc = useQueryClient()
 
   const [tab, setTab] = useState<"doctor" | "sales">("doctor")
@@ -2479,6 +2483,9 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const noPhone = !lead.phone || lead.phone === "—"
   const canSend = windowOpen && !optedOut && !noPhone
 
+  const lastSalesInbound = salesInbound.reduce<InboundReply | null>((acc, m) => (!acc || m.receivedAt > acc.receivedAt ? m : acc), null)
+  const salesWindowOpen = lastSalesInbound ? Date.now() - lastSalesInbound.receivedAt.getTime() <= 24 * 3600_000 : false
+
   // Opening the thread = the rep has READ the replies (clears the unread badge). It does
   // NOT clear the awaiting-reply count — only sending a reply does (server-side).
   useEffect(() => {
@@ -2505,6 +2512,18 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
       toast.success(res.dryRun ? "Reply queued (dry-run — see backend logs)" : "Reply sent to customer")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to send the reply")
+    }
+  }
+
+  const onSendSales = async () => {
+    const text = salesDraft.trim()
+    if (!text || !salesWindowOpen) return
+    try {
+      const res = await sendSalesReply({ text })
+      setSalesDraft("")
+      toast.success(res.dryRun ? "Message queued (dry-run — see backend logs)" : "Message sent to the sales rep")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to message the sales rep")
     }
   }
 
@@ -2556,7 +2575,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
                 ) : item.msg.kind === "quotation" ? (
                   <OutboundBubble key={item.key} m={item.msg} />
                 ) : (
-                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} />
+                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} sentBy={item.msg.sentBy} />
                 ),
               )}
             </div>
@@ -2577,7 +2596,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
           </div>
         )}
 
-        {/* Composer — Doctor tab only (no free-text back to the rep) */}
+        {/* Composer — Doctor tab: free text to the customer */}
         {tab === "doctor" && (
         <div className="space-y-2 border-t pt-3">
           {optedOut ? (
@@ -2631,6 +2650,49 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
           </div>
           <p className="text-[10px] text-muted-foreground">
             The catalogue sends on an approved template — it works even when the 24h reply window is closed.
+          </p>
+        </div>
+        )}
+
+        {/* Composer — Sales-employee tab: free text to the assigned sales rep */}
+        {tab === "sales" && (
+        <div className="space-y-2 border-t pt-3">
+          {!salesWindowOpen ? (
+            <p className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] text-warning">
+              <Clock className="size-3.5 shrink-0" />
+              {lastSalesInbound
+                ? `24h reply window closed (last reply ${lastSalesInbound.receivedAt.toLocaleString()}) — the sales rep must message you again before you can send free text.`
+                : "The sales rep hasn't replied yet — free text opens for 24h once they message you back on a reminder."}
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-[11px] text-success">
+              <Clock className="size-3.5 shrink-0" /> Reply window open — free text allowed for 24h after the rep's last message.
+            </p>
+          )}
+          <div className="flex items-end gap-2">
+            <Textarea
+              value={salesDraft}
+              onChange={(e) => setSalesDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSendSales() }
+              }}
+              placeholder={salesWindowOpen ? "Message the sales rep…  (Enter to send, Shift+Enter for a new line)" : "Replies disabled"}
+              disabled={!salesWindowOpen || sendingSales}
+              rows={2}
+              className="min-h-[44px] resize-none text-sm"
+            />
+            <Button
+              type="button"
+              size="icon"
+              onClick={onSendSales}
+              disabled={!salesWindowOpen || sendingSales || !salesDraft.trim()}
+              aria-label="Message sales rep"
+            >
+              <Send className="size-4" />
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Goes to the rep assigned to this lead on WhatsApp — recorded here in the Sales-employee thread.
           </p>
         </div>
         )}

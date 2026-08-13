@@ -967,6 +967,14 @@ export const leadsApi = {
       ),
     ),
 
+  sendSalesReply: (id: number | string, body: { text: string }) =>
+    unwrap(
+      api.post<Envelope<{ messageId: string | null; dryRun: boolean; text: string }>>(
+        endpoints.leadSendSalesReply(String(id)),
+        body,
+      ),
+    ),
+
   exitDrip: (id: number | string, body: { reason: string; status?: string }) =>
     unwrap(
       api.post<Envelope<{ opportunityDocEntry: number; status: string; reason: string }>>(
