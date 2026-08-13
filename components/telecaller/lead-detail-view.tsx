@@ -345,7 +345,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     return {
       id: w.id,
       kind: w.message_type,
-      text: p?.message?.body ?? (w.message_type === "manual" || w.message_type === "meeting" ? (p?.text ?? null) : null),
+      text: p?.message?.body ?? (w.message_type === "manual" || w.message_type === "meeting" || w.message_type === "sales_nudge" ? (p?.text ?? null) : null),
       message: p?.message ?? null,
       templateName: w.template_name,
       sentBy: w.sent_by ?? p?.sentBy ?? null,
