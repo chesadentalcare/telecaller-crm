@@ -16,6 +16,7 @@ import type { ZoomMeetingValues } from "@/lib/schemas/zoom-meeting"
 import type { PhysicalMeetingValues } from "@/lib/schemas/physical-meeting"
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
 import type { QuotationValues } from "@/lib/schemas/quotation"
+import type { DateRange } from "@/lib/types/lead"
 
 // ─── Shared envelope ────────────────────────────────────────────────────
 interface Envelope<T> {
@@ -26,6 +27,15 @@ interface Envelope<T> {
 
 const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
   p.then((res) => res.data)
+
+// Created-date range → query string for the pipeline queue endpoints.
+const qs = (r?: DateRange): string => {
+  if (!r?.from && !r?.to) return ""
+  const p = new URLSearchParams()
+  if (r.from) p.set("from", r.from)
+  if (r.to) p.set("to", r.to)
+  return `?${p.toString()}`
+}
 
 // Result of the on-booking meeting WhatsApp send (Zoom join link / physical venue).
 // `ok` = sent (or dry-run logged); `skipped` = no phone; `error` = provider/template failure.
@@ -1224,17 +1234,17 @@ export const leadsApi = {
 
   // ─── Queues ───────────────────────────────────────────────────────────
   queues: {
-    pipeline:     () => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline)),
-    noResponse:   () => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse)),
-    drip:         () => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip)),
-    idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
-    dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
-    lost:         () => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost)),
-    won:          () => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon)),
+    pipeline:     (r?: DateRange) => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline + qs(r))),
+    noResponse:   (r?: DateRange) => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse + qs(r))),
+    drip:         (r?: DateRange) => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip + qs(r))),
+    idle:         (r?: DateRange) => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle + qs(r))),
+    dormant:      (r?: DateRange) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r))),
+    lost:         (r?: DateRange) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r))),
+    won:          (r?: DateRange) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r))),
     repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
-    reactivation: () => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation)),
-    sixMonth:     () => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth)),
-    requalification: () => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification)),
+    reactivation: (r?: DateRange) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r))),
+    sixMonth:     (r?: DateRange) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r))),
+    requalification: (r?: DateRange) => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification + qs(r))),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),

@@ -48,7 +48,7 @@ import type {
   ScheduledCallRow,
   ReplyRowFields,
 } from "@/lib/api/leads"
-import type { ReplyIndicator, DripProjection } from "@/lib/types/lead"
+import type { ReplyIndicator, DripProjection, DateRange } from "@/lib/types/lead"
 
 // ─── helpers ────────────────────────────────────────────────────────────
 const placeholderName = (id: number | string) => `Lead #${id}`
@@ -310,38 +310,38 @@ function humanAgo(iso: string): string {
 }
 
 // ─── public fetchers ────────────────────────────────────────────────────
-export const fetchPipelineLeads = async (): Promise<PipelineLead[]> => {
-  const rows = await leadsApi.queues.pipeline()
+export const fetchPipelineLeads = async (range?: DateRange): Promise<PipelineLead[]> => {
+  const rows = await leadsApi.queues.pipeline(range)
   return rows.map(toPipeline)
 }
 
-export const fetchDripLeads = async (): Promise<DripLead[]> => {
-  const rows = await leadsApi.queues.drip()
+export const fetchDripLeads = async (range?: DateRange): Promise<DripLead[]> => {
+  const rows = await leadsApi.queues.drip(range)
   return rows.map(toDrip)
 }
 
-export const fetchNoResponseLeads = async (): Promise<NoResponseLead[]> => {
-  const rows = await leadsApi.queues.noResponse()
+export const fetchNoResponseLeads = async (range?: DateRange): Promise<NoResponseLead[]> => {
+  const rows = await leadsApi.queues.noResponse(range)
   return rows.map(toNoResponse)
 }
 
-export const fetchIdleLeads = async (): Promise<IdleLead[]> => {
-  const rows = await leadsApi.queues.idle()
+export const fetchIdleLeads = async (range?: DateRange): Promise<IdleLead[]> => {
+  const rows = await leadsApi.queues.idle(range)
   return rows.map(toIdle)
 }
 
-export const fetchDormantLeads = async (): Promise<DormantLead[]> => {
-  const rows = await leadsApi.queues.dormant()
+export const fetchDormantLeads = async (range?: DateRange): Promise<DormantLead[]> => {
+  const rows = await leadsApi.queues.dormant(range)
   return rows.map(toDormant)
 }
 
-export const fetchLostLeads = async (): Promise<LostLead[]> => {
-  const rows = await leadsApi.queues.lost()
+export const fetchLostLeads = async (range?: DateRange): Promise<LostLead[]> => {
+  const rows = await leadsApi.queues.lost(range)
   return rows.map(toLost)
 }
 
-export const fetchWonLeads = async (): Promise<WonLead[]> => {
-  const rows = await leadsApi.queues.won()
+export const fetchWonLeads = async (range?: DateRange): Promise<WonLead[]> => {
+  const rows = await leadsApi.queues.won(range)
   return rows.map(toWon)
 }
 
@@ -350,18 +350,18 @@ export const fetchRepliesDueLeads = async (): Promise<RepliesDueLead[]> => {
   return rows.map(toRepliesDue)
 }
 
-export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {
-  const rows = await leadsApi.queues.reactivation()
+export const fetchReactivationLeads = async (range?: DateRange): Promise<ReactivationLead[]> => {
+  const rows = await leadsApi.queues.reactivation(range)
   return rows.map(toReactivation)
 }
 
-export const fetchSixMonthLeads = async (): Promise<SixMonthLead[]> => {
-  const rows = await leadsApi.queues.sixMonth()
+export const fetchSixMonthLeads = async (range?: DateRange): Promise<SixMonthLead[]> => {
+  const rows = await leadsApi.queues.sixMonth(range)
   return rows.map(toSixMonth)
 }
 
-export const fetchRequalificationLeads = async (): Promise<RequalificationLead[]> => {
-  const rows = await leadsApi.queues.requalification()
+export const fetchRequalificationLeads = async (range?: DateRange): Promise<RequalificationLead[]> => {
+  const rows = await leadsApi.queues.requalification(range)
   return rows.map(toRequalification)
 }
 

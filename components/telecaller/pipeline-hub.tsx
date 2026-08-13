@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadsExportDialog } from "./leads-export-dialog"
+import { PipelineDateFilterProvider, PipelineDateBar } from "@/lib/pipeline-date-filter"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useRole } from "@/hooks/use-role"
 import type { QueueCounts } from "@/lib/types/lead"
@@ -93,15 +94,19 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
   const current = SEGMENTS.find((s) => s.id === active) ?? SEGMENTS[0]
 
   return (
+    <PipelineDateFilterProvider>
     <div className="space-y-4">
-      {isManagerOrAbove && (
-        <div className="flex items-center justify-end">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
-            <FileSpreadsheet className="size-4" />Export all data
-          </Button>
-          <LeadsExportDialog open={exportOpen} onOpenChange={setExportOpen} />
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <PipelineDateBar />
+        {isManagerOrAbove && (
+          <div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+              <FileSpreadsheet className="size-4" />Export all data
+            </Button>
+            <LeadsExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+          </div>
+        )}
+      </div>
 
       {/* Segmented control — single scrollable strip (no messy wrap on mobile) */}
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
@@ -140,5 +145,6 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
       {/* Active segment body */}
       <div>{current.render(onOpenLead)}</div>
     </div>
+    </PipelineDateFilterProvider>
   )
 }
