@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useProductCatalogue, type CatalogueProduct } from "@/hooks/use-products"
+import { useSalesUsers } from "@/hooks/use-leads"
+import { SalesUserOptions } from "./sales-user-options"
 import {
   quotationApi,
   type QuotationLine,
@@ -227,6 +229,8 @@ export function QuotationAshvaBuilder({
   // Downloading / sending flags (keyed so both buttons can show spinners).
   const [busy, setBusy] = useState<null | "pdf" | "xlsx" | "send">(null)
   const [sendOpen, setSendOpen] = useState(false)
+  const [salesCode, setSalesCode] = useState("")
+  const { data: salesUsers = [], isLoading: loadingSales } = useSalesUsers(sendOpen, leadId)
 
   const { data: packages = [], isLoading: packagesLoading } = useQuery({
     queryKey: ["quotation-packages"],
@@ -318,15 +322,18 @@ export function QuotationAshvaBuilder({
     }
   }
 
-  const handleSend = async (recipient: "customer" | "sales") => {
+  const handleSend = async (recipient: "customer" | "sales", salesPersonCode?: string) => {
     if (!validate()) return
+    if (recipient === "sales" && !salesPersonCode) { toast.error("Pick a sales employee first"); return }
     setSendOpen(false)
     setBusy("send")
     try {
-      const r = await quotationApi.send("pdf", buildBody(), leadId, approval?.quotationId, recipient)
+      const r = await quotationApi.send("pdf", buildBody(), leadId, approval?.quotationId, recipient, salesPersonCode)
       if (r.sent) {
         toast.success(recipient === "sales" ? "Quotation sent to the sales employee" : "Quotation sent to the customer")
         setApproval(null)
+        setSalesCode("")
+        setOpen(false)
       } else if (r.needsApproval) {
         setApproval({ quotationId: r.quotationId!, discountPct: r.discountPct, thresholdPct: r.thresholdPct })
         toast.warning(r.message || `Discount ${r.discountPct}% needs manager approval (limit ${r.thresholdPct}%).`)
@@ -691,18 +698,27 @@ export function QuotationAshvaBuilder({
                   <span className="text-[11px] text-muted-foreground">Goes to the customer&apos;s WhatsApp number.</span>
                 </span>
               </Button>
-              <Button
-                type="button" variant="outline"
-                className="h-auto w-full justify-start gap-3 py-3 text-left"
-                onClick={() => handleSend("sales")}
-                disabled={busy !== null}
-              >
-                <Users className="size-4 shrink-0 text-indigo-600" />
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium">Send to Sales employee</span>
-                  <span className="text-[11px] text-muted-foreground">Goes to the assigned sales rep&apos;s WhatsApp number.</span>
-                </span>
-              </Button>
+              <div className="rounded-lg border p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+                  <Users className="size-4 shrink-0 text-indigo-600" /> Send to a sales employee
+                </div>
+                <Select value={salesCode} onValueChange={setSalesCode}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={loadingSales ? "Loading sales employees…" : "Choose a sales employee…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SalesUserOptions salesUsers={salesUsers} loading={loadingSales} />
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  className="mt-2 w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700"
+                  onClick={() => handleSend("sales", salesCode)}
+                  disabled={busy !== null || !salesCode}
+                >
+                  <Send className="size-3.5" /> Send to this sales employee
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

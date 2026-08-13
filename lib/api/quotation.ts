@@ -108,6 +108,7 @@ export const quotationApi = {
     leadId?: number | string,
     quotationId?: number,
     recipient?: "customer" | "sales",
+    salesPersonCode?: string,
   ): Promise<QuotationSendResult> => {
     const token = tokenStorage.get()
     const res = await fetch(apiUrl(endpoints.quotationSend), {
@@ -122,6 +123,7 @@ export const quotationApi = {
         ...(leadId != null ? { leadId } : {}),
         ...(quotationId != null ? { quotationId } : {}),
         ...(recipient ? { recipient } : {}),
+        ...(salesPersonCode ? { salesPersonCode } : {}),
       }),
     })
     const json = (await res.json().catch(() => ({}))) as {
