@@ -302,9 +302,10 @@ export function useUnreadNotificationCount() {
 }
 
 export function useQueueCountsQuery() {
+  const r = usePipelineDateRange()
   return useQuery({
-    queryKey: leadKeys.queueCounts(),
-    queryFn: fetchQueueCounts,
+    queryKey: [...leadKeys.queueCounts(), r],
+    queryFn: () => fetchQueueCounts(r),
     // Badges update more often than reference data — let stale go after 30s.
     staleTime: 30_000,
   })
