@@ -1,17 +1,88 @@
 "use client"
 
 import { useState } from "react"
-import { Inbox, Phone, RotateCcw } from "lucide-react"
+import { Inbox, Phone, RotateCcw, Loader2, Droplets } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter,
+} from "@/components/ui/dialog"
 import { LeadQueueRow } from "./lead-queue-row"
 import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { ViewSkeleton } from "./view-skeleton"
 import { useReactivationLeads } from "@/hooks/use-leads"
+import { useAssumeOwnership } from "@/hooks/use-lead-mutations"
+import type { ReactivationLead } from "@/lib/types/lead"
 
 interface ReactivationViewProps {
   onOpenLead: (id: string) => void
+}
+
+const formatTrack = (t?: string | null) => {
+  if (t === "1_month") return "1-Month"
+  if (t === "3_month") return "3-Month"
+  if (t === "6_plus_month") return "6+ Month"
+  return t || "drip"
+}
+
+function AssumeOwnershipButton({ lead }: { lead: ReactivationLead }) {
+  const [open, setOpen] = useState(false)
+  const { mutateAsync, isPending } = useAssumeOwnership(lead.id)
+  const hasDrip = !!lead.dripTrack
+
+  const onConfirm = async () => {
+    try {
+      await mutateAsync()
+      setOpen(false)
+    } catch {
+      // toast handled by the mutation
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">Assume Ownership</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <RotateCcw className="size-4" /> Assume ownership — {lead.name}
+          </DialogTitle>
+          <DialogDescription>
+            You&apos;ll take this lead back from sales
+            {hasDrip ? " and it resumes its nurture drip in the exact spot it left off." : "."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {hasDrip ? (
+          <div className="space-y-1.5 rounded-md border bg-muted/40 p-3 text-sm">
+            <p className="flex items-center gap-1.5 font-medium">
+              <Droplets className="size-3.5 text-primary" /> It will go back to exactly where it was:
+            </p>
+            <p>• Drip track: <span className="font-semibold">{formatTrack(lead.dripTrack)}</span></p>
+            <p>• Resumes at message <span className="font-semibold">#{lead.dripMessageIndex ?? 0}</span></p>
+            {lead.dripNextAt && (
+              <p>• Next message: <span className="font-semibold">{new Date(lead.dripNextAt).toLocaleString()}</span></p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+            This lead had no active drip — it comes back as an active lead for you to work.
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isPending}>Cancel</Button>
+          <Button onClick={onConfirm} disabled={isPending} className="gap-1.5">
+            {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
+            {hasDrip ? "Confirm — resume here" : "Confirm"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 // Gap #8 (Track1 spec): leads handed back from sales for telecaller follow-up.
@@ -83,7 +154,7 @@ export function ReactivationView({ onOpenLead }: ReactivationViewProps) {
                       ) : (
                         <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
                       )}
-                      <Button size="sm">Assume Ownership</Button>
+                      <AssumeOwnershipButton lead={lead} />
                       <Button size="sm" variant="outline" onClick={() => onOpenLead(lead.id)}>Open</Button>
                     </div>
                   }

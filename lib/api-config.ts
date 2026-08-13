@@ -102,6 +102,7 @@ export const endpoints = {
   leadHandBack: (id: string) => `/leads/${id}/hand-back`,
   // One-button revive: un-archive a filed lead back to No Response + flag re-qualification.
   leadUnarchiveNoResponse: (id: string) => `/leads/${id}/unarchive-no-response`,
+  leadAssumeOwnership: (id: string) => `/leads/${id}/assume-ownership`,
   // Meeting SLAs (Phase 3)
   meetingSummaryUpload: (meetingId: string) => `/meetings/${meetingId}/summary`,
   meetingSlaStatus: (meetingId: string) => `/meetings/${meetingId}/sla`,

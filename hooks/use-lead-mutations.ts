@@ -355,6 +355,18 @@ export function useUnarchiveToNoResponse(id: string | number) {
   })
 }
 
+export function useAssumeOwnership(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.assumeOwnership(id),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(res.resumedDrip ? "Ownership assumed — drip resumed where it left off" : "Ownership assumed")
+    },
+    onError: toastError("Failed to assume ownership"),
+  })
+}
+
 export function useUploadMeetingSummary(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({
