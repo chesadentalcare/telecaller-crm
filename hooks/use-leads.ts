@@ -9,6 +9,7 @@ import {
   fetchDormantLeads,
   fetchLostLeads,
   fetchWonLeads,
+  fetchRepliesDueLeads,
   fetchReactivationLeads,
   fetchSixMonthLeads,
   fetchRequalificationLeads,
@@ -32,6 +33,7 @@ export const leadKeys = {
   dormant: () => [...leadKeys.all, "dormant"] as const,
   lost: () => [...leadKeys.all, "lost"] as const,
   won: () => [...leadKeys.all, "won"] as const,
+  repliesDue: () => [...leadKeys.all, "replies-due"] as const,
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   requalification: () => [...leadKeys.all, "requalification"] as const,
@@ -76,6 +78,9 @@ export function useDormantLeads() {
 }
 export function useWonLeads() {
   return useQuery({ queryKey: leadKeys.won(),         queryFn: fetchWonLeads })
+}
+export function useRepliesDueLeads() {
+  return useQuery({ queryKey: leadKeys.repliesDue(),  queryFn: fetchRepliesDueLeads })
 }
 export function useLostLeads() {
   return useQuery({ queryKey: leadKeys.lost(),        queryFn: fetchLostLeads })

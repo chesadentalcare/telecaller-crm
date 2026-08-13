@@ -563,6 +563,18 @@ export interface WonRow extends ReplyRowFields {
   won_by: string | null
 }
 
+export interface RepliesDueRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  city: string | null
+  state: string | null
+  last_outcome: string | null
+  last_outcome_at: string | null
+  last_outcome_by: string | null
+}
+
 // Segment queues now carry the same identity as the Active pipeline so every
 // pipeline-hub segment renders the canonical LeadQueueRow.
 export interface ReactivationRow extends ReplyRowFields {
@@ -1211,6 +1223,7 @@ export const leadsApi = {
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
     lost:         () => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost)),
     won:          () => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon)),
+    repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
     reactivation: () => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation)),
     sixMonth:     () => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth)),
     requalification: () => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification)),
