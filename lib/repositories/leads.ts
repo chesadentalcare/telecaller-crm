@@ -15,6 +15,7 @@ import type {
   IdleLead,
   DormantLead,
   LostLead,
+  WonLead,
   ReactivationLead,
   SixMonthLead,
   RequalificationLead,
@@ -35,6 +36,7 @@ import type {
   IdleRow,
   DormantRow,
   LostRow,
+  WonRow,
   ReactivationRow,
   SixMonthRow,
   RequalificationRow,
@@ -170,6 +172,16 @@ const toLost = (r: LostRow): LostLead => ({
   reason: r.reason ?? "—",
   lostReason: r.lost_reason ?? null,
   lostDaysAgo: r.lost_days,
+  replied: toReplied(r),
+})
+const toWon = (r: WonRow): WonLead => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
+  wonDaysAgo: r.won_days,
+  installationDate: r.installation_date ?? null,
+  wonBy: r.won_by ?? null,
   replied: toReplied(r),
 })
 
@@ -311,6 +323,11 @@ export const fetchLostLeads = async (): Promise<LostLead[]> => {
   return rows.map(toLost)
 }
 
+export const fetchWonLeads = async (): Promise<WonLead[]> => {
+  const rows = await leadsApi.queues.won()
+  return rows.map(toWon)
+}
+
 export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {
   const rows = await leadsApi.queues.reactivation()
   return rows.map(toReactivation)
@@ -357,6 +374,7 @@ export const fetchQueueCounts = async (): Promise<QueueCounts> => {
     archived: c.archived,
     requalification: c.requalification,
     lost: c.lost,
+    won: c.won ?? 0,
     callsDue: c.callsDue,
     callsDueAwaitingReply: c.callsDueAwaitingReply ?? 0,
     pipelineAwaitingReply: c.pipelineAwaitingReply ?? 0,

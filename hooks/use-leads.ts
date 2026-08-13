@@ -8,6 +8,7 @@ import {
   fetchIdleLeads,
   fetchDormantLeads,
   fetchLostLeads,
+  fetchWonLeads,
   fetchReactivationLeads,
   fetchSixMonthLeads,
   fetchRequalificationLeads,
@@ -30,6 +31,7 @@ export const leadKeys = {
   idle: () => [...leadKeys.all, "idle"] as const,
   dormant: () => [...leadKeys.all, "dormant"] as const,
   lost: () => [...leadKeys.all, "lost"] as const,
+  won: () => [...leadKeys.all, "won"] as const,
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
   sixMonth: () => [...leadKeys.all, "six-month"] as const,
   requalification: () => [...leadKeys.all, "requalification"] as const,
@@ -71,6 +73,9 @@ export function useIdleLeads() {
 }
 export function useDormantLeads() {
   return useQuery({ queryKey: leadKeys.dormant(),     queryFn: fetchDormantLeads })
+}
+export function useWonLeads() {
+  return useQuery({ queryKey: leadKeys.won(),         queryFn: fetchWonLeads })
 }
 export function useLostLeads() {
   return useQuery({ queryKey: leadKeys.lost(),        queryFn: fetchLostLeads })

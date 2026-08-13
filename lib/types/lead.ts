@@ -106,6 +106,14 @@ export interface LostLead extends LeadBase {
   lostDaysAgo?: number
 }
 
+// Closed-won end state — the deal was won (via the app or synced from SAP).
+export interface WonLead extends LeadBase {
+  equipment: string
+  wonDaysAgo?: number
+  installationDate?: string | null
+  wonBy?: string | null
+}
+
 // Gap #8 — sales handed this lead back to telecaller
 export interface ReactivationLead extends LeadBase {
   handedBackAt: string
@@ -203,6 +211,7 @@ export interface QueueCounts {
   archived: number
   requalification: number
   lost: number
+  won: number
   callsDue: number
   // WhatsApp awaiting-reply badges (replace the raw queue-size counts on the nav).
   callsDueAwaitingReply: number
