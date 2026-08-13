@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { useSearchParams, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { Clock, Droplets, Loader2, Phone } from "lucide-react"
 
@@ -19,7 +19,6 @@ import { useQueryClient } from "@tanstack/react-query"
 export function IdleQueueView() {
   const { data: leads = [], isLoading } = useIdleLeads()
   const qc = useQueryClient()
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -34,7 +33,7 @@ export function IdleQueueView() {
     const params = new URLSearchParams(searchParams.toString())
     params.set("view", "lead-detail")
     params.set("leadId", id)
-    router.push(`${pathname}?${params.toString()}`)
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`)
   }
 
   const addToDrip = async (id: string) => {
