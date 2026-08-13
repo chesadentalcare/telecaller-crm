@@ -67,6 +67,16 @@ interface PipelineHubProps {
 }
 
 export function PipelineHub({ onOpenLead }: PipelineHubProps) {
+  return (
+    <PipelineDateFilterProvider>
+      <PipelineHubInner onOpenLead={onOpenLead} />
+    </PipelineDateFilterProvider>
+  )
+}
+
+// Inner lives INSIDE the date-filter provider so the tab badge counts (and the
+// segment lists) both react to the selected created-date range.
+function PipelineHubInner({ onOpenLead }: PipelineHubProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const counts = useQueueCounts()
@@ -94,7 +104,6 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
   const current = SEGMENTS.find((s) => s.id === active) ?? SEGMENTS[0]
 
   return (
-    <PipelineDateFilterProvider>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PipelineDateBar />
@@ -145,6 +154,5 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
       {/* Active segment body */}
       <div>{current.render(onOpenLead)}</div>
     </div>
-    </PipelineDateFilterProvider>
   )
 }

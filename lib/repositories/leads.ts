@@ -383,8 +383,8 @@ export const fetchUpcomingCalls = async (): Promise<UpcomingCalls> => {
   }
 }
 
-export const fetchQueueCounts = async (): Promise<QueueCounts> => {
-  const c = await leadsApi.queues.counts()
+export const fetchQueueCounts = async (range?: DateRange): Promise<QueueCounts> => {
+  const c = await leadsApi.queues.counts(range)
   return {
     pipeline: c.pipeline,
     noResponse: c.noResponse,

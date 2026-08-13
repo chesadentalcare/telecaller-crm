@@ -1248,6 +1248,6 @@ export const leadsApi = {
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),
-    counts:       () => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts)),
+    counts:       (r?: DateRange) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r))),
   },
 }
