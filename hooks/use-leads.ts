@@ -20,6 +20,7 @@ import {
   fetchLeadById,
 } from "@/lib/repositories/leads"
 import { leadsApi } from "@/lib/api/leads"
+import { usePipelineDateRange } from "@/lib/pipeline-date-filter"
 
 // Single source of truth for query keys. Group prefix `leads` lets us
 // invalidate everything with `queryClient.invalidateQueries({ queryKey: ['leads'] })`.
@@ -62,37 +63,47 @@ export const leadKeys = {
 }
 
 export function usePipelineLeads() {
-  return useQuery({ queryKey: leadKeys.pipeline(),    queryFn: fetchPipelineLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.pipeline(), r],    queryFn: () => fetchPipelineLeads(r) })
 }
 export function useDripLeads() {
-  return useQuery({ queryKey: leadKeys.drip(),        queryFn: fetchDripLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.drip(), r],        queryFn: () => fetchDripLeads(r) })
 }
 export function useNoResponseLeads() {
-  return useQuery({ queryKey: leadKeys.noResponse(),  queryFn: fetchNoResponseLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.noResponse(), r],  queryFn: () => fetchNoResponseLeads(r) })
 }
 export function useIdleLeads() {
-  return useQuery({ queryKey: leadKeys.idle(),        queryFn: fetchIdleLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.idle(), r],        queryFn: () => fetchIdleLeads(r) })
 }
 export function useDormantLeads() {
-  return useQuery({ queryKey: leadKeys.dormant(),     queryFn: fetchDormantLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.dormant(), r],     queryFn: () => fetchDormantLeads(r) })
 }
 export function useWonLeads() {
-  return useQuery({ queryKey: leadKeys.won(),         queryFn: fetchWonLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.won(), r],         queryFn: () => fetchWonLeads(r) })
 }
 export function useRepliesDueLeads() {
   return useQuery({ queryKey: leadKeys.repliesDue(),  queryFn: fetchRepliesDueLeads })
 }
 export function useLostLeads() {
-  return useQuery({ queryKey: leadKeys.lost(),        queryFn: fetchLostLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.lost(), r],        queryFn: () => fetchLostLeads(r) })
 }
 export function useReactivationLeads() {
-  return useQuery({ queryKey: leadKeys.reactivation(), queryFn: fetchReactivationLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.reactivation(), r], queryFn: () => fetchReactivationLeads(r) })
 }
 export function useSixMonthLeads() {
-  return useQuery({ queryKey: leadKeys.sixMonth(),    queryFn: fetchSixMonthLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.sixMonth(), r],    queryFn: () => fetchSixMonthLeads(r) })
 }
 export function useRequalificationLeads() {
-  return useQuery({ queryKey: leadKeys.requalification(), queryFn: fetchRequalificationLeads })
+  const r = usePipelineDateRange()
+  return useQuery({ queryKey: [...leadKeys.requalification(), r], queryFn: () => fetchRequalificationLeads(r) })
 }
 export function useCallsDueLeads() {
   return useQuery({ queryKey: leadKeys.callsDue(),    queryFn: fetchCallsDueLeads })

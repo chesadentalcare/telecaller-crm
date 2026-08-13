@@ -6,6 +6,8 @@
 
 import type { CallOutcome } from "@/lib/schemas/call-attempt"
 
+export interface DateRange { from?: string; to?: string }
+
 export type LeadStatus = "new" | "contacted" | "qualified" | "unqualified" | "meeting-scheduled"
 export type DripTrack = "1-month" | "3-month" | "6-month"
 export type InterestLevel = "hot" | "warm" | "cold" | "just_exploring"
