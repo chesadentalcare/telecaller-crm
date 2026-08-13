@@ -8,16 +8,19 @@
 // logic is duplicated. The active segment is synced to the `segment` URL param
 // so deep-links / browser-back / shared links work.
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy,
+  Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ViewSkeleton } from "./view-skeleton"
+import { LeadsExportDialog } from "./leads-export-dialog"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
+import { useRole } from "@/hooks/use-role"
 import type { QueueCounts } from "@/lib/types/lead"
 
 // Lazy-load each segment so only the selected one is fetched/rendered — preserves
@@ -66,6 +69,8 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const counts = useQueueCounts()
+  const { isManagerOrAbove } = useRole()
+  const [exportOpen, setExportOpen] = useState(false)
 
   const param = searchParams.get("segment")
   const active = useMemo<SegmentId>(
@@ -89,6 +94,15 @@ export function PipelineHub({ onOpenLead }: PipelineHubProps) {
 
   return (
     <div className="space-y-4">
+      {isManagerOrAbove && (
+        <div className="flex items-center justify-end">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+            <FileSpreadsheet className="size-4" />Export all data
+          </Button>
+          <LeadsExportDialog open={exportOpen} onOpenChange={setExportOpen} />
+        </div>
+      )}
+
       {/* Segmented control — single scrollable strip (no messy wrap on mobile) */}
       <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {SEGMENTS.map((seg) => {
