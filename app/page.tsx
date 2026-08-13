@@ -296,9 +296,11 @@ function TelecallerDashboardInner() {
   // navigation (full page reload). window.history.pushState updates the URL
   // client-side only — Next 16 keeps useSearchParams reactive to it — so view
   // switching stays a true SPA transition (no reload, no scroll jump).
+  // Stable across renders unless the URL changes (searchParams is a new object every render).
+  const searchParamsString = searchParams.toString()
   const setActiveView = useMemo(
     () => (view: string) => {
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(searchParamsString)
       // `home` is kept EXPLICIT in the URL (not cleared) — telecallers default to
       // Calls Due on a bare URL, so clearing `view` would bounce them off the
       // Dashboard right back to Calls Due. Explicit ?view=home lets Home stick.
@@ -307,19 +309,19 @@ function TelecallerDashboardInner() {
       if (view !== "pipeline") params.delete("segment")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
-    [pathname, searchParams],
+    [pathname, searchParamsString],
   )
 
   const openLead = useMemo(
     () => (leadId: string, action?: string) => {
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(searchParamsString)
       params.set("view", "lead-detail")
       params.set("leadId", leadId)
       if (action) params.set("action", action)
       else params.delete("action")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
-    [pathname, searchParams],
+    [pathname, searchParamsString],
   )
 
   const requested = VIEW_REGISTRY[activeView]
@@ -332,7 +334,7 @@ function TelecallerDashboardInner() {
     requested && (!requested.roles || isManagerOrAbove || (role !== null && hasRole(...requested.roles)))
       ? requested
       : FALLBACK_VIEW
-  const pageInfo = { title: view.title, subtitle: view.subtitle }
+  const pageInfo = useMemo(() => ({ title: view.title, subtitle: view.subtitle }), [view])
   const renderContent = () => view.render({ selectedLeadId, selectedAction, setActiveView, openLead })
 
   return (
