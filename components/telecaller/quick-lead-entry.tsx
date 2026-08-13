@@ -64,6 +64,13 @@ const BUYER_SOURCE = [
   { value: "other", label: "Bought from other", hint: "Lost" },
 ] as const
 
+const LEAD_SOURCES = [
+  { value: "Facebook Organic", label: "Facebook Organic", hint: "Unpaid FB/IG" },
+  { value: "Facebook Paid", label: "Facebook Paid", hint: "FB/IG ads" },
+  { value: "Google Ads", label: "Google Ads", hint: "Search / display" },
+  { value: "IndiaMart", label: "IndiaMart", hint: "Marketplace" },
+] as const
+
 // Plain-English version of where the lead went (no "drip" / "nurture" jargon).
 const ROUTE_LABEL: Record<string, string> = {
   drip: "we'll follow up automatically",
@@ -126,6 +133,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   const [email, setEmail] = useState("")
   const [state, setState] = useState("")
   const [city, setCity] = useState("")
+  const [source, setSource] = useState("")
   const [equipmentInterest, setEquipmentInterest] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
   const [budget, setBudget] = useState("")
@@ -183,7 +191,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
 
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
-    setState(""); setCity(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
+    setState(""); setCity(""); setSource(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
     setOutcome(""); setReadyNow(false); setNurtureRoute("drip"); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
   }
 
@@ -194,6 +202,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "That email doesn't look right"
     if (!state) return "Pick a state"
     if (!city.trim()) return "Enter a city"
+    if (!source) return "Pick the lead source"
     if (!outcome) return "Pick what happened on the call"
     // Interest / budget / buy-timing only matter when she actually spoke to the
     // doctor. A no-response / wrong-number lead saves with just the basics.
@@ -257,7 +266,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
       city: city.trim(),
       interestLevel: isEngaged && interestLevel ? interestLevel : "just_exploring",
       budget: isEngaged && budget ? budget : "<5L",
-      source: "Facebook",
+      source,
       equipmentInterest: isEngaged ? (equipmentInterest || undefined) : undefined,
       timeline: timelineNeeded && timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
       ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: engagedMeeting === "physical" ? "physical_meeting" : engagedMeeting === "zoom" ? "online_meeting" : "drip_info" } : {}),
@@ -381,6 +390,11 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
               <Mail className={iconCls} />
               <Input className="pl-10" type="email" placeholder="dr.name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Lead source<Req /></Label>
+            <Pills options={LEAD_SOURCES} value={source} onChange={setSource} />
           </div>
         </div>
 
