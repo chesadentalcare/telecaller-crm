@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 export type EngagementMode = "all" | "engaged" | "not_engaged"
@@ -25,8 +25,10 @@ export function EngagementModeProvider({ children }: { children: React.ReactNode
     try { window.localStorage.setItem(STORAGE_KEY, m) } catch { /* private mode */ }
   }, [])
 
+  const value = useMemo(() => ({ mode, setMode }), [mode, setMode])
+
   return (
-    <EngagementModeContext.Provider value={{ mode, setMode }}>
+    <EngagementModeContext.Provider value={value}>
       {children}
     </EngagementModeContext.Provider>
   )

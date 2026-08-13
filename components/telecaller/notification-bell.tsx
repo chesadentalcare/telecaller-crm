@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import {
   Bell, CheckCheck, Clock, AlertTriangle, FileText, MessageSquare, Shield, ArrowRightLeft,
 } from "lucide-react"
@@ -77,7 +76,6 @@ function linkToHref(link: string): string | null {
 }
 
 export function NotificationBell() {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const { data: countData } = useUnreadNotificationCount()
   const { data: notifications } = useNotifications(15)
@@ -121,7 +119,7 @@ export function NotificationBell() {
                 key={n.id}
                 notification={n}
                 onRead={() => { if (!n.is_read) markRead(n.id) }}
-                onNavigate={(href) => { setOpen(false); router.push(href) }}
+                onNavigate={(href) => { setOpen(false); window.history.pushState(null, "", href) }}
               />
             ))
           )}

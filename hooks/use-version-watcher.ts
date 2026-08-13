@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react"
 
-// Polls /version.json (emitted at build time by scripts/gen-version.mjs) and fires
-// an update when the build number changes: sets `updateAvailable` for the banner,
-// then a staggered auto-reload (0–30s) as a safety net so stale tabs update even if
-// the user never taps Refresh. Module-level singleton → ONE poll loop shared by every
-// subscriber. Network/JSON errors (e.g. dev, which has no version.json) are ignored.
-// The random stagger avoids a thundering-herd reload across all open browsers.
+// Polls /version.json (emitted at build time by scripts/gen-version.mjs) and, when the
+// build number changes, sets `updateAvailable` so the banner offers a manual Refresh.
+// It does NOT auto-reload — an unprompted window.location.reload() interrupts the rep
+// mid-action (bad UX). Module-level singleton → ONE poll loop shared by every subscriber.
+// Network/JSON errors (e.g. dev, which has no version.json) are ignored.
 
 const POLL_INTERVAL_MS = 2 * 60 * 1000 // 2 min
-const MAX_STAGGER_MS = 30 * 1000 // 30 s
 
 type WatcherState = { updateAvailable: boolean; runningVersion: number | null; runningBuildAt: string | null }
 
@@ -50,8 +48,6 @@ const check = async () => {
     if (version !== runningVersion) {
       reloadScheduled = true
       setState({ updateAvailable: true })
-      const delay = Math.floor(Math.random() * MAX_STAGGER_MS)
-      setTimeout(() => { void forceUpdateReload() }, delay)
     }
   } catch { /* dev has no version.json — ignore */ }
 }

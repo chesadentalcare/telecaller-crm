@@ -62,7 +62,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
           ? "bg-rose-50 hover:bg-rose-100/70"
           : undefined
     return (
-      <div key={`${lead.id}-${lead.reason}-${lead.scheduledAt.getTime()}`}>
+      <div key={`${lead.id}-${lead.reason}`}>
         <LeadQueueRow
           id={lead.id}
           name={lead.name}
