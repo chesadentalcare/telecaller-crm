@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   FileText, FileSpreadsheet, Plus, Trash2, Package, Search,
-  ChevronDown, Send, Loader2,
+  ChevronDown, Send, Loader2, User, Users,
 } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
@@ -226,6 +226,7 @@ export function QuotationAshvaBuilder({
 
   // Downloading / sending flags (keyed so both buttons can show spinners).
   const [busy, setBusy] = useState<null | "pdf" | "xlsx" | "send">(null)
+  const [sendOpen, setSendOpen] = useState(false)
 
   const { data: packages = [], isLoading: packagesLoading } = useQuery({
     queryKey: ["quotation-packages"],
@@ -317,13 +318,14 @@ export function QuotationAshvaBuilder({
     }
   }
 
-  const handleSend = async () => {
+  const handleSend = async (recipient: "customer" | "sales") => {
     if (!validate()) return
+    setSendOpen(false)
     setBusy("send")
     try {
-      const r = await quotationApi.send("pdf", buildBody(), leadId, approval?.quotationId)
+      const r = await quotationApi.send("pdf", buildBody(), leadId, approval?.quotationId, recipient)
       if (r.sent) {
-        toast.success("Quotation sent on WhatsApp")
+        toast.success(recipient === "sales" ? "Quotation sent to the sales employee" : "Quotation sent to the customer")
         setApproval(null)
       } else if (r.needsApproval) {
         setApproval({ quotationId: r.quotationId!, discountPct: r.discountPct, thresholdPct: r.thresholdPct })
@@ -612,7 +614,7 @@ export function QuotationAshvaBuilder({
               <div className="text-[10px] text-gray-700 space-y-0.5 mb-3">
                 <p className="font-semibold">Terms &amp; Conditions</p>
                 <p>1. Prices are subject to change without prior notice.</p>
-                <p>2. Taxes extra as applicable.</p>
+                <p>2. Prices are inclusive of GST.</p>
                 <p>3. Warranty as stated against each item.</p>
               </div>
 
@@ -656,7 +658,7 @@ export function QuotationAshvaBuilder({
             </Button>
             <Button
               type="button" size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700"
-              onClick={handleSend}
+              onClick={() => { if (validate()) setSendOpen(true) }}
               disabled={busy !== null}
             >
               {busy === "send" ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
@@ -665,6 +667,45 @@ export function QuotationAshvaBuilder({
           </div>
           </div>
         </div>
+
+        <Dialog open={sendOpen} onOpenChange={setSendOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="size-4" /> Send quotation on WhatsApp
+              </DialogTitle>
+              <DialogDescription>
+                Choose who receives this quotation. Both go out on the approved WhatsApp template.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Button
+                type="button" variant="outline"
+                className="h-auto w-full justify-start gap-3 py-3 text-left"
+                onClick={() => handleSend("customer")}
+                disabled={busy !== null}
+              >
+                <User className="size-4 shrink-0 text-green-600" />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">Send to Customer{to ? ` — ${to}` : ""}</span>
+                  <span className="text-[11px] text-muted-foreground">Goes to the customer&apos;s WhatsApp number.</span>
+                </span>
+              </Button>
+              <Button
+                type="button" variant="outline"
+                className="h-auto w-full justify-start gap-3 py-3 text-left"
+                onClick={() => handleSend("sales")}
+                disabled={busy !== null}
+              >
+                <Users className="size-4 shrink-0 text-indigo-600" />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">Send to Sales employee</span>
+                  <span className="text-[11px] text-muted-foreground">Goes to the assigned sales rep&apos;s WhatsApp number.</span>
+                </span>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   )

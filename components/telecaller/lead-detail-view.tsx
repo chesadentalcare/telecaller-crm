@@ -281,6 +281,8 @@ type WhatsappOutbound = {
   sentAt: Date
   deliveredAt?: Date
   readAt?: Date
+  toSales?: boolean
+  sentToName?: string | null
 }
 
 type ZoomMeetingSummary = {
@@ -299,12 +301,12 @@ type ZoomMeetingSummary = {
 // reuse the exact same mapping + tab components instead of duplicating them.
 // whatsapp_messages.payload arrives as a JSON object (mysql2) or a JSON string
 // (depending on the driver/column) — normalise both to { text, sentBy } | null.
-function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null } | null {
+function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null } | null {
   if (!p) return null
   if (typeof p === "string") {
     try { return JSON.parse(p) } catch { return null }
   }
-  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null }
+  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null }
 }
 
 export function mapDetail(d: ApiLeadDetail): LeadDetail {
@@ -350,6 +352,8 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       sentAt: new Date(w.sent_at),
       deliveredAt: w.delivered_at ? new Date(w.delivered_at) : undefined,
       readAt: w.read_at ? new Date(w.read_at) : undefined,
+      toSales: p?.sentTo === "sales",
+      sentToName: p?.salesRepName ?? null,
     }
   })
 
@@ -2348,6 +2352,14 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
               <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
               <span className="text-muted-foreground"> · {m.templateName}</span>
             </p>
+            {m.kind === "quotation" && (
+              <span className={cn(
+                "inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                m.toSales ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-600" : "border-success/30 bg-success/10 text-success",
+              )}>
+                → {m.toSales ? `Sales employee${m.sentToName ? `: ${m.sentToName}` : ""}` : "Customer"}
+              </span>
+            )}
             {hasDoc && (
               <a
                 href={msg?.documentUrl || undefined}
@@ -2420,10 +2432,9 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const allOutbound = lead.whatsappOutbound ?? []
   // Split the doctor (customer) conversation from the sales-rep nudge thread so each gets its own tab.
   const inbound = allInbound.filter((m) => !m.fromSales)
-  const outbound = allOutbound.filter((m) => m.kind !== "sales_nudge")
+  const outbound = allOutbound.filter((m) => m.kind !== "sales_nudge" && !m.toSales)
   const salesInbound = allInbound.filter((m) => m.fromSales)
-  const salesOutbound = allOutbound.filter((m) => m.kind === "sales_nudge")
-  const hasSales = salesInbound.length > 0 || salesOutbound.length > 0
+  const salesOutbound = allOutbound.filter((m) => m.kind === "sales_nudge" || m.toSales)
 
   const buildThread = (
     ins: InboundReply[],
@@ -2447,10 +2458,15 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
     if (el) el.scrollTop = el.scrollHeight
   }, [tab, thread.length, salesThread.length])
 
-  // Awaiting = customer's latest inbound (not a STOP) with no manual reply after it.
+  // Awaiting = latest non-STOP inbound with no manual reply nor engaged call logged after it.
   const lastInbound = inbound.reduce<InboundReply | null>((acc, m) => (!acc || m.receivedAt > acc.receivedAt ? m : acc), null)
   const lastManualOut = outbound.reduce<Date | null>((acc, m) => (m.kind === "manual" && (!acc || m.sentAt > acc) ? m.sentAt : acc), null)
-  const awaiting = !!lastInbound && lastInbound.intent !== "stop" && (!lastManualOut || lastInbound.receivedAt > lastManualOut)
+  const lastEngagedCall = lead.attempts.reduce<Date | null>(
+    (acc, a) => (a.outcome === "engaged" && (a.attemptType === "call" || a.attemptType === "retry_call") && (!acc || a.attemptedAt > acc) ? a.attemptedAt : acc),
+    null,
+  )
+  const respondedAt = [lastManualOut, lastEngagedCall].reduce<Date | null>((acc, d) => (d && (!acc || d > acc) ? d : acc), null)
+  const awaiting = !!lastInbound && lastInbound.intent !== "stop" && (!respondedAt || lastInbound.receivedAt > respondedAt)
 
   // 24h customer-care window — Meta only allows free text within 24h of the last inbound.
   // Basis = the actual latest inbound in the thread (falls back to the denormalized
@@ -2508,35 +2524,35 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {hasSales && (
-          <div className="flex gap-1.5 rounded-lg border bg-muted/30 p-1">
-            <button
-              type="button"
-              onClick={() => setTab("doctor")}
-              className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "doctor" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
-            >
-              Doctor{thread.length ? ` (${thread.length})` : ""}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("sales")}
-              className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "sales" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
-            >
-              Sales rep{salesThread.length ? ` (${salesThread.length})` : ""}
-            </button>
-          </div>
-        )}
+        <div className="flex gap-1.5 rounded-lg border bg-muted/30 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("doctor")}
+            className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "doctor" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
+          >
+            Doctor{thread.length ? ` (${thread.length})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("sales")}
+            className={cn("flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors", tab === "sales" ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}
+          >
+            Sales employee{salesThread.length ? ` (${salesThread.length})` : ""}
+          </button>
+        </div>
 
-        {tab === "sales" && hasSales ? (
+        {tab === "sales" ? (
           salesThread.length === 0 ? (
             <div className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">
-              No sales-rep messages yet.
+              No sales-employee messages yet. Quotations you send to the sales rep appear here.
             </div>
           ) : (
             <div ref={threadRef} className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
               {salesThread.map((item) =>
                 item.side === "in" ? (
                   <SalesBubble key={item.key} text={item.reply.body} at={item.at} inbound />
+                ) : item.msg.kind === "quotation" ? (
+                  <OutboundBubble key={item.key} m={item.msg} />
                 ) : (
                   <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} />
                 ),
@@ -2560,7 +2576,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
         )}
 
         {/* Composer — Doctor tab only (no free-text back to the rep) */}
-        {!(tab === "sales" && hasSales) && (
+        {tab === "doctor" && (
         <div className="space-y-2 border-t pt-3">
           {optedOut ? (
             <p className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">

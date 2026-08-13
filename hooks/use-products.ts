@@ -54,6 +54,7 @@ export interface CatalogueProduct {
   name: string
   code: string
   mrp: number
+  gstRate: number
   msp: number
   dp: number
   sdp: number
@@ -71,12 +72,13 @@ async function fetchProductCatalogue(): Promise<CatalogueProduct[]> {
   const rows = Array.isArray(json?.products) ? json.products : []
   return rows
     .map((p) => {
-      const prices = (p.prices ?? {}) as Record<string, { pre?: number } | null>
+      const prices = (p.prices ?? {}) as Record<string, { pre?: number; post?: number } | null>
       return {
         id: 0,
         name: String(p.name ?? ""),
         code: String(p.code ?? ""),
-        mrp: Number(prices.MRP?.pre) || 0,
+        mrp: Number(prices.MRP?.post) || Number(prices.MRP?.pre) || 0,
+        gstRate: Number(p.gstRate) || 0,
         msp: 0,
         dp: 0,
         sdp: 0,
