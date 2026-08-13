@@ -296,6 +296,17 @@ export function useSendReply(id: string | number) {
   })
 }
 
+export function useSendSalesReply(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { text: string }) => leadsApi.sendSalesReply(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(id)) })
+    },
+    onError: toastError("Failed to message the sales rep"),
+  })
+}
+
 export function useEnterDrip(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

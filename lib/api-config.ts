@@ -96,6 +96,7 @@ export const endpoints = {
   leadAckReplies: (id: string) => `/leads/${id}/replies/ack`,
   // Two-way WhatsApp reply — send a free-text message to the customer (24h window gated).
   leadSendReply: (id: string) => `/leads/${id}/replies/send`,
+  leadSendSalesReply: (id: string) => `/leads/${id}/replies/send-sales`,
   // Live conversation SSE stream (EventSource; JWT passed as ?token=).
   conversationStream: "/stream/conversations",
   leadTimeline: (id: string) => `/leads/${id}/timeline`,
