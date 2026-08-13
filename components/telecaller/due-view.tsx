@@ -16,7 +16,7 @@ import { useMeetingsDueLeads } from "@/hooks/use-leads"
 type DueTab = "calls" | "meetings" | "replies"
 
 interface DueViewProps {
-  onOpenLead: (id: string) => void
+  onOpenLead: (id: string, action?: string) => void
   initialTab?: DueTab
 }
 

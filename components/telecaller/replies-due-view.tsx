@@ -12,7 +12,7 @@ import { useRepliesDueLeads } from "@/hooks/use-leads"
 import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
 
-export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string) => void }) {
+export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string, action?: string) => void }) {
   const { data: leads = [], isLoading } = useRepliesDueLeads()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   if (isLoading) return <ViewSkeleton />
@@ -79,7 +79,7 @@ export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string) => voi
                           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                           <SlidersHorizontal className="size-3.5" />Cockpit
                         </Button>
-                        <Button size="sm" onClick={() => onOpenLead(lead.id)}>Open &amp; reply</Button>
+                        <Button size="sm" onClick={() => onOpenLead(lead.id, "replies")}>Open &amp; reply</Button>
                       </div>
                     }
                   />
