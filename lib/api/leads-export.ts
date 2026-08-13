@@ -26,6 +26,13 @@ export async function downloadLeadsExport(filters: LeadsExportFilters): Promise<
     method: "GET",
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   })
+  if (res.status === 401) {
+    tokenStorage.clear()
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.assign("/login")
+    }
+    throw new Error("Your session expired — please sign in again.")
+  }
   if (!res.ok) {
     const msg = await res
       .json()
