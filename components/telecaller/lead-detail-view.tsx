@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import {
   ArrowLeft,
   BookOpen,
@@ -99,7 +99,8 @@ import {
   physicalMeetingDefaults,
   type PhysicalMeetingValues,
 } from "@/lib/schemas/physical-meeting"
-import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers } from "@/hooks/use-leads"
+import { useLeadFullDetail, useMeetingSlaStatus, useSalesUsers, leadKeys } from "@/hooks/use-leads"
+import { useQueryClient } from "@tanstack/react-query"
 import { SalesUserOptions } from "./sales-user-options"
 import {
   useLogAttempt,
@@ -2411,6 +2412,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
   const { mutate: ackReplies } = useAckReplies(lead.id)
   const { mutateAsync: sendReply, isPending: sending } = useSendReply(lead.id)
   const [draft, setDraft] = useState("")
+  const qc = useQueryClient()
 
   const [tab, setTab] = useState<"doctor" | "sales">("doctor")
 
@@ -2438,6 +2440,12 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
 
   const thread = buildThread(inbound, outbound, "")
   const salesThread = buildThread(salesInbound, salesOutbound, "s")
+
+  const threadRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = threadRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [tab, thread.length, salesThread.length])
 
   // Awaiting = customer's latest inbound (not a STOP) with no manual reply after it.
   const lastInbound = inbound.reduce<InboundReply | null>((acc, m) => (!acc || m.receivedAt > acc.receivedAt ? m : acc), null)
@@ -2525,7 +2533,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
               No sales-rep messages yet.
             </div>
           ) : (
-            <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
+            <div ref={threadRef} className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
               {salesThread.map((item) =>
                 item.side === "in" ? (
                   <SalesBubble key={item.key} text={item.reply.body} at={item.at} inbound />
@@ -2540,7 +2548,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             No WhatsApp messages yet. Sent templates and customer replies will appear here.
           </div>
         ) : (
-          <div className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
+          <div ref={threadRef} className="space-y-3 max-h-[52vh] overflow-y-auto overflow-x-hidden pr-1">
             {thread.map((item) =>
               item.side === "in" ? (
                 <InboundBubble key={item.key} m={item.reply} onReclassify={onReclassify} disabled={reclassifying} />
@@ -2573,6 +2581,15 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </p>
           )}
           <div className="flex items-end gap-2">
+            <SendCatalogueButton
+              leadId={lead.id}
+              phone={!noPhone ? lead.phone : undefined}
+              iconOnly
+              variant="outline"
+              className="shrink-0"
+              disabled={optedOut || noPhone}
+              onSent={() => qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(lead.id)) })}
+            />
             <Textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
@@ -2594,6 +2611,9 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
               <Send className="size-4" />
             </Button>
           </div>
+          <p className="text-[10px] text-muted-foreground">
+            The catalogue sends on an approved template — it works even when the 24h reply window is closed.
+          </p>
         </div>
         )}
       </CardContent>

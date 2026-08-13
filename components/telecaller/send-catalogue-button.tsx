@@ -20,6 +20,8 @@ interface SendCatalogueButtonProps {
   size?: BtnSize
   variant?: BtnVariant
   className?: string
+  disabled?: boolean
+  onSent?: () => void
 }
 
 // Sends the approved Ashva catalogue (chesa_m1_recap) to the lead's WhatsApp on a
@@ -33,6 +35,8 @@ export function SendCatalogueButton({
   size = "sm",
   variant = "outline",
   className,
+  disabled = false,
+  onSent,
 }: SendCatalogueButtonProps) {
   const [open, setOpen] = useState(false)
   const [info, setInfo] = useState<CatalogueInfo | null>(null)
@@ -62,6 +66,7 @@ export function SendCatalogueButton({
       const res = await catalogueApi.send(leadId)
       toast.success(res.dryRun ? "Catalogue queued (dry-run)" : "Catalogue sent on WhatsApp")
       setOpen(false)
+      onSent?.()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send catalogue")
     } finally {
@@ -77,6 +82,7 @@ export function SendCatalogueButton({
           size={iconOnly ? "icon" : size}
           variant={variant}
           className={className}
+          disabled={disabled}
           onClick={(e) => e.stopPropagation()}
           title="Send catalogue on WhatsApp"
         >
