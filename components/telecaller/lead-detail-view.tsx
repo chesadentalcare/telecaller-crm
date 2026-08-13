@@ -515,6 +515,8 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
     if (action === "book-physical" || action === "book-zoom") {
       setActiveTab("meetings")
       setAutoOpenMeeting(action === "book-zoom" ? "zoom" : "physical")
+    } else if (action === "replies") {
+      setActiveTab("replies")
     }
   }, [action])
   // Map backend payload → rich UI shape. useMemo so child tabs see stable
