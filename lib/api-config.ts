@@ -179,7 +179,7 @@ export const endpoints = {
   queueCounts: "/queue/counts",
   dueExport: "/queue/export",
   dueExportAgents: "/queue/export/agents",
-  leadsFullExport: "/admin/export/leads-full",
+  leadsFullExport: "/reports/leads-full",
 } as const
 
 /**
