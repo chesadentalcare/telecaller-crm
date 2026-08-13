@@ -553,6 +553,16 @@ export interface LostRow extends ReplyRowFields {
   lost_reason: string | null
 }
 
+export interface WonRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  won_days: number
+  installation_date: string | null
+  won_by: string | null
+}
+
 // Segment queues now carry the same identity as the Active pipeline so every
 // pipeline-hub segment renders the canonical LeadQueueRow.
 export interface ReactivationRow extends ReplyRowFields {
@@ -667,6 +677,7 @@ export interface QueueCountsResponse {
   archived: number
   requalification: number
   lost: number
+  won: number
   callsDue: number
   // WhatsApp awaiting-reply badges — leads (in each surface) whose customer replied
   // and the rep hasn't replied back yet. Replace the raw queue-size badges on the nav.
@@ -1187,6 +1198,7 @@ export const leadsApi = {
     idle:         () => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle)),
     dormant:      () => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant)),
     lost:         () => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost)),
+    won:          () => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon)),
     reactivation: () => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation)),
     sixMonth:     () => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth)),
     requalification: () => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification)),

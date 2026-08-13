@@ -14,6 +14,7 @@ const EMPTY_QUEUE_COUNTS: QueueCounts = {
   archived: 0,
   requalification: 0,
   lost: 0,
+  won: 0,
   callsDue: 0,
   callsDueAwaitingReply: 0,
   pipelineAwaitingReply: 0,
