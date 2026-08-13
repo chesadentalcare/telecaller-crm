@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { ViewSkeleton } from "./view-skeleton"
 import { useIdleLeads, leadKeys } from "@/hooks/use-leads"
 import { leadsApi } from "@/lib/api/leads"
@@ -25,6 +26,9 @@ export function IdleQueueView() {
   // Track which row is mid-flight so only its button spins. A Map keeps the
   // state per-lead — using a single boolean would disable every row at once.
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [repliedOnly, setRepliedOnly] = useState(false)
+  const repliedCount = leads.filter(isAwaitingReply).length
+  const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
   const openLead = (id: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -56,19 +60,24 @@ export function IdleQueueView() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Clock className="size-4 text-warning" />Idle Leads
-        </CardTitle>
-        <CardDescription>No activity in the last 14+ days · pick one to nurture or open</CardDescription>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="size-4 text-warning" />Idle Leads
+            </CardTitle>
+            <CardDescription>No activity in the last 14+ days · pick one to nurture or open</CardDescription>
+          </div>
+          <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
-        {leads.length === 0 ? (
+        {shown.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
             Nothing idle right now — all your leads have recent activity.
           </div>
         ) : (
           <div className="divide-y">
-            {leads.map((lead) => {
+            {shown.map((lead) => {
               const tel = lead.phone.replace(/\D/g, "")
               return (
                 <LeadQueueRow

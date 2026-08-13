@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { RefreshCw, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { useRequalificationLeads } from "@/hooks/use-leads"
 
 interface RequalificationViewProps {
@@ -17,7 +19,11 @@ interface RequalificationViewProps {
 // drip (Amendment Gap 3). "Re-qualify" opens the lead's CallsTab.
 export function RequalificationView({ onOpenLead }: RequalificationViewProps) {
   const { data: leads = [], isLoading } = useRequalificationLeads()
+  const [repliedOnly, setRepliedOnly] = useState(false)
   if (isLoading) return <ViewSkeleton />
+
+  const repliedCount = leads.filter(isAwaitingReply).length
+  const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
   return (
     <Card>
@@ -29,15 +35,18 @@ export function RequalificationView({ onOpenLead }: RequalificationViewProps) {
             </CardTitle>
             <CardDescription>Re-surfaced leads — re-capture timeline &amp; budget before re-entering a drip</CardDescription>
           </div>
-          <Badge variant="outline" className="text-[10px]">{leads.length} to re-qualify</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-[10px]">{leads.length} to re-qualify</Badge>
+            <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {leads.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">Nothing to re-qualify right now</p>
         ) : (
           <div className="divide-y">
-            {leads.map((lead) => {
+            {shown.map((lead) => {
               const tel = lead.phone.replace(/\D/g, "")
               return (
                 <LeadQueueRow

@@ -11,6 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { SendCatalogueButton } from "./send-catalogue-button"
 import {
@@ -72,6 +73,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
   // without thrashing the query cache. Re-syncs whenever the query updates.
   const [leads, setLeads] = useState<DripLead[]>([])
   const [activeTab, setActiveTab] = useState<"all" | DripTrack>("all")
+  const [repliedOnly, setRepliedOnly] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
 
@@ -88,7 +90,9 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
 
   if (isLoading) return <DripQueueViewSkeleton />
 
-  const filteredLeads = activeTab === "all" ? leads : leads.filter((l) => l.track === activeTab)
+  const trackFiltered = activeTab === "all" ? leads : leads.filter((l) => l.track === activeTab)
+  const repliedCount = trackFiltered.filter(isAwaitingReply).length
+  const filteredLeads = repliedOnly ? trackFiltered.filter(isAwaitingReply) : trackFiltered
   const trackCounts: Record<DripTrack, number> = {
     "1-month": leads.filter((l) => l.track === "1-month").length,
     "3-month": leads.filter((l) => l.track === "3-month").length,
@@ -112,14 +116,17 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
               <CardTitle className="text-base font-semibold">Active Drip Campaigns</CardTitle>
               <CardDescription className="text-xs">Automated nurture sequences</CardDescription>
             </div>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-              <TabsList className="h-8 bg-muted/50">
-                <TabsTrigger value="all" className="text-xs px-3 h-6">All</TabsTrigger>
-                <TabsTrigger value="1-month" className="text-xs px-3 h-6">1-Month</TabsTrigger>
-                <TabsTrigger value="3-month" className="text-xs px-3 h-6">3-Month</TabsTrigger>
-                <TabsTrigger value="6-month" className="text-xs px-3 h-6">6-Month</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+                <TabsList className="h-8 bg-muted/50">
+                  <TabsTrigger value="all" className="text-xs px-3 h-6">All</TabsTrigger>
+                  <TabsTrigger value="1-month" className="text-xs px-3 h-6">1-Month</TabsTrigger>
+                  <TabsTrigger value="3-month" className="text-xs px-3 h-6">3-Month</TabsTrigger>
+                  <TabsTrigger value="6-month" className="text-xs px-3 h-6">6-Month</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">

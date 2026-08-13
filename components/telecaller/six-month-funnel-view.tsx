@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { CalendarClock, RefreshCw, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
+import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { useSixMonthLeads } from "@/hooks/use-leads"
 
 interface SixMonthFunnelViewProps {
@@ -16,11 +18,14 @@ interface SixMonthFunnelViewProps {
 // window opens.
 export function SixMonthFunnelView({ onOpenLead }: SixMonthFunnelViewProps) {
   const { data: leads = [], isLoading } = useSixMonthLeads()
+  const [repliedOnly, setRepliedOnly] = useState(false)
   if (isLoading) return <ViewSkeleton />
 
   // P6.12 — the 24-month re-touch pool (already-purchased leads parked for a
   // re-touch) rides along in this funnel, badged distinctly.
   const retouchCount = leads.filter((l) => l.retouch).length
+  const repliedCount = leads.filter(isAwaitingReply).length
+  const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
   return (
     <Card>
@@ -39,15 +44,16 @@ export function SixMonthFunnelView({ onOpenLead }: SixMonthFunnelViewProps) {
               </Badge>
             )}
             <Badge variant="outline" className="text-[10px]">{leads.length} in funnel</Badge>
+            <RepliesFilterToggle count={repliedCount} active={repliedOnly} onToggle={() => setRepliedOnly((v) => !v)} />
           </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {leads.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">No long-cycle leads in the funnel right now</p>
         ) : (
         <div className="divide-y">
-          {leads.map((lead) => {
+          {shown.map((lead) => {
             const tel = lead.phone.replace(/\D/g, "")
             return (
               <LeadQueueRow
