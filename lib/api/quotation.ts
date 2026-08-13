@@ -164,8 +164,14 @@ export const catalogueApi = {
       .then((res) => res.data),
 
   // Send the approved catalogue to the lead's WhatsApp number.
-  send: (leadId: string | number) =>
+  send: (leadId: string | number): Promise<CatalogueSendResult> =>
     api
-      .post<Envelope<CatalogueSendResult>>(endpoints.catalogueSend(String(leadId)))
-      .then((res) => res.data),
+      .post<{ success?: boolean; dryRun?: boolean; messageId?: string | null; url?: string }>(
+        endpoints.catalogueSend(String(leadId)),
+      )
+      .then((res) => ({
+        messageId: res?.messageId ?? null,
+        dryRun: !!res?.dryRun,
+        url: res?.url ?? "",
+      })),
 }
