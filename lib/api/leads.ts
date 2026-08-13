@@ -573,6 +573,9 @@ export interface ReactivationRow extends ReplyRowFields {
   handed_back_at: string
   handed_back_by: string
   reason: string
+  drip_track: string | null
+  drip_message_index: number | null
+  drip_next_at: string | null
 }
 export interface SixMonthRow extends ReplyRowFields {
   id: number
@@ -988,6 +991,15 @@ export const leadsApi = {
     unwrap(
       api.post<Envelope<{ opportunityDocEntry: number }>>(
         endpoints.leadUnarchiveNoResponse(String(id)),
+        {},
+      ),
+    ),
+
+  // Re-claim a handed-back lead: resumes its drip exactly where it left off.
+  assumeOwnership: (id: number | string) =>
+    unwrap(
+      api.post<Envelope<{ opportunityDocEntry: number; resumedDrip: { track: string; messageIndex: number } | null }>>(
+        endpoints.leadAssumeOwnership(String(id)),
         {},
       ),
     ),

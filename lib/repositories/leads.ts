@@ -193,6 +193,9 @@ const toReactivation = (r: ReactivationRow): ReactivationLead => ({
   handedBackAt: humanAgo(r.handed_back_at),
   handedBackBy: r.handed_back_by,
   reason: r.reason ?? "—",
+  dripTrack: r.drip_track ?? null,
+  dripMessageIndex: r.drip_message_index ?? null,
+  dripNextAt: r.drip_next_at ?? null,
   replied: toReplied(r),
 })
 

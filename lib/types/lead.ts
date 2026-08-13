@@ -120,6 +120,11 @@ export interface ReactivationLead extends LeadBase {
   handedBackBy: string
   reason: string
   equipment: string
+  // Where the lead was in the drip before it was handed back — so "Assume ownership"
+  // can show the rep exactly where it will resume.
+  dripTrack?: string | null
+  dripMessageIndex?: number | null
+  dripNextAt?: string | null
 }
 
 // Gap #11 — long-cycle nurture pool. P6.12 — `retouch` marks the 24-month
