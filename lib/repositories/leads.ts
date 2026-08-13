@@ -16,6 +16,7 @@ import type {
   DormantLead,
   LostLead,
   WonLead,
+  RepliesDueLead,
   ReactivationLead,
   SixMonthLead,
   RequalificationLead,
@@ -37,6 +38,7 @@ import type {
   DormantRow,
   LostRow,
   WonRow,
+  RepliesDueRow,
   ReactivationRow,
   SixMonthRow,
   RequalificationRow,
@@ -184,6 +186,18 @@ const toWon = (r: WonRow): WonLead => ({
   wonBy: r.won_by ?? null,
   replied: toReplied(r),
 })
+const toRepliesDue = (r: RepliesDueRow): RepliesDueLead => ({
+  id: String(r.id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
+  city: r.city ?? null,
+  state: r.state ?? null,
+  lastOutcome: (r.last_outcome as RepliesDueLead["lastOutcome"]) ?? null,
+  lastOutcomeAt: r.last_outcome_at ?? null,
+  lastOutcomeBy: r.last_outcome_by ?? null,
+  replied: toReplied(r),
+})
 
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
   id: String(r.id),
@@ -329,6 +343,11 @@ export const fetchLostLeads = async (): Promise<LostLead[]> => {
 export const fetchWonLeads = async (): Promise<WonLead[]> => {
   const rows = await leadsApi.queues.won()
   return rows.map(toWon)
+}
+
+export const fetchRepliesDueLeads = async (): Promise<RepliesDueLead[]> => {
+  const rows = await leadsApi.queues.repliesDue()
+  return rows.map(toRepliesDue)
 }
 
 export const fetchReactivationLeads = async (): Promise<ReactivationLead[]> => {

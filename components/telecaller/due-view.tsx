@@ -1,18 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { PhoneCall, CalendarClock, FileSpreadsheet } from "lucide-react"
+import { PhoneCall, CalendarClock, FileSpreadsheet, MessageSquare } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CallsDueView } from "./calls-due-view"
 import { MeetingsDueView } from "./meetings-due-view"
+import { RepliesDueView } from "./replies-due-view"
 import { DueExportDialog } from "./due-export-dialog"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
 
-type DueTab = "calls" | "meetings"
+type DueTab = "calls" | "meetings" | "replies"
 
 interface DueViewProps {
   onOpenLead: (id: string) => void
@@ -31,6 +32,7 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
   const tabs = [
     { key: "calls" as const, label: "Calls", icon: PhoneCall, count: counts.callsDue },
     { key: "meetings" as const, label: "Meetings", icon: CalendarClock, count: meetings.length },
+    { key: "replies" as const, label: "WhatsApp Replies", icon: MessageSquare, count: counts.pipelineAwaitingReply },
   ]
 
   return (
@@ -44,7 +46,7 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
 
       <DueExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1">
+      <div className="grid grid-cols-3 gap-1.5 rounded-xl border bg-muted/30 p-1">
         {tabs.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -70,9 +72,13 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
         })}
       </div>
 
-      {tab === "calls"
-        ? <CallsDueView onOpenLead={onOpenLead} />
-        : <MeetingsDueView onOpenLead={onOpenLead} />}
+      {tab === "calls" ? (
+        <CallsDueView onOpenLead={onOpenLead} />
+      ) : tab === "meetings" ? (
+        <MeetingsDueView onOpenLead={onOpenLead} />
+      ) : (
+        <RepliesDueView onOpenLead={onOpenLead} />
+      )}
     </div>
   )
 }

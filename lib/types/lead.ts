@@ -114,6 +114,17 @@ export interface WonLead extends LeadBase {
   wonBy?: string | null
 }
 
+// A lead whose customer replied on WhatsApp and is awaiting a reply back — the
+// "WhatsApp Replies" worklist tab in the Due screen.
+export interface RepliesDueLead extends LeadBase {
+  equipment: string
+  city?: string | null
+  state?: string | null
+  lastOutcome?: CallOutcome | null
+  lastOutcomeAt?: string | null
+  lastOutcomeBy?: string | null
+}
+
 // Gap #8 — sales handed this lead back to telecaller
 export interface ReactivationLead extends LeadBase {
   handedBackAt: string
