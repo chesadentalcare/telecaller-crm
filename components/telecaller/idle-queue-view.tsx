@@ -31,6 +31,8 @@ export function IdleQueueView() {
 
   const openLead = (id: string) => {
     const params = new URLSearchParams(searchParams.toString())
+    const currentView = params.get("view") ?? "idle"
+    if (currentView !== "lead-detail") params.set("from", currentView)
     params.set("view", "lead-detail")
     params.set("leadId", id)
     window.history.pushState(null, "", `${pathname}?${params.toString()}`)

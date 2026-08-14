@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { PhoneCall, CalendarClock, FileSpreadsheet, MessageSquare } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,15 @@ interface DueViewProps {
 // so the sidebar carries a single item. Each tab keeps its own internal
 // Today / Past / Upcoming views (rendered by CallsDueView / MeetingsDueView).
 export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
-  const [tab, setTab] = useState<DueTab>(initialTab)
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const urlTab = searchParams.get("duetab")
+  const tab: DueTab = urlTab === "calls" || urlTab === "meetings" || urlTab === "replies" ? urlTab : initialTab
+  const setTab = (t: DueTab) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("duetab", t)
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`)
+  }
   const [exportOpen, setExportOpen] = useState(false)
   const counts = useQueueCounts()
   const { data: meetings = [] } = useMeetingsDueLeads()
