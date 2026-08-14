@@ -80,7 +80,7 @@ function PipelineHubInner({ onOpenLead }: PipelineHubProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const counts = useQueueCounts()
-  const { isManagerOrAbove } = useRole()
+  const { isManagerOrAbove, isTelecaller } = useRole()
   const [exportOpen, setExportOpen] = useState(false)
 
   const param = searchParams.get("segment")
@@ -107,7 +107,7 @@ function PipelineHubInner({ onOpenLead }: PipelineHubProps) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PipelineDateBar />
-        {isManagerOrAbove && (
+        {(isManagerOrAbove || isTelecaller) && (
           <div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
               <FileSpreadsheet className="size-4" />Export all data

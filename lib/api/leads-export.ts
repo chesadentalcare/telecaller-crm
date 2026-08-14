@@ -1,5 +1,16 @@
+import { api } from "@/lib/api/client"
 import { apiUrl, endpoints } from "@/lib/api-config"
 import { tokenStorage } from "@/lib/auth/token"
+
+export interface LeadStateOption {
+  name: string
+  count: number
+}
+
+interface Envelope<T> { success: boolean; data: T }
+
+export const fetchLeadStates = () =>
+  api.get<Envelope<LeadStateOption[]>>(endpoints.leadStates).then((res) => res.data)
 
 export interface LeadsExportFilters {
   from?: string

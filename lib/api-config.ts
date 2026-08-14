@@ -180,6 +180,7 @@ export const endpoints = {
   dueExport: "/queue/export",
   dueExportAgents: "/queue/export/agents",
   leadsFullExport: "/reports/leads-full",
+  leadStates: "/reports/leads-states",
 } as const
 
 /**

@@ -14,9 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
-import { useSapStates } from "@/hooks/use-sap-states"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates } from "@/lib/api/leads-export"
 
 export function LeadsExportDialog({
   open,
@@ -41,7 +40,12 @@ export function LeadsExportDialog({
     staleTime: 5 * 60 * 1000,
   })
   const { data: sources = [] } = useSapSources()
-  const { data: states = [] } = useSapStates()
+  const { data: states = [] } = useQuery({
+    queryKey: ["lead-states"],
+    queryFn: fetchLeadStates,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const reset = () => {
     setFrom("")
@@ -119,7 +123,7 @@ export function LeadsExportDialog({
               <SelectContent>
                 <SelectItem value="__all__">All states</SelectItem>
                 {states.map((s) => (
-                  <SelectItem key={s.code} value={s.name}>{s.name}</SelectItem>
+                  <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
