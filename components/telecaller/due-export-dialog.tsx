@@ -23,6 +23,7 @@ const TYPE_OPTIONS: { key: DueExportType; label: string }[] = [
   { key: "both", label: "Both" },
   { key: "calls", label: "Calls" },
   { key: "meetings", label: "Meetings" },
+  { key: "replies", label: "Replies" },
 ]
 
 const OUTCOME_OPTIONS: { value: string; label: string }[] = [
@@ -108,7 +109,7 @@ export function DueExportDialog({
         <div className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Include</Label>
-            <div className="grid grid-cols-3 gap-1.5 rounded-lg border bg-muted/30 p-1">
+            <div className="grid grid-cols-4 gap-1.5 rounded-lg border bg-muted/30 p-1">
               {TYPE_OPTIONS.map((t) => (
                 <button
                   key={t.key}
