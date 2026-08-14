@@ -77,6 +77,7 @@ const WA_MAP: Record<string, { title: string; phase: JourneyPhase; actor: Journe
   manual: { title: "WhatsApp (rep)", phase: "reply", actor: "rep" },
   quotation: { title: "Quotation sent", phase: "quote", actor: "rep" },
   meeting: { title: "Meeting WhatsApp", phase: "meeting", actor: "system" },
+  marketing: { title: "Offer campaign", phase: "drip", actor: "system" },
 }
 
 function outcomeStep(outcome: string, reason: string | null): { title: string; tone: JourneyTone } {
