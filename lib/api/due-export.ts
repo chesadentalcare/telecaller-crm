@@ -8,7 +8,7 @@ interface Envelope<T> {
   data: T
 }
 
-export type DueExportType = "both" | "calls" | "meetings"
+export type DueExportType = "both" | "calls" | "meetings" | "replies"
 
 export interface DueExportFilters {
   type: DueExportType
