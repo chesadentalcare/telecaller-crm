@@ -64,6 +64,39 @@ export function useLeadDetail(id: string | number | undefined) {
   }
 }
 
+// Toggle the "flagged" high-priority marker on a pipeline lead.
+// Optimistically patches the cached list entry so the flag icon and row
+// highlight flip immediately, without waiting for a server round-trip.
+export function useFlagLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, flagged }: { id: string | number; flagged: boolean }) =>
+      leadsApi.flag(id, flagged),
+    onMutate: async ({ id, flagged }) => {
+      // Cancel any in-flight refetch so it doesn't overwrite our optimistic value.
+      await qc.cancelQueries({ queryKey: leadKeys.all })
+      // Snapshot the previous value for rollback.
+      const prev = qc.getQueriesData({ queryKey: leadKeys.all })
+      // Optimistically update every cached pipeline list.
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: unknown) => {
+        if (!Array.isArray(old)) return old
+        return old.map((lead: { id: string }) =>
+          String(lead.id) === String(id) ? { ...lead, flagged } : lead,
+        )
+      })
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      // Rollback on error.
+      if (ctx?.prev) {
+        ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data))
+      }
+      toast.error("Failed to update flag — please try again")
+    },
+    onSettled: () => invalidateAllLeads(qc),
+  })
+}
+
 export function useLogAttempt(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

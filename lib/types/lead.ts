@@ -63,6 +63,8 @@ export interface PipelineLead extends LeadBase {
   meetingPending?: boolean
   // Active drip track this lead is on (null when not in a drip) — drives the Active-tab track filter.
   dripTrack?: DripTrack | null
+  // Telecaller-flagged as high-priority — floats to top, shown with amber highlight.
+  flagged?: boolean
 }
 
 // Drip campaign queue

@@ -491,6 +491,7 @@ export interface PipelineRow extends ReplyRowFields {
   first_call_route: string
   assigned_to: string
   phone_verified: 0 | 1
+  flagged: 0 | 1
   customer_name: string | null
   phone: string | null
   city: string | null
@@ -784,6 +785,16 @@ export const leadsApi = {
       api.patch<Envelope<{ opportunityDocEntry: number; phoneReset: boolean; sapSynced: boolean; sapReason?: string }>>(
         endpoints.leadUpdate(String(id)),
         body,
+      ),
+    ),
+
+  // Toggle the telecaller "flagged" state on a pipeline lead. Uses the same
+  // PATCH /leads/:id endpoint — only the `flagged` field is sent.
+  flag: (id: number | string, flagged: boolean) =>
+    unwrap(
+      api.patch<Envelope<{ opportunityDocEntry: number; phoneReset: boolean; sapSynced: boolean }>>(
+        endpoints.leadUpdate(String(id)),
+        { flagged },
       ),
     ),
 
