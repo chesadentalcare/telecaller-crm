@@ -463,7 +463,7 @@ export interface LeadDetail {
   whatsapp: Array<{
     id: number
     template_name: string
-    message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge"
+    message_type: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge" | "marketing"
     sent_by?: string | null
     sent_at: string
     delivered_at?: string | null

@@ -274,7 +274,7 @@ type SentMessage = {
 }
 type WhatsappOutbound = {
   id: number
-  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge"
+  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge" | "marketing"
   text: string | null
   message: SentMessage | null
   templateName: string
@@ -2294,6 +2294,7 @@ const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
   quotation: "Quotation",
   meeting: "Meeting confirmation",
   sales_nudge: "Sales reminder",
+  marketing: "Offer campaign",
 }
 
 // Customer reply bubble (left): the message, its auto-classified intent chip, and a
