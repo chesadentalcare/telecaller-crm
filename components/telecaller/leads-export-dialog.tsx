@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
+import { useSapStates } from "@/hooks/use-sap-states"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
 import { downloadLeadsExport } from "@/lib/api/leads-export"
 
@@ -29,6 +30,7 @@ export function LeadsExportDialog({
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
   const [source, setSource] = useState("__all__")
+  const [state, setState] = useState("__all__")
   const [agent, setAgent] = useState("__all__")
   const [busy, setBusy] = useState(false)
 
@@ -39,11 +41,13 @@ export function LeadsExportDialog({
     staleTime: 5 * 60 * 1000,
   })
   const { data: sources = [] } = useSapSources()
+  const { data: states = [] } = useSapStates()
 
   const reset = () => {
     setFrom("")
     setTo("")
     setSource("__all__")
+    setState("__all__")
     setAgent("__all__")
   }
 
@@ -58,6 +62,7 @@ export function LeadsExportDialog({
         from: from || undefined,
         to: to || undefined,
         source: source !== "__all__" ? source : undefined,
+        state: state !== "__all__" ? state : undefined,
         agent: agent !== "__all__" ? agent : undefined,
       })
       toast.success("Export downloaded")
@@ -102,6 +107,19 @@ export function LeadsExportDialog({
                 <SelectItem value="__all__">All sources</SelectItem>
                 {sources.map((s) => (
                   <SelectItem key={s.sequenceNo} value={s.description}>{s.description}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">State</Label>
+            <Select value={state} onValueChange={setState}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All states</SelectItem>
+                {states.map((s) => (
+                  <SelectItem key={s.code} value={s.name}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
