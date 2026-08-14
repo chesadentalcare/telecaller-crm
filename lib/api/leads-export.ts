@@ -6,6 +6,7 @@ export interface LeadsExportFilters {
   to?: string
   source?: string
   stage?: string
+  state?: string
   agent?: string
 }
 
@@ -15,6 +16,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.to) p.set("to", f.to)
   if (f.source) p.set("source", f.source)
   if (f.stage) p.set("stage", f.stage)
+  if (f.state) p.set("state", f.state)
   if (f.agent) p.set("agent", f.agent)
   const s = p.toString()
   return s ? `?${s}` : ""
