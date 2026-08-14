@@ -126,6 +126,7 @@ interface ViewContext {
   selectedAction: string | null
   setActiveView: (view: string) => void
   openLead: (id: string, action?: string) => void
+  goBack: () => void
 }
 
 interface ViewDefinition {
@@ -150,8 +151,8 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   "lead-detail": {
     title: "Lead Detail",
     subtitle: "Full lifecycle view",
-    render: ({ selectedLeadId, selectedAction, setActiveView }) => (
-      <LeadDetailView leadId={selectedLeadId ?? undefined} action={selectedAction} onBack={() => setActiveView("pipeline")} />
+    render: ({ selectedLeadId, selectedAction, goBack }) => (
+      <LeadDetailView leadId={selectedLeadId ?? undefined} action={selectedAction} onBack={goBack} />
     ),
   },
   "new-lead": {
@@ -305,7 +306,7 @@ function TelecallerDashboardInner() {
       // Calls Due on a bare URL, so clearing `view` would bounce them off the
       // Dashboard right back to Calls Due. Explicit ?view=home lets Home stick.
       params.set("view", view)
-      if (view !== "lead-detail") { params.delete("leadId"); params.delete("action") }
+      if (view !== "lead-detail") { params.delete("leadId"); params.delete("action"); params.delete("from") }
       if (view !== "pipeline") params.delete("segment")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
@@ -315,10 +316,26 @@ function TelecallerDashboardInner() {
   const openLead = useMemo(
     () => (leadId: string, action?: string) => {
       const params = new URLSearchParams(searchParamsString)
+      const currentView = params.get("view") ?? defaultView
+      if (currentView !== "lead-detail") params.set("from", currentView)
       params.set("view", "lead-detail")
       params.set("leadId", leadId)
       if (action) params.set("action", action)
       else params.delete("action")
+      window.history.pushState(null, "", `${pathname}?${params.toString()}`)
+    },
+    [pathname, searchParamsString, defaultView],
+  )
+
+  const goBack = useMemo(
+    () => () => {
+      const params = new URLSearchParams(searchParamsString)
+      const dest = params.get("from") || "pipeline"
+      params.delete("leadId")
+      params.delete("action")
+      params.delete("from")
+      params.set("view", dest)
+      if (dest !== "pipeline") params.delete("segment")
       window.history.pushState(null, "", `${pathname}?${params.toString()}`)
     },
     [pathname, searchParamsString],
@@ -335,7 +352,7 @@ function TelecallerDashboardInner() {
       ? requested
       : FALLBACK_VIEW
   const pageInfo = useMemo(() => ({ title: view.title, subtitle: view.subtitle }), [view])
-  const renderContent = () => view.render({ selectedLeadId, selectedAction, setActiveView, openLead })
+  const renderContent = () => view.render({ selectedLeadId, selectedAction, setActiveView, openLead, goBack })
 
   return (
     <SidebarProvider>

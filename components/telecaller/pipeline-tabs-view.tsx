@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { Inbox, ArrowRightLeft } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -24,7 +24,15 @@ export function PipelineTabsView({ onOpenLead, initialTab = "mine" }: PipelineTa
   const { role, isManagerOrAbove, hasRole } = useRole()
   const canSeeSales = isManagerOrAbove || (role !== null && hasRole("telecaller", "sale_staff", "coordinator", "sale_head"))
 
-  const [tab, setTab] = useState<PipeTab>(initialTab === "sales" && canSeeSales ? "sales" : "mine")
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const urlTab = searchParams.get("ptab")
+  const tab: PipeTab = urlTab === "sales" && canSeeSales ? "sales" : urlTab === "mine" ? "mine" : (initialTab === "sales" && canSeeSales ? "sales" : "mine")
+  const setTab = (t: PipeTab) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("ptab", t)
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`)
+  }
 
   // Pure telecaller (no sales visibility): just their pipeline, no tab bar.
   if (!canSeeSales) return <PipelineHub onOpenLead={onOpenLead} />
