@@ -7,6 +7,7 @@
 //   • Calendar  — a big month calendar of every meeting (past / today / upcoming);
 //                 click a day for its schedule (MeetingsCalendar).
 
+import { useState } from "react"
 import { CalendarClock, Video, MapPin, PhoneCall, AlertCircle, CheckCircle2, History, CalendarDays } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
 import { MeetingsCalendar } from "./meetings-calendar"
+import { RescheduleMeetingDialog } from "./reschedule-meeting-dialog"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
 import type { MeetingsDueLead } from "@/lib/types/lead"
 
@@ -24,6 +26,7 @@ interface MeetingsDueViewProps {
 
 export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const { data: meetings = [], isLoading } = useMeetingsDueLeads()
+  const [rescheduleTarget, setRescheduleTarget] = useState<MeetingsDueLead | null>(null)
   if (isLoading) return <ViewSkeleton />
 
   // Split by the meeting's DAY (the server returns today + upcoming + past meetings
@@ -87,6 +90,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             ) : tel.length >= 10 ? (
               <Button asChild size="sm" variant="outline" className="gap-1.5"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
             ) : null}
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setRescheduleTarget(m)}><CalendarClock className="size-3.5" />Reschedule</Button>
             <Button size="sm" variant="ghost" onClick={() => onOpenLead(m.id)}>Open</Button>
           </div>
         }
@@ -95,6 +99,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   }
 
   return (
+    <>
     <Tabs defaultValue="today" className="gap-4">
       <TabsList className="h-auto w-full justify-start gap-5 rounded-none border-b bg-transparent p-0">
         <TabsTrigger value="today" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
@@ -160,5 +165,14 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
         <MeetingsCalendar onOpenLead={onOpenLead} />
       </TabsContent>
     </Tabs>
+    {rescheduleTarget && (
+      <RescheduleMeetingDialog
+        key={rescheduleTarget.meetingId}
+        meeting={rescheduleTarget}
+        open
+        onOpenChange={(o) => { if (!o) setRescheduleTarget(null) }}
+      />
+    )}
+    </>
   )
 }
