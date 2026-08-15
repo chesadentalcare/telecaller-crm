@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSapStates } from "@/hooks/use-sap-states"
+import { useSapSources } from "@/hooks/use-sap-sources"
 import { useQuickCreateLead } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 import type { QuickLeadInput, QuickFirstResponse } from "@/lib/api/leads"
@@ -124,6 +125,11 @@ function Pills({ options, value, onChange, cols = 3 }: {
 
 export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, action?: string) => void }) {
   const { data: states, isLoading: statesLoading } = useSapStates()
+  const { data: sapSources } = useSapSources()
+  const sourceOptions: { value: string; label: string; hint?: string }[] =
+    sapSources && sapSources.length
+      ? sapSources.map((s) => ({ value: s.description, label: s.description }))
+      : [...LEAD_SOURCES]
   const { mutateAsync: quickCreate, isPending } = useQuickCreateLead()
 
   const [leadName, setLeadName] = useState("")
@@ -394,7 +400,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
 
           <div className="space-y-1.5">
             <Label>Lead source<Req /></Label>
-            <Pills options={LEAD_SOURCES} value={source} onChange={setSource} />
+            <Pills options={sourceOptions} value={source} onChange={setSource} />
           </div>
         </div>
 
