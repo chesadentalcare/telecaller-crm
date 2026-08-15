@@ -9,12 +9,13 @@
 
 import * as React from "react"
 import { useEffect, useMemo, useState } from "react"
-import { CalendarDays, Video, MapPin, PhoneCall, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react"
+import { CalendarDays, Video, MapPin, PhoneCall, ChevronRight, AlertCircle, CheckCircle2, CalendarClock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
+import { RescheduleMeetingDialog } from "./reschedule-meeting-dialog"
 import type { MeetingsDueLead } from "@/lib/types/lead"
 
 const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
@@ -45,6 +46,7 @@ export function MeetingsCalendar({ onOpenLead }: { onOpenLead: (id: string) => v
 
   const [month, setMonth] = useState<Date>(() => new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [rescheduleTarget, setRescheduleTarget] = useState<MeetingsDueLead | null>(null)
 
   const byDay = useMemo(() => {
     const map = new Map<string, MeetingsDueLead[]>()
@@ -94,6 +96,7 @@ export function MeetingsCalendar({ onOpenLead }: { onOpenLead: (id: string) => v
   }, [byDay, startToday])
 
   return (
+    <>
     <Card className="lg:flex lg:h-[calc(100dvh-10rem)] lg:flex-col lg:overflow-hidden">
       <CardHeader className="pb-3 lg:shrink-0">
         <CardTitle className="text-base flex items-center gap-2">
@@ -147,21 +150,31 @@ export function MeetingsCalendar({ onOpenLead }: { onOpenLead: (id: string) => v
             </div>
           </div>
 
-          <MeetingDayAgenda day={selectedDay} entries={selectedEntries} now={now} startToday={startToday} onOpenLead={onOpenLead} />
+          <MeetingDayAgenda day={selectedDay} entries={selectedEntries} now={now} startToday={startToday} onOpenLead={onOpenLead} onReschedule={setRescheduleTarget} />
         </div>
       </CardContent>
     </Card>
+    {rescheduleTarget && (
+      <RescheduleMeetingDialog
+        key={rescheduleTarget.meetingId}
+        meeting={rescheduleTarget}
+        open
+        onOpenChange={(o) => { if (!o) setRescheduleTarget(null) }}
+      />
+    )}
+    </>
   )
 }
 
 function MeetingDayAgenda({
-  day, entries, now, startToday, onOpenLead,
+  day, entries, now, startToday, onOpenLead, onReschedule,
 }: {
   day: Date | null
   entries: MeetingsDueLead[]
   now: Date
   startToday: number
   onOpenLead: (id: string) => void
+  onReschedule: (m: MeetingsDueLead) => void
 }) {
   return (
     <div className="flex min-w-0 flex-col lg:min-h-0 lg:border-l lg:pl-5">
@@ -185,7 +198,7 @@ function MeetingDayAgenda({
       ) : (
         <div className="min-w-0 max-h-[58vh] space-y-1 overflow-y-auto overflow-x-hidden pr-1 lg:max-h-none lg:min-h-0 lg:flex-1">
           {entries.map((m) => (
-            <MeetingAgendaRow key={m.meetingId} meeting={m} startToday={startToday} onOpenLead={onOpenLead} />
+            <MeetingAgendaRow key={m.meetingId} meeting={m} startToday={startToday} onOpenLead={onOpenLead} onReschedule={onReschedule} />
           ))}
         </div>
       )}
@@ -194,11 +207,12 @@ function MeetingDayAgenda({
 }
 
 function MeetingAgendaRow({
-  meeting, startToday, onOpenLead,
+  meeting, startToday, onOpenLead, onReschedule,
 }: {
   meeting: MeetingsDueLead
   startToday: number
   onOpenLead: (id: string) => void
+  onReschedule: (m: MeetingsDueLead) => void
 }) {
   const tel = meeting.phone.replace(/\D/g, "")
   const isZoom = meeting.meetingType === "zoom"
@@ -231,6 +245,14 @@ function MeetingAgendaRow({
           ) : null}
         </p>
       </div>
+      <button
+        type="button"
+        onClick={(ev) => { ev.stopPropagation(); onReschedule(meeting) }}
+        className="flex size-8 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        title="Reschedule meeting"
+      >
+        <CalendarClock className="size-3.5" />
+      </button>
       {isZoom && meeting.joinUrl ? (
         <a
           href={meeting.joinUrl}
