@@ -13,7 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { leadsApi } from "@/lib/api/leads"
-import type { QuickLeadInput } from "@/lib/api/leads"
+import type { QuickLeadInput, NotificationRow } from "@/lib/api/leads"
 import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
@@ -525,11 +525,35 @@ export function useMarkNotificationRead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number | string) => leadsApi.markNotificationRead(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: leadKeys.notifications() })
+      await qc.cancelQueries({ queryKey: leadKeys.notificationCount() })
+      const prevList = qc.getQueryData<NotificationRow[]>(leadKeys.notifications())
+      const prevCount = qc.getQueryData<{ count: number }>(leadKeys.notificationCount())
+      const wasUnread = prevList?.some((n) => String(n.id) === String(id) && !n.is_read) ?? false
+      if (prevList) {
+        qc.setQueryData<NotificationRow[]>(
+          leadKeys.notifications(),
+          prevList.map((n) => (String(n.id) === String(id) ? { ...n, is_read: 1 } : n)),
+        )
+      }
+      if (prevCount && wasUnread) {
+        qc.setQueryData<{ count: number }>(leadKeys.notificationCount(), {
+          ...prevCount,
+          count: Math.max(0, prevCount.count - 1),
+        })
+      }
+      return { prevList, prevCount }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.prevList) qc.setQueryData(leadKeys.notifications(), ctx.prevList)
+      if (ctx?.prevCount) qc.setQueryData(leadKeys.notificationCount(), ctx.prevCount)
+      toast.error("Could not mark the notification as read")
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.notifications() })
       qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
     },
-    onError: toastError("Could not mark the notification as read"),
   })
 }
 
@@ -537,11 +561,31 @@ export function useMarkAllNotificationsRead() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => leadsApi.markAllNotificationsRead(),
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: leadKeys.notifications() })
+      await qc.cancelQueries({ queryKey: leadKeys.notificationCount() })
+      const prevList = qc.getQueryData<NotificationRow[]>(leadKeys.notifications())
+      const prevCount = qc.getQueryData<{ count: number }>(leadKeys.notificationCount())
+      if (prevList) {
+        qc.setQueryData<NotificationRow[]>(
+          leadKeys.notifications(),
+          prevList.map((n) => (n.is_read ? n : { ...n, is_read: 1 })),
+        )
+      }
+      if (prevCount) {
+        qc.setQueryData<{ count: number }>(leadKeys.notificationCount(), { ...prevCount, count: 0 })
+      }
+      return { prevList, prevCount }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prevList) qc.setQueryData(leadKeys.notifications(), ctx.prevList)
+      if (ctx?.prevCount) qc.setQueryData(leadKeys.notificationCount(), ctx.prevCount)
+      toast.error("Could not mark all notifications as read")
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.notifications() })
       qc.invalidateQueries({ queryKey: leadKeys.notificationCount() })
     },
-    onError: toastError("Could not mark all notifications as read"),
   })
 }
 
