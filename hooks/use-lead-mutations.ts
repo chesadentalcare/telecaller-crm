@@ -13,7 +13,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { leadsApi } from "@/lib/api/leads"
-import type { QuickLeadInput, NotificationRow } from "@/lib/api/leads"
+import type { QuickLeadInput, NotificationRow, LeadDetail, AttemptRow } from "@/lib/api/leads"
+import { userStorage } from "@/lib/auth/token"
 import { ApiError } from "@/lib/api/client"
 import { leadKeys } from "@/hooks/use-leads"
 import type { LeadIntakeValues } from "@/lib/schemas/lead-intake"
@@ -115,9 +116,36 @@ export function useLogAttempt(id: string | number) {
       bought_from_us?: boolean
       callback_at?: string
     }) => leadsApi.logAttempt(id, body),
-    onSuccess: (res) => {
+    onMutate: async (body) => {
+      const key = leadKeys.fullDetail(String(id))
+      await qc.cancelQueries({ queryKey: key })
+      const prev = qc.getQueryData<LeadDetail>(key)
+      if (prev && Array.isArray(prev.attempts)) {
+        const me = userStorage.get()
+        const optimistic: AttemptRow = {
+          id: -Date.now(),
+          attempt_type: body.attempt_type ?? "call",
+          attempt_number: prev.attempts.length + 1,
+          outcome: body.outcome,
+          not_interested_reason: body.not_interested_reason ?? null,
+          attempted_by: me?.username ?? "You",
+          notes: body.notes ?? null,
+          attempted_at: new Date().toISOString(),
+          edited_at: null,
+        }
+        qc.setQueryData<LeadDetail>(key, { ...prev, attempts: [...prev.attempts, optimistic] })
+      }
+      return { prev }
+    },
+    onError: (_err, _body, ctx) => {
+      if (ctx?.prev) qc.setQueryData(leadKeys.fullDetail(String(id)), ctx.prev)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.detail(String(id)) })
+      qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(id)) })
       invalidateAllLeads(qc)
+    },
+    onSuccess: (res) => {
       // Confirm the live SAP Conversation-Activity push (created the moment the
       // call was logged). Silent when there's no call activity to push (skipped).
       const sap = res?.sapActivity
