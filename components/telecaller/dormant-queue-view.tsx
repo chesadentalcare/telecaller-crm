@@ -22,7 +22,6 @@ export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => 
             </CardTitle>
             <CardDescription>Inactive for 60+ days - consider archiving</CardDescription>
           </div>
-          <Button variant="outline" size="sm" className="text-muted-foreground">Archive All</Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -56,8 +55,6 @@ export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => 
                     ) : (
                       <Button size="sm" disabled className="h-8 px-2.5 gap-1.5"><Phone className="size-3" />Call</Button>
                     )}
-                    <Button variant="outline" size="sm">Revive</Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">Archive</Button>
                     <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => onOpenLead?.(lead.id)}>Open</Button>
                   </div>
                 }

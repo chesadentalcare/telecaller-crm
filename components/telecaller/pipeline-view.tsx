@@ -43,7 +43,9 @@ import { usePipelineLeads } from "@/hooks/use-leads"
 import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
-import { useFlagLead } from "@/hooks/use-lead-mutations"
+import { useFlagLead, useRecoveryWhatsapp } from "@/hooks/use-lead-mutations"
+import { toast } from "sonner"
+import { ApiError } from "@/lib/api/client"
 import type { PipelineLead, DripTrack } from "@/lib/types/lead"
 
 function getStatusConfig(status: PipelineLead["status"]) {
@@ -126,12 +128,13 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     }
   }, [activeTab, flaggedOnly, leads])
 
-  if (isLoading) return <PipelineViewSkeleton />
-
   const leadWithNoResponse = leads.find(
     (lead) =>
       lead.failedAttempts >= 4 && !dismissedBanners.has(lead.id),
   )
+  const { mutateAsync: sendRecovery } = useRecoveryWhatsapp(leadWithNoResponse?.id ?? "")
+
+  if (isLoading) return <PipelineViewSkeleton />
 
   const isReplied = (l: PipelineLead) =>
     !!(l.replied?.hasUnread || l.replied?.awaitingReply)
@@ -337,12 +340,18 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
           leadPhone={leadWithNoResponse.phone}
           failedAttempts={leadWithNoResponse.failedAttempts}
           lastAttemptTime={leadWithNoResponse.lastAttemptTime}
-          onSendWhatsApp={() =>
-            console.log(
-              "Sending WhatsApp to:",
-              leadWithNoResponse.phone,
-            )
-          }
+          onSendWhatsApp={async () => {
+            try {
+              const res = await sendRecovery({
+                phone: leadWithNoResponse.phone,
+                dentistName: leadWithNoResponse.name,
+                equipmentInterest: leadWithNoResponse.equipment,
+              })
+              toast.success(res?.dryRun ? "Recovery WhatsApp queued (dry-run)" : "Recovery WhatsApp sent")
+            } catch (err) {
+              toast.error(err instanceof ApiError ? err.message : "Failed to send recovery WhatsApp")
+            }
+          }}
           onDismiss={() =>
             setDismissedBanners(
               (prev) => new Set([...prev, leadWithNoResponse.id]),
