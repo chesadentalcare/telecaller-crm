@@ -277,7 +277,7 @@ export function QuotationBuilder({
           )}
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-lg max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg max-h-[92dvh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Fixed header */}
         <div className="px-5 pt-5 pb-3">
           <DialogHeader>

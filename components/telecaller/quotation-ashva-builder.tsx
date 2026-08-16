@@ -354,7 +354,7 @@ export function QuotationAshvaBuilder({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] sm:max-w-[95vw] 2xl:max-w-[1600px] max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[95vw] sm:max-w-[95vw] 2xl:max-w-[1600px] max-h-[92dvh] flex flex-col p-0 gap-0 overflow-hidden">
         <div className="px-5 pt-5 pb-3 border-b">
           <DialogHeader>
             <DialogTitle className="text-base">Ashva Quotation Builder</DialogTitle>

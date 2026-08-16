@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,6 +11,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { Countdown } from "./drip-countdown"
 import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { SendCatalogueButton } from "./send-catalogue-button"
@@ -39,15 +40,6 @@ function toWhatsappNumber(phone: string): string {
   return digits.length === 10 ? `91${digits}` : digits
 }
 
-function formatCountdown(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  return hours > 0 ? `${days}d ${hours}h` : `${days}d`
-}
-
 function formatDate(date: Date): string {
   const diffMs = Date.now() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
@@ -69,36 +61,32 @@ function getTrackConfig(track: string) {
 
 export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data, isLoading } = useDripLeads()
-  // Mirror server data locally so we can tick down `nextMessageIn` every second
-  // without thrashing the query cache. Re-syncs whenever the query updates.
-  const [leads, setLeads] = useState<DripLead[]>([])
   const [activeTab, setActiveTab] = useState<"all" | DripTrack>("all")
   const [repliedOnly, setRepliedOnly] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
 
-  useEffect(() => {
-    if (data) setLeads(data)
-  }, [data])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLeads((prev) => prev.map((l) => ({ ...l, nextMessageIn: Math.max(0, l.nextMessageIn - 1) })))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
+  const leads = useMemo(() => data ?? [], [data])
+  const trackFiltered = useMemo(
+    () => (activeTab === "all" ? leads : leads.filter((l) => l.track === activeTab)),
+    [leads, activeTab],
+  )
+  const repliedCount = useMemo(() => trackFiltered.filter(isAwaitingReply).length, [trackFiltered])
+  const filteredLeads = useMemo(
+    () => (repliedOnly ? trackFiltered.filter(isAwaitingReply) : trackFiltered),
+    [trackFiltered, repliedOnly],
+  )
+  const trackCounts = useMemo<Record<DripTrack, number>>(
+    () => ({
+      "1-month": leads.filter((l) => l.track === "1-month").length,
+      "3-month": leads.filter((l) => l.track === "3-month").length,
+      "6-month": leads.filter((l) => l.track === "6-month").length,
+    }),
+    [leads],
+  )
+  const urgentLeads = useMemo(() => leads.filter((l) => l.nextMessageIn < 3600).length, [leads])
 
   if (isLoading) return <DripQueueViewSkeleton />
-
-  const trackFiltered = activeTab === "all" ? leads : leads.filter((l) => l.track === activeTab)
-  const repliedCount = trackFiltered.filter(isAwaitingReply).length
-  const filteredLeads = repliedOnly ? trackFiltered.filter(isAwaitingReply) : trackFiltered
-  const trackCounts: Record<DripTrack, number> = {
-    "1-month": leads.filter((l) => l.track === "1-month").length,
-    "3-month": leads.filter((l) => l.track === "3-month").length,
-    "6-month": leads.filter((l) => l.track === "6-month").length,
-  }
-  const urgentLeads = leads.filter((l) => l.nextMessageIn < 3600).length
 
   return (
     <div className="space-y-4">
@@ -136,7 +124,6 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
             <div className="divide-y">
               {filteredLeads.map((lead) => {
                 const trackConfig = getTrackConfig(lead.track)
-                const isUrgent = lead.nextMessageIn < 3600
                 const progress = (lead.messagesSent / lead.totalMessages) * 100
                 const expanded = expandedId === lead.id
                 return (
@@ -158,9 +145,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                           <Progress value={progress} className="h-1.5 w-16" />
                           <span className="font-medium">Stage {lead.messagesSent}/{lead.totalMessages}</span>
                           <span>•</span>
-                          <span className={`inline-flex items-center gap-1 ${isUrgent ? "text-warning font-medium" : ""}`}>
-                            <Timer className="size-3" />next {formatCountdown(lead.nextMessageIn)}
-                          </span>
+                          <Countdown seconds={lead.nextMessageIn} />
                           <span>•</span>
                           <span>engaged {formatDate(lead.lastEngagement)}</span>
                         </div>
