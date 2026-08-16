@@ -807,7 +807,7 @@ function LeadDetailHeader({
       </CardContent>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit lead</DialogTitle>
             <DialogDescription>Edit any field. Contact changes write through to SAP; a phone change resets verification.</DialogDescription>
@@ -2244,7 +2244,7 @@ function QualificationDialog({
   const isRequalify = !!lead.requalifyPending
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-lg max-h-[85dvh] overflow-y-auto p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>{isRequalify ? "Re-Qualification" : "Qualification"}</DialogTitle>
           <DialogDescription>Single qualification bar — all fields required.</DialogDescription>
@@ -3227,7 +3227,7 @@ function ZoomMeetingCard({ lead, autoOpen, onAutoOpened }: { lead: LeadDetail; a
               {lead.crmLocked ? "CRM Locked" : "Schedule Zoom Meeting"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Schedule Zoom Meeting</DialogTitle>
               <DialogDescription>

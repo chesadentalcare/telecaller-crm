@@ -29,7 +29,7 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+    <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       <BrandHero />
       <FormPane />
     </div>
@@ -215,7 +215,7 @@ function LogoMark({ large = false }: { large?: boolean }) {
 
 function LoginShellSkeleton() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-dvh items-center justify-center bg-background">
       <div className="size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
     </div>
   )

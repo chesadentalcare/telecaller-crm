@@ -102,7 +102,7 @@ export function MeetingChooserDialog({
         onOpenChange(o)
       }}
     >
-      <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isPhysical ? "Schedule the physical meeting & log the call" : "Schedule the Zoom consult & log the call"}

@@ -5,6 +5,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { tokenStorage } from "@/lib/auth/token"
 import { apiUrl, endpoints } from "@/lib/api-config"
 import { leadKeys } from "@/hooks/use-leads"
+import { createCoalescer } from "@/lib/coalesce"
+
+const SSE_REFRESH_COALESCE_MS = 500
 
 // Live WhatsApp conversation updates via Server-Sent Events.
 //
@@ -30,11 +33,14 @@ export function useConversationStream() {
     const url = `${apiUrl(endpoints.conversationStream)}?token=${encodeURIComponent(token)}`
     let es: EventSource | null = null
 
-    // Invalidating the whole `leads` group refreshes every CURRENTLY-OBSERVED lead query
-    // (open chat full-detail, queue lists, awaiting-reply counts) and nothing else.
-    const refresh = () => qc.invalidateQueries({ queryKey: leadKeys.all })
+    // Broad invalidation stays (load-bearing for live badges/lists); the coalescer only
+    // changes how often it fires — one refresh per burst instead of one per event.
+    const refresh = createCoalescer(
+      () => qc.invalidateQueries({ queryKey: leadKeys.all }),
+      SSE_REFRESH_COALESCE_MS,
+    )
 
-    const onConversation = () => refresh()
+    const onConversation = () => refresh.schedule()
 
     try {
       es = new EventSource(url)
@@ -46,6 +52,7 @@ export function useConversationStream() {
     }
 
     return () => {
+      refresh.cancel()
       if (es) {
         es.removeEventListener("conversation", onConversation as EventListener)
         es.close()
