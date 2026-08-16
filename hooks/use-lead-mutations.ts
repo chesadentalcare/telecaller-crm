@@ -333,7 +333,23 @@ export function useAckReplies(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => leadsApi.ackReplies(id),
-    onSuccess: () => {
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: leadKeys.all })
+      const prev = qc.getQueriesData({ queryKey: leadKeys.all })
+      qc.setQueriesData({ queryKey: leadKeys.all }, (old: unknown) => {
+        if (!Array.isArray(old)) return old
+        return old.map((lead: { id?: string | number; replied?: { hasUnread?: boolean; awaitingReply?: boolean } }) =>
+          lead && String(lead.id) === String(id) && lead.replied
+            ? { ...lead, replied: { ...lead.replied, hasUnread: false, awaitingReply: false } }
+            : lead,
+        )
+      })
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data))
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(id)) })
       invalidateAllLeads(qc)
     },
