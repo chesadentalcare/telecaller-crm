@@ -68,6 +68,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { QuotationAshvaBuilder } from "./quotation-ashva-builder"
 import { SendCatalogueButton } from "./send-catalogue-button"
+import { SendRecoveryButton } from "./send-recovery-button"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
@@ -1328,6 +1329,12 @@ export function CallsTab({
   } | null>(null)
   // Call-history "what happens" explainer (per historical attempt).
   const [historyDetail, setHistoryDetail] = useState<{ flow: OutcomeFlow; ctx: OutcomeContext } | null>(null)
+  const [logSuccess, setLogSuccess] = useState<{ n: number; outcome: CallOutcome } | null>(null)
+  useEffect(() => {
+    if (!logSuccess) return
+    const t = setTimeout(() => setLogSuccess(null), 5000)
+    return () => clearTimeout(t)
+  }, [logSuccess])
 
   const { mutateAsync: enterDrip } = useEnterDrip(lead.id)
   const { mutateAsync: sendRecovery, isPending: sendingRecovery } = useRecoveryWhatsapp(lead.id)
@@ -1421,6 +1428,7 @@ export function CallsTab({
       const res = await logAttempt(body)
       const routedServerSide = !!res.route
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
+      setLogSuccess({ n: res.attemptNumber, outcome: values.outcome })
       if (res.predictedCloseSynced === false) {
         toast.warning("Predicted close saved, but the SAP push failed — it will need a re-sync.")
       }
@@ -1472,6 +1480,7 @@ export function CallsTab({
         notes: engagedCallValues.notes,
       })
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
+      setLogSuccess({ n: res.attemptNumber, outcome: "engaged" })
       let projectionLabel: string | undefined
       if (res.route !== "drip") {
         try {
@@ -1765,6 +1774,21 @@ export function CallsTab({
               </Button>
             </div>
           </form>
+
+          {logSuccess && (
+            <div className="flex items-center gap-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-emerald-800 shadow-sm animate-in fade-in slide-in-from-bottom-2 dark:text-emerald-200">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <Check className="size-5" strokeWidth={3} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold leading-tight">Response recorded</p>
+                <p className="text-xs opacity-90">Attempt #{logSuccess.n} logged · {OUTCOME_CONFIG[logSuccess.outcome]?.label ?? logSuccess.outcome}</p>
+              </div>
+              <button type="button" onClick={() => setLogSuccess(null)} className="shrink-0 rounded-md p-1 text-emerald-700/70 hover:text-emerald-800 dark:text-emerald-300/70">
+                <XCircle className="size-4" />
+              </button>
+            </div>
+          )}
 
           {/* Outcome-driven post-log result — shows what actually happened + next step. */}
           {lastResult && (
@@ -2619,6 +2643,17 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </p>
           )}
           <div className="flex items-end gap-2">
+            <SendRecoveryButton
+              leadId={lead.id}
+              phone={!noPhone ? lead.phone : undefined}
+              dentistName={lead.name}
+              equipmentInterest={lead.equipment}
+              iconOnly
+              variant="outline"
+              className="shrink-0"
+              disabled={optedOut || noPhone}
+              onSent={() => qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(lead.id)) })}
+            />
             <SendCatalogueButton
               leadId={lead.id}
               phone={!noPhone ? lead.phone : undefined}
@@ -2650,7 +2685,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            The catalogue sends on an approved template — it works even when the 24h reply window is closed.
+            The “tried to call” and catalogue buttons send approved templates — they work even when the 24h reply window is closed.
           </p>
         </div>
         )}
