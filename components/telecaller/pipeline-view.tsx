@@ -102,9 +102,14 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [activeTab, setActiveTab] = useState("all")
 
   // Inline cockpit
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const toggle = (id: string) =>
-    setExpandedId((cur) => (cur === id ? null : id))
+    setExpandedIds((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const [repliedOnly, setRepliedOnly] = useState(false)
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
@@ -706,7 +711,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
               {filteredLeads.map((lead) => {
                 const statusConfig = getStatusConfig(lead.status)
                 const tel = lead.phone.replace(/\D/g, "")
-                const expanded = expandedId === lead.id
+                const expanded = expandedIds.has(lead.id)
 
                 return (
                   <div key={lead.id}>

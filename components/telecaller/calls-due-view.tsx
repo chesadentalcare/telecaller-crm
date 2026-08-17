@@ -32,10 +32,16 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const { data: leads = [], isLoading } = useCallsDueLeads()
   const { data: upcoming } = useUpcomingCalls()
   const { mode } = useEngagementMode()
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   if (isLoading) return <ViewSkeleton />
 
-  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
+  const toggle = (id: string) =>
+    setExpandedIds((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const upcomingCount = (upcoming?.scheduled.length ?? 0) + (upcoming?.drip.length ?? 0)
 
   // Split the worklist by the call's scheduled DAY (server returns today + overdue):
@@ -54,7 +60,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   //   'past'    — scheduled on an earlier day (a deeper rose).
   const renderRow = (lead: CallsDueLead, tone: "due" | "overdue" | "past") => {
     const tel = lead.phone.replace(/\D/g, "")
-    const expanded = expandedId === lead.id
+    const expanded = expandedIds.has(lead.id)
     const rowClass =
       tone === "past"
         ? "bg-rose-100/60 hover:bg-rose-100"
