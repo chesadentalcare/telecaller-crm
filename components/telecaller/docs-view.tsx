@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import {
   BookOpen, PhoneCall, CalendarClock, Repeat, XCircle, PhoneOff, PhoneMissed,
   Droplets, Clock, Send, Route, LogOut,
-  CheckCircle2, Search, PhoneForwarded,
+  CheckCircle2, Search, PhoneForwarded, Bell,
 } from "lucide-react"
 
 // In-app training guide. Two tabs:
@@ -193,31 +193,10 @@ Follow-up    scheduled    Follow-up    4× then      to re-open
         <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">🆕 <b>The doctor also STAYS in the WhatsApp drip.</b> Booking a physical or Zoom meeting <b>no longer stops</b> the follow-up — the system keeps sending nurture messages on the doctor&rsquo;s buy-timeline track <b>while the meeting/sale is in progress</b>, so a doctor never goes silent if the order doesn&rsquo;t close right away. It keeps running <b>even if the doctor replies</b>, and stops only when the sale is <b>won / lost</b>, they send <b>STOP</b>, or the track finishes. Full details in <b>Drip Engine → &ldquo;How a lead leaves a drip&rdquo;</b>.</p>
         <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-foreground/80">
           <b>🆕 If sales doesn&rsquo;t follow up — automatic reminders to the salesperson.</b> Once a lead is <b>handed to a
-          salesperson</b> (or a <b>physical meeting</b> is booked), the system watches it. If the rep doesn&rsquo;t update the
-          lead in time, it <b>WhatsApps the salesperson&rsquo;s own phone</b> a reminder — automatically, on this schedule:
-          <Chart>{`Handover / physical meeting booked   ← clock starts
-        │
-        ▼  after ~4 hours, still no update
-   1st WhatsApp reminder  →  the salesperson
-        │
-        ▼  then once every 24 hours, while still no update
-   Daily WhatsApp reminder  →  the salesperson
-        │
-        ▼  on the 3rd reminder (~2 days in)
-   MANAGER + the telecaller who handed it over
-   also get an in-app "rep unresponsive" alert
-        │
-        ▼  keeps chasing every day — through the meeting,
-           the quotation, the negotiation… the WHOLE deal
-   Reminders continue until the rep CLOSES it
-        │
-        ▼  rep marks it Won or Lost, or RETURNS the lead
-   Only then do the reminders STOP`}</Chart>
-          <p className="mt-2 mb-0 text-xs text-foreground/70">The whole point is to keep the rep moving the deal to a close —
-          so the reminder <b>does not stop just because the rep quotes or changes the stage</b>. It keeps going <b>every day</b>
-          until the deal is <b>Won</b>, <b>Lost</b>, or the lead is <b>handed back</b> to the telecaller. The watcher checks
-          every 2 hours, so the first reminder lands about <b>4–6 hours</b> after handover. The salesperson&rsquo;s WhatsApp
-          replies come back onto the lead under the <b>&ldquo;Sales rep&rdquo;</b> tab in Replies.</p>
+          salesperson</b> (or a <b>physical meeting</b> is booked), the system WhatsApps the rep&rsquo;s own phone if they don&rsquo;t
+          update the lead — <b>1st at ~4h, then every 24h, max 3</b>. On the 3rd, the <b>manager + you</b> get an in-app alert and the
+          WhatsApp reminders <b>stop</b>. <b>Any update the rep makes pauses reminders for 48h</b>; <b>Won / Lost / Returned</b> stops
+          them for good. Full schedule in the <b>&ldquo;Sales Handover&rdquo;</b> tab.
         </div>
         <p><b>Buying later</b> → pick <b>when they plan to buy</b> (Within a month / 1–3 months / 6+ months). That decides
           which <b>drip track</b> the lead goes on (see the Drip Engine tab). <b>Always set it</b> for an interested-but-later lead.</p>
@@ -734,11 +713,98 @@ At your time   ☎  The CALLBACK appears in your Calls Due  → you call
   )
 }
 
-type DocTab = "flow" | "drip" | "no_response" | "wrong_number" | "callback"
+// ── Sales Handover tab ───────────────────────────────────────────────
+function SalesHandoverGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <Bell className="size-5 text-primary" /> Sales Handover — reminders to the salesperson
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          When a lead is <b>handed to a salesperson</b> — or a <b>physical meeting</b> is booked for them — the system keeps
+          the deal moving by <b>WhatsApping the rep&rsquo;s own phone</b> if they go quiet. It never spams: a few nudges, then it
+          escalates to a manager and stops.
+        </p>
+      </div>
+
+      <Section n="1" title="When the reminders start" icon={Send}>
+        <p>The clock starts the moment a lead <b>leaves the telecaller for sales</b>:</p>
+        <ul className="ml-4 list-disc space-y-1">
+          <li>you booked a <b>physical meeting</b> (the rep needs to visit), or</li>
+          <li>the lead was <b>handed over to a salesperson</b> to close.</li>
+        </ul>
+        <p>From there, the system watches whether the rep <b>updates the lead</b> (Visited, Quoted, Order created, Won, Lost…).</p>
+      </Section>
+
+      <Section n="2" title="If the rep stays silent — the reminder schedule" icon={Bell}>
+        <Chart>{`Handover / physical meeting booked   ← clock starts
+      │
+      ▼  ~4 hours later, still no update
+  Reminder 1   →  WhatsApp to the salesperson's phone
+      │
+      ▼  +24 hours, still silent
+  Reminder 2
+      │
+      ▼  +24 hours, still silent
+  Reminder 3   +  in-app alert to the MANAGER and the
+                  telecaller who handed the lead over
+      │
+      ▼
+  STOP — no more WhatsApp (max 3 per silent streak).
+         From here it's the manager's job on the dashboard.`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">The watcher checks every 2 hours, so the first reminder lands about <b>4–6 hours</b> after handover. WhatsApp is <b>capped at 3</b> so we never pester a rep — or run up messaging costs — endlessly.</p>
+      </Section>
+
+      <Section n="3" title="The moment the rep updates — the clock resets" icon={Repeat}>
+        <p>Any update the rep records <b>pauses</b> the reminders — someone who just acted doesn&rsquo;t need chasing again straight away.</p>
+        <Chart>{`Rep marks  Visited / Quoted / Order created / Rescheduled
+      │
+      ▼  reminders PAUSE for 48 hours
+  (and the "3 reminders" counter resets to zero)
+      │
+      ▼  if the rep goes quiet again for 48h+
+  reminders can resume — again capped at 3`}</Chart>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">✅ So a rep who&rsquo;s actively working the lead won&rsquo;t get pestered: <b>each update buys 48 hours of quiet</b>. Only genuine silence brings the reminders back.</p>
+      </Section>
+
+      <Section n="4" title="When reminders stop for good" icon={LogOut}>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Rep marks the lead…</th>
+                <th className="p-2 text-left font-medium">What happens</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              <tr><td className="p-2 font-medium text-foreground">Won</td><td className="p-2 text-muted-foreground">Deal closed in SAP — reminders stop permanently.</td></tr>
+              <tr><td className="p-2 font-medium text-foreground">Lost</td><td className="p-2 text-muted-foreground">Opportunity closed — reminders stop permanently.</td></tr>
+              <tr><td className="p-2 font-medium text-foreground">Returned</td><td className="p-2 text-muted-foreground">Lead goes back to the telecaller to re-nurture — reminders stop.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-amber-500/10 p-2 text-foreground/80"><b>Quoted is different:</b> a quote doesn&rsquo;t close the deal, so it <b>doesn&rsquo;t stop</b> the reminders for good — it just resets the 48-hour clock. The lead is still open, so if the rep then goes silent, gentle reminders can come back.</p>
+      </Section>
+
+      <Section n="5" title="Good to know" icon={CheckCircle2}>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>Reminders go to the <b>salesperson&rsquo;s own WhatsApp</b> (their phone on file), not the customer.</li>
+          <li>The rep&rsquo;s WhatsApp <b>replies</b> come back onto the lead under the <b>&ldquo;Sales rep&rdquo;</b> tab in Replies.</li>
+          <li>On the 3rd reminder, <b>you (who handed it over) and the manager</b> both get an in-app &ldquo;rep unresponsive&rdquo; alert — a stalled deal never goes unnoticed.</li>
+          <li>Never more than <b>3 WhatsApp reminders</b> per silent streak — after that it&rsquo;s handled on the dashboard, not by more messages.</li>
+        </ul>
+      </Section>
+    </div>
+  )
+}
+
+type DocTab = "flow" | "drip" | "sales_handover" | "no_response" | "wrong_number" | "callback"
 
 const TABS: { key: DocTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "flow", label: "Telecaller Flow", icon: BookOpen },
   { key: "drip", label: "Drip Engine", icon: Droplets },
+  { key: "sales_handover", label: "Sales Handover", icon: Bell },
   { key: "no_response", label: "No Response", icon: PhoneOff },
   { key: "wrong_number", label: "Wrong Number", icon: PhoneMissed },
   { key: "callback", label: "Call Back Later", icon: CalendarClock },
@@ -749,7 +815,7 @@ export function DocsView() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-8">
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-3 lg:grid-cols-6">
         {TABS.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -772,6 +838,7 @@ export function DocsView() {
 
       {tab === "flow" ? <TelecallerFlowGuide />
         : tab === "drip" ? <DripEngineGuide />
+        : tab === "sales_handover" ? <SalesHandoverGuide />
         : tab === "no_response" ? <NoResponseGuide />
         : tab === "wrong_number" ? <WrongNumberGuide />
         : <CallBackGuide />}
