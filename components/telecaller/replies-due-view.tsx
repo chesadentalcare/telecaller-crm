@@ -14,10 +14,16 @@ import { repColor } from "@/lib/rep-color"
 
 export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string, action?: string) => void }) {
   const { data: leads = [], isLoading } = useRepliesDueLeads()
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   if (isLoading) return <ViewSkeleton />
 
-  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
+  const toggle = (id: string) =>
+    setExpandedIds((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   return (
     <Card>
@@ -41,7 +47,7 @@ export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string, action
         ) : (
           <div className="divide-y">
             {leads.map((lead) => {
-              const expanded = expandedId === lead.id
+              const expanded = expandedIds.has(lead.id)
               return (
                 <div key={lead.id}>
                   <LeadQueueRow

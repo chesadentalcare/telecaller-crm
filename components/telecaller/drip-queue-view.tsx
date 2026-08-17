@@ -63,8 +63,14 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
   const { data, isLoading } = useDripLeads()
   const [activeTab, setActiveTab] = useState<"all" | DripTrack>("all")
   const [repliedOnly, setRepliedOnly] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const toggle = (id: string) => setExpandedId((cur) => (cur === id ? null : id))
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const toggle = (id: string) =>
+    setExpandedIds((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const leads = useMemo(() => data ?? [], [data])
   const trackFiltered = useMemo(
@@ -125,7 +131,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
               {filteredLeads.map((lead) => {
                 const trackConfig = getTrackConfig(lead.track)
                 const progress = (lead.messagesSent / lead.totalMessages) * 100
-                const expanded = expandedId === lead.id
+                const expanded = expandedIds.has(lead.id)
                 return (
                   <div key={lead.id}>
                   <LeadQueueRow
