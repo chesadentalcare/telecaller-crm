@@ -63,6 +63,13 @@ export interface PipelineLead extends LeadBase {
   meetingPending?: boolean
   // Active drip track this lead is on (null when not in a drip) — drives the Active-tab track filter.
   dripTrack?: DripTrack | null
+  // Drip detail — present only when the lead is on an active 1/3/6-month drip (mirrors DripLead),
+  // so the merged Active row can show the same progress / next / projection block the old Nurturing tab did.
+  messagesSent?: number
+  totalMessages?: number
+  nextMessageIn?: number
+  lastEngagement?: Date | null
+  projection?: DripProjection
   // Telecaller-flagged as high-priority — floats to top, shown with amber highlight.
   flagged?: boolean
 }

@@ -115,6 +115,11 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   lastOutcomeBy: r.last_outcome_by ?? null,
   meetingPending: !!r.meeting_pending,
   dripTrack: r.drip_track ? trackBackToFront(r.drip_track) : null,
+  messagesSent: r.drip_track ? (r.drip_index ?? 0) : undefined,
+  totalMessages: r.drip_track ? (r.drip_track === "1_month" ? 9 : r.drip_track === "3_month" ? 19 : 13) : undefined,
+  nextMessageIn: r.drip_next_at ? Math.max(0, Math.floor((new Date(r.drip_next_at).getTime() - Date.now()) / 1000)) : undefined,
+  lastEngagement: r.drip_last_engagement ? new Date(r.drip_last_engagement) : null,
+  projection: toProjection(r.projection),
   flagged: !!r.flagged,
 })
 
