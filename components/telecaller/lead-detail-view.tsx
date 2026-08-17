@@ -68,6 +68,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { NoResponseBanner } from "./no-response-banner"
 import { QuotationAshvaBuilder } from "./quotation-ashva-builder"
 import { SendCatalogueButton } from "./send-catalogue-button"
+import { SendRecoveryButton } from "./send-recovery-button"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
@@ -2642,6 +2643,17 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </p>
           )}
           <div className="flex items-end gap-2">
+            <SendRecoveryButton
+              leadId={lead.id}
+              phone={!noPhone ? lead.phone : undefined}
+              dentistName={lead.name}
+              equipmentInterest={lead.equipment}
+              iconOnly
+              variant="outline"
+              className="shrink-0"
+              disabled={optedOut || noPhone}
+              onSent={() => qc.invalidateQueries({ queryKey: leadKeys.fullDetail(String(lead.id)) })}
+            />
             <SendCatalogueButton
               leadId={lead.id}
               phone={!noPhone ? lead.phone : undefined}
@@ -2673,7 +2685,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            The catalogue sends on an approved template — it works even when the 24h reply window is closed.
+            The “tried to call” and catalogue buttons send approved templates — they work even when the 24h reply window is closed.
           </p>
         </div>
         )}
