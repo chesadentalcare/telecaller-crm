@@ -119,6 +119,10 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   totalMessages: r.drip_track ? (r.drip_track === "1_month" ? 9 : r.drip_track === "3_month" ? 19 : 13) : undefined,
   nextMessageIn: r.drip_next_at ? Math.max(0, Math.floor((new Date(r.drip_next_at).getTime() - Date.now()) / 1000)) : undefined,
   lastEngagement: r.drip_last_engagement ? new Date(r.drip_last_engagement) : null,
+  dripNextChannel: r.drip_next_channel ?? null,
+  dripNextLabel: r.drip_next_label ?? null,
+  dripLastChannel: r.drip_last_channel ?? null,
+  dripLastLabel: r.drip_last_label ?? null,
   projection: toProjection(r.projection),
   flagged: !!r.flagged,
 })
@@ -139,6 +143,10 @@ const toDrip = (r: DripQueueRow): DripLead => {
     city: r.city ?? null,
     state: r.state ?? null,
     replied: toReplied(r),
+    dripNextChannel: r.drip_next_channel ?? null,
+    dripNextLabel: r.drip_next_label ?? null,
+    dripLastChannel: r.drip_last_channel ?? null,
+    dripLastLabel: r.drip_last_label ?? null,
     projection: toProjection(r.projection),
   }
 }

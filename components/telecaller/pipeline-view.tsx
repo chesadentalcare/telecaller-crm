@@ -864,6 +864,10 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                               totalMessages={lead.totalMessages}
                               nextMessageIn={lead.nextMessageIn}
                               lastEngagement={lead.lastEngagement}
+                              nextChannel={lead.dripNextChannel}
+                              lastChannel={lead.dripLastChannel}
+                              nextLabel={lead.dripNextLabel}
+                              lastLabel={lead.dripLastLabel}
                               projection={lead.projection}
                             />
                           )}

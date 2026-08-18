@@ -515,6 +515,10 @@ export interface PipelineRow extends ReplyRowFields {
   drip_started_at?: string | null
   drip_next_at?: string | null
   drip_last_engagement?: string | null
+  drip_next_channel?: "call" | "whatsapp" | null
+  drip_next_label?: string | null
+  drip_last_channel?: "call" | "whatsapp" | null
+  drip_last_label?: string | null
   projection?: DripProjectionPayload | null
 }
 
@@ -539,6 +543,10 @@ export interface DripQueueRow extends ReplyRowFields {
   phone: string | null
   city?: string | null
   state?: string | null
+  drip_next_channel?: "call" | "whatsapp" | null
+  drip_next_label?: string | null
+  drip_last_channel?: "call" | "whatsapp" | null
+  drip_last_label?: string | null
   // Issue 4 — projected completion + current stage for the queue row.
   projection?: DripProjectionPayload | null
 }
