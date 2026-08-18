@@ -36,6 +36,7 @@ export const REASON_LABEL: Record<string, string> = {
   callback: "Callback",
   drip_anchor: "Drip call",
   requalification: "Re-qualify",
+  post_meeting: "Post-meeting follow-up",
 }
 
 // Human labels for a prior call outcome — the single source of truth shared by the

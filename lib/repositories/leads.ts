@@ -265,6 +265,17 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   lastOutcome: r.last_outcome ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
+  salesName: r.sales_name ?? null,
+  salesPhone: r.sales_phone ?? null,
+  salesUpdate: r.sales_update
+    ? {
+        event: r.sales_update.event ?? null,
+        notes: r.sales_update.notes ?? null,
+        loggedBy: r.sales_update.logged_by ?? null,
+        source: r.sales_update.source,
+        at: r.sales_update.at,
+      }
+    : null,
 })
 
 const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
