@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Calendar, Trash2 } from "lucide-react"
+import { Calendar, Trash2, Phone, MessageSquare } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,12 +19,17 @@ import type { DripProjection } from "@/lib/types/lead"
 
 function ago(date?: Date | null): string {
   if (!date || date.getTime() === 0) return "—"
-  const days = Math.floor((Date.now() - date.getTime()) / 86_400_000)
+  const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000)
   if (days <= 0) return "Today"
   if (days === 1) return "Yesterday"
   if (days < 7) return `${days} days ago`
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`
   return `${Math.floor(days / 30)} months ago`
+}
+
+function channelWord(c?: "call" | "whatsapp" | null): string {
+  return c === "call" ? "Call" : c === "whatsapp" ? "WhatsApp" : "sent"
 }
 
 // The drip progress/next/projection block, shown on a queue row when the lead is on an
@@ -34,24 +39,42 @@ export function DripMeta({
   totalMessages = 0,
   nextMessageIn = 0,
   lastEngagement,
+  nextChannel,
+  lastChannel,
+  nextLabel,
+  lastLabel,
   projection,
 }: {
   messagesSent?: number
   totalMessages?: number
   nextMessageIn?: number
   lastEngagement?: Date | null
+  nextChannel?: "call" | "whatsapp" | null
+  lastChannel?: "call" | "whatsapp" | null
+  nextLabel?: string | null
+  lastLabel?: string | null
   projection?: DripProjection
 }) {
   const progress = totalMessages > 0 ? (messagesSent / totalMessages) * 100 : 0
+  const hasLast = !!lastEngagement && lastEngagement.getTime() !== 0
   return (
     <div className="mt-1 space-y-0.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
         <Progress value={progress} className="h-1.5 w-16" />
         <span className="font-medium text-foreground/80">Stage {messagesSent}/{totalMessages}</span>
         <span>•</span>
-        <Countdown seconds={nextMessageIn} />
-        <span>•</span>
-        <span>engaged {ago(lastEngagement)}</span>
+        <span title={nextLabel ?? undefined}>
+          <Countdown seconds={nextMessageIn} channel={nextChannel} />
+        </span>
+        {hasLast && (
+          <>
+            <span>•</span>
+            <span className="inline-flex items-center gap-1" title={lastLabel ?? undefined}>
+              {lastChannel === "call" ? <Phone className="size-3" /> : <MessageSquare className="size-3" />}
+              last drip: {channelWord(lastChannel)} · {ago(lastEngagement)}
+            </span>
+          </>
+        )}
       </div>
       {projection && (
         <div className="inline-flex items-center gap-1 text-[11px] text-foreground/80">

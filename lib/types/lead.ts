@@ -69,6 +69,10 @@ export interface PipelineLead extends LeadBase {
   totalMessages?: number
   nextMessageIn?: number
   lastEngagement?: Date | null
+  dripNextChannel?: "call" | "whatsapp" | null
+  dripNextLabel?: string | null
+  dripLastChannel?: "call" | "whatsapp" | null
+  dripLastLabel?: string | null
   projection?: DripProjection
   // Telecaller-flagged as high-priority — floats to top, shown with amber highlight.
   flagged?: boolean
@@ -84,6 +88,10 @@ export interface DripLead extends LeadBase {
   messagesSent: number
   totalMessages: number
   equipment: string
+  dripNextChannel?: "call" | "whatsapp" | null
+  dripNextLabel?: string | null
+  dripLastChannel?: "call" | "whatsapp" | null
+  dripLastLabel?: string | null
   // Issue 4 — projected nurture completion + current stage label.
   projection?: DripProjection
 }

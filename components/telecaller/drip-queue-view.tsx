@@ -41,13 +41,17 @@ function toWhatsappNumber(phone: string): string {
 }
 
 function formatDate(date: Date): string {
-  const diffMs = Date.now() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return "Today"
+  const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime() }
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / (1000 * 60 * 60 * 24))
+  if (diffDays <= 0) return "Today"
   if (diffDays === 1) return "Yesterday"
   if (diffDays < 7) return `${diffDays} days ago`
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
   return `${Math.floor(diffDays / 30)} months ago`
+}
+
+function channelWord(c?: "call" | "whatsapp" | null): string {
+  return c === "call" ? "Call" : c === "whatsapp" ? "WhatsApp" : "sent"
 }
 
 function getTrackConfig(track: string) {
@@ -151,9 +155,16 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                           <Progress value={progress} className="h-1.5 w-16" />
                           <span className="font-medium">Stage {lead.messagesSent}/{lead.totalMessages}</span>
                           <span>•</span>
-                          <Countdown seconds={lead.nextMessageIn} />
-                          <span>•</span>
-                          <span>engaged {formatDate(lead.lastEngagement)}</span>
+                          <Countdown seconds={lead.nextMessageIn} channel={lead.dripNextChannel} />
+                          {lead.lastEngagement.getTime() !== 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1" title={lead.dripLastLabel ?? undefined}>
+                                {lead.dripLastChannel === "call" ? <Phone className="size-3" /> : <MessageSquare className="size-3" />}
+                                last drip: {channelWord(lead.dripLastChannel)} · {formatDate(lead.lastEngagement)}
+                              </span>
+                            </>
+                          )}
                         </div>
                         {lead.projection && (
                           <div className="inline-flex items-center gap-1 text-[11px] text-foreground/80">
