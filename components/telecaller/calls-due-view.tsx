@@ -110,7 +110,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               )}
               {tone === "overdue" && (
                 <span className="inline-flex items-center gap-1 font-medium text-rose-600">
-                  <AlertCircle className="size-3" />Overdue — due earlier today
+                  <AlertCircle className="size-3" />Overdue — was due {lead.scheduledAt.toLocaleString(undefined, { hour: "2-digit", minute: "2-digit" })} today
                 </span>
               )}
               {tone === "past" && (
