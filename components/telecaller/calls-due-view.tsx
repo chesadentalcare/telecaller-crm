@@ -115,7 +115,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               )}
               {tone === "past" && (
                 <span className="inline-flex items-center gap-1 font-medium text-rose-700">
-                  <AlertCircle className="size-3" />Missed — not called on its day
+                  <AlertCircle className="size-3" />Missed {lead.scheduledAt.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} — not called on its day
                 </span>
               )}
             </span>
