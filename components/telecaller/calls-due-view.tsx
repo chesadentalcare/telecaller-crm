@@ -82,10 +82,10 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
             <span className="flex flex-wrap items-center gap-1.5">
               {lead.reason === "callback" ? (
                 <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                  <PhoneCall className="size-3" />Callback at {lead.scheduledAt.toLocaleString()}
+                  <PhoneCall className="size-3" />Callback at {lead.scheduledAt.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </span>
               ) : (
-                <span>Scheduled {lead.scheduledAt.toLocaleString()}</span>
+                <span>Scheduled {lead.scheduledAt.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               )}
               {/* Previous call outcome — or "Fresh call" if never called. */}
               <span

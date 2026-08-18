@@ -69,7 +69,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1 font-medium text-foreground">
               {isZoom ? <Video className="size-3" /> : <MapPin className="size-3" />}
-              {m.meetingAt.toLocaleString()}
+              {m.meetingAt.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
             </span>
             {!isZoom && m.location && <span>· {m.location}</span>}
             {m.assignedSalesperson && <span>· with {m.assignedSalesperson}</span>}
