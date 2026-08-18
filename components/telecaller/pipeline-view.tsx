@@ -19,6 +19,7 @@ import {
 import { LeadQueueRow } from "./lead-queue-row"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { SendCatalogueButton } from "./send-catalogue-button"
+import { DripMeta, RemoveFromDripButton } from "./drip-detail"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone,
@@ -772,6 +773,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                         }
 
                         meta={
+                          <div className="space-y-0.5">
                           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             {lead.value && (
                               <>
@@ -856,20 +858,42 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                                 </>
                               )}
                           </span>
+                          {lead.dripTrack && (
+                            <DripMeta
+                              messagesSent={lead.messagesSent}
+                              totalMessages={lead.totalMessages}
+                              nextMessageIn={lead.nextMessageIn}
+                              lastEngagement={lead.lastEngagement}
+                              projection={lead.projection}
+                            />
+                          )}
+                          </div>
                         }
 
                         badge={
-                          <Badge
-                            variant="outline"
-                            className={[
-                              "text-[10px] font-medium",
-                              lead.flagged
-                                ? "border-slate-500 bg-slate-800 text-white"
-                                : statusConfig.className,
-                            ].join(" ")}
-                          >
-                            {statusConfig.label}
-                          </Badge>
+                          <span className="flex flex-wrap items-center justify-end gap-1">
+                            <Badge
+                              variant="outline"
+                              className={[
+                                "text-[10px] font-medium",
+                                lead.flagged
+                                  ? "border-slate-500 bg-slate-800 text-white"
+                                  : statusConfig.className,
+                              ].join(" ")}
+                            >
+                              {statusConfig.label}
+                            </Badge>
+                            {lead.status === "meeting-scheduled" && (
+                              <Badge variant="outline" className="text-[10px] border-primary/30 bg-primary/10 text-primary">
+                                With sales
+                              </Badge>
+                            )}
+                            {lead.dripTrack && (
+                              <Badge variant="outline" className="text-[10px] border-chart-2/20 bg-chart-2/10 text-chart-2">
+                                {lead.dripTrack === "1-month" ? "1-Month" : lead.dripTrack === "3-month" ? "3-Month" : "6-Month"}
+                              </Badge>
+                            )}
+                          </span>
                         }
 
                         actions={
@@ -974,6 +998,19 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                                   : "",
                               ].join(" ")}
                             />
+
+                            {/* Remove from drip — only when on an active drip */}
+                            {lead.dripTrack && (
+                              <RemoveFromDripButton
+                                leadId={lead.id}
+                                className={[
+                                  "h-8 w-8 p-0",
+                                  lead.flagged
+                                    ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                                    : "",
+                                ].join(" ")}
+                              />
+                            )}
 
                             {/* More */}
                             <DropdownMenu>

@@ -509,6 +509,13 @@ export interface PipelineRow extends ReplyRowFields {
   // The lead's active drip track (null when not on a running drip) — powers the
   // Active-tab drip-track filter.
   drip_track?: "1_month" | "3_month" | "6_plus_month" | null
+  // Drip detail (present only when the lead is on an active 1/3/6-month drip) — lets the
+  // merged Active row render the same progress / next / projection block as the old Nurturing tab.
+  drip_index?: number | null
+  drip_started_at?: string | null
+  drip_next_at?: string | null
+  drip_last_engagement?: string | null
+  projection?: DripProjectionPayload | null
 }
 
 export interface NoResponseRow extends ReplyRowFields {

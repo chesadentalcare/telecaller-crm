@@ -307,7 +307,7 @@ function DripRowActions({ lead, expanded, onToggleCockpit }: { lead: DripLead; e
 }
 
 // ─── Pending Follow-Ups — surfaces the per-user worklist endpoint ───────
-function PendingFollowUpsCard() {
+export function PendingFollowUpsCard() {
   const { data, isLoading } = usePendingFollowUps()
   const tasks = data ?? []
 

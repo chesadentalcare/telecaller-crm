@@ -12,7 +12,7 @@ import { useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, Timer, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet,
+  Inbox, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +27,7 @@ import type { QueueCounts } from "@/lib/types/lead"
 // Lazy-load each segment so only the selected one is fetched/rendered — preserves
 // the per-view code-splitting the registry had before.
 const PipelineView = dynamic(() => import("./pipeline-view").then((m) => ({ default: m.PipelineView })), { loading: () => <ViewSkeleton /> })
-const DripQueueView = dynamic(() => import("./drip-queue-view").then((m) => ({ default: m.DripQueueView })), { loading: () => <ViewSkeleton /> })
+const PendingFollowUpsCard = dynamic(() => import("./drip-queue-view").then((m) => ({ default: m.PendingFollowUpsCard })), { loading: () => null })
 const NoResponseView = dynamic(() => import("./no-response-view").then((m) => ({ default: m.NoResponseView })), { loading: () => <ViewSkeleton /> })
 const IdleQueueView = dynamic(() => import("./idle-queue-view").then((m) => ({ default: m.IdleQueueView })), { loading: () => <ViewSkeleton /> })
 const SixMonthFunnelView = dynamic(() => import("./six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })), { loading: () => <ViewSkeleton /> })
@@ -38,7 +38,7 @@ const LostView = dynamic(() => import("./lost-view").then((m) => ({ default: m.L
 const WonView = dynamic(() => import("./won-view").then((m) => ({ default: m.WonView })), { loading: () => <ViewSkeleton /> })
 
 type SegmentId =
-  | "active" | "drip" | "no-response" | "idle"
+  | "active" | "no-response" | "idle"
   | "six-month" | "requalification" | "reactivation" | "archived" | "lost" | "won"
 
 interface Segment {
@@ -50,8 +50,7 @@ interface Segment {
 }
 
 const SEGMENTS: Segment[] = [
-  { id: "active",         label: "Active",      icon: Inbox,        countKey: "pipeline",        render: (open) => <PipelineView onOpenLead={open} /> },
-  { id: "drip",           label: "Nurturing",   icon: Timer,        countKey: "drip",            render: (open) => <DripQueueView onOpenLead={open} /> },
+  { id: "active",         label: "Active",      icon: Inbox,        countKey: "pipeline",        render: (open) => (<div className="space-y-4"><PipelineView onOpenLead={open} /><PendingFollowUpsCard /></div>) },
   { id: "no-response",    label: "No Response", icon: PhoneOff,     countKey: "noResponse",      render: (open) => <NoResponseView onOpenLead={open} /> },
   { id: "idle",           label: "Idle",        icon: Moon,         countKey: "idle",            render: () => <IdleQueueView /> },
   { id: "six-month",      label: "Long-cycle",  icon: CalendarClock, countKey: "sixMonth",       render: (open) => <SixMonthFunnelView onOpenLead={open} /> },
