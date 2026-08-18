@@ -19,6 +19,7 @@ export interface LeadsExportFilters {
   stage?: string
   state?: string
   agent?: string
+  flagged?: boolean
 }
 
 const buildQuery = (f: LeadsExportFilters): string => {
@@ -29,6 +30,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.stage) p.set("stage", f.stage)
   if (f.state) p.set("state", f.state)
   if (f.agent) p.set("agent", f.agent)
+  if (f.flagged) p.set("flagged", "1")
   const s = p.toString()
   return s ? `?${s}` : ""
 }
