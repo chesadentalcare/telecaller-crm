@@ -180,7 +180,7 @@ export interface RequalificationLead extends LeadBase {
 export interface CallsDueLead extends LeadBase {
   city?: string | null
   state?: string | null
-  reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
+  reason: "first_contact" | "callback" | "drip_anchor" | "requalification" | "post_meeting"
   scheduledAt: Date
   slot: string | null
   equipment: string
@@ -190,6 +190,17 @@ export interface CallsDueLead extends LeadBase {
   lastOutcomeAt?: string | null
   // Who logged that most recent disposition (the accountability trail).
   lastOutcomeBy?: string | null
+  // Post-meeting follow-up only — the sales rep the telecaller may also call to verify
+  // the visit went ahead, plus that rep's latest reported update (null until they respond).
+  salesName?: string | null
+  salesPhone?: string | null
+  salesUpdate?: {
+    event: string | null
+    notes: string | null
+    loggedBy: string | null
+    source: string
+    at: string
+  } | null
 }
 
 // Meetings-Due worklist — upcoming physical/zoom meetings (parallel to Calls Due).

@@ -639,7 +639,7 @@ export interface RequalificationRow extends ReplyRowFields {
 // P6.8 — Calls-Due worklist row (over call_nudges, with enriched phone).
 export interface CallNudgeRow extends ReplyRowFields {
   id: number
-  reason: "first_contact" | "callback" | "drip_anchor" | "requalification"
+  reason: "first_contact" | "callback" | "drip_anchor" | "requalification" | "post_meeting"
   scheduled_at: string
   slot: string | null
   status: string
@@ -653,6 +653,16 @@ export interface CallNudgeRow extends ReplyRowFields {
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null
   last_outcome_by?: string | null
+  // Post-meeting follow-up only — the rep to also call + their latest reported update.
+  sales_name?: string | null
+  sales_phone?: string | null
+  sales_update?: {
+    event: string | null
+    notes: string | null
+    logged_by: string | null
+    source: string
+    at: string
+  } | null
 }
 
 // Meetings-Due worklist row (over meeting_records, enriched identity).
@@ -1058,6 +1068,13 @@ export const leadsApi = {
         endpoints.leadAssumeOwnership(String(id)),
         {},
       ),
+    ),
+
+  // Post-meeting follow-up — record the sales rep's response when the telecaller had to
+  // call them (the rep's side is otherwise reported via the sales app / their WhatsApp).
+  addSalesUpdate: (id: number | string, body: { notes: string; event?: string; amount?: number }) =>
+    unwrap(
+      api.post<Envelope<{ success: true }>>(endpoints.leadSalesUpdate(String(id)), body),
     ),
 
   // ─── Meeting SLAs ────────────────────────────────────────────────────

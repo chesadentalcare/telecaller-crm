@@ -9,23 +9,108 @@
 //                      full schedule (UpcomingCallsCalendar).
 
 import { useState } from "react"
-import { PhoneCall, ChevronDown, ChevronRight, SlidersHorizontal, CalendarClock, History, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
+import { PhoneCall, ChevronDown, ChevronRight, SlidersHorizontal, CalendarClock, History, AlertCircle, CheckCircle2, MessageSquarePlus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { UpcomingCallsCalendar } from "./upcoming-calls-calendar"
 import { useCallsDueLeads, useUpcomingCalls } from "@/hooks/use-leads"
+import { useAddSalesUpdate } from "@/hooks/use-lead-mutations"
 import { REASON_LABEL, lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
 import { useEngagementMode, isEngagedReason } from "@/lib/engagement-mode"
+import { ApiError } from "@/lib/api/client"
 import type { CallsDueLead } from "@/lib/types/lead"
 
 interface CallsDueViewProps {
   onOpenLead: (id: string) => void
+}
+
+// Post-meeting follow-up — a small dialog to record the sales rep's response when the
+// telecaller had to call the rep (the rep's side wasn't yet reported via the sales app /
+// their WhatsApp). Mirrors RemoveFromDripButton's structure.
+function LogRepResponseButton({ leadId, salesName }: { leadId: string; salesName?: string | null }) {
+  const [open, setOpen] = useState(false)
+  const [notes, setNotes] = useState("")
+  const [event, setEvent] = useState("")
+  const { mutateAsync: addSalesUpdate, isPending } = useAddSalesUpdate(leadId)
+
+  const handleSubmit = async () => {
+    if (!notes.trim()) {
+      toast.error("Please add a note on what the rep said")
+      return
+    }
+    try {
+      await addSalesUpdate({ notes: notes.trim(), event: event.trim() || undefined })
+      setOpen(false)
+      setNotes("")
+      setEvent("")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to log the rep's response")
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MessageSquarePlus className="size-3.5" />Log rep&apos;s response
+        </Button>
+      </DialogTrigger>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>Log the sales rep&apos;s response</DialogTitle>
+          <DialogDescription>
+            Record what {salesName || "the sales rep"} reported about the visit — this shows on the follow-up card.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="rep-notes" className="text-xs">Notes</Label>
+            <Textarea
+              id="rep-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Visited today, doctor liked the chair, quotation requested."
+              rows={3}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="rep-event" className="text-xs">Event <span className="text-muted-foreground">(optional)</span></Label>
+            <Input
+              id="rep-event"
+              value={event}
+              onChange={(e) => setEvent(e.target.value)}
+              placeholder="e.g. visited / quoted / closing soon"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isPending}>
+            {isPending ? "Saving…" : "Save response"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
@@ -60,6 +145,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   //   'past'    — scheduled on an earlier day (a deeper rose).
   const renderRow = (lead: CallsDueLead, tone: "due" | "overdue" | "past") => {
     const tel = lead.phone.replace(/\D/g, "")
+    const salesTel = (lead.salesPhone ?? "").replace(/\D/g, "")
     const expanded = expandedIds.has(lead.id)
     const rowClass =
       tone === "past"
@@ -118,15 +204,41 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
                   <AlertCircle className="size-3" />Missed {lead.scheduledAt.toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} — not called on its day
                 </span>
               )}
+              {/* Post-meeting follow-up — the rep's reported update (already in), else a
+                  prompt to call the rep + log their response. */}
+              {lead.reason === "post_meeting" && lead.salesUpdate ? (
+                <span className="inline-flex w-full items-center gap-1 text-[11px] font-medium text-emerald-700">
+                  <CheckCircle2 className="size-3 shrink-0" />
+                  Sales: {lead.salesUpdate.event ? `${lead.salesUpdate.event} — ` : ""}{lead.salesUpdate.notes || "reported"}
+                  {lead.salesUpdate.loggedBy ? ` · ${lead.salesUpdate.loggedBy}` : ""}
+                  {` via ${lead.salesUpdate.source}`}
+                </span>
+              ) : lead.reason === "post_meeting" && lead.salesPhone ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                  Sales rep not reported yet — call {lead.salesName || "the rep"} to verify the visit
+                </span>
+              ) : null}
             </span>
           }
           badge={<Badge variant="outline" className="text-[10px]">{REASON_LABEL[lead.reason] ?? lead.reason}</Badge>}
           actions={
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {tel.length >= 10 ? (
-                <Button asChild size="sm" className="gap-1.5"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
+                <Button asChild size="sm" className="gap-1.5"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />{lead.reason === "post_meeting" ? "Call doctor" : "Call"}</a></Button>
               ) : (
                 <Button size="sm" disabled className="gap-1.5"><PhoneCall className="size-3.5" />No number</Button>
+              )}
+              {/* Post-meeting follow-up — call the rep + log their response, only while the
+                  rep hasn't reported yet and we have a number to call. */}
+              {lead.reason === "post_meeting" && !lead.salesUpdate && lead.salesPhone && (
+                <>
+                  {salesTel.length >= 10 && (
+                    <Button asChild size="sm" variant="outline" className="gap-1.5">
+                      <a href={`tel:${salesTel}`}><PhoneCall className="size-3.5" />Call {lead.salesName || "sales rep"}</a>
+                    </Button>
+                  )}
+                  <LogRepResponseButton leadId={lead.id} salesName={lead.salesName} />
+                </>
               )}
               <Button size="sm" variant="outline" onClick={() => toggle(lead.id)} className="gap-1" title="Open cockpit">
                 {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}

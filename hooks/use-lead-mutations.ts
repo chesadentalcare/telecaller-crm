@@ -450,6 +450,22 @@ export function useAssumeOwnership(id: string | number) {
   })
 }
 
+// Post-meeting follow-up — record the sales rep's response (from the Calls Due card, when
+// the telecaller had to call the rep). Refreshes Calls Due so the card shows the reported update.
+export function useAddSalesUpdate(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { notes: string; event?: string; amount?: number }) =>
+      leadsApi.addSalesUpdate(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: leadKeys.callsDue() })
+      invalidateAllLeads(qc)
+      toast.success("Sales rep's response logged")
+    },
+    onError: toastError("Failed to log the rep's response"),
+  })
+}
+
 export function useUploadMeetingSummary(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({

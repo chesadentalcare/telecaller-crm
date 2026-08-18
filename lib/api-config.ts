@@ -104,6 +104,8 @@ export const endpoints = {
   // One-button revive: un-archive a filed lead back to No Response + flag re-qualification.
   leadUnarchiveNoResponse: (id: string) => `/leads/${id}/unarchive-no-response`,
   leadAssumeOwnership: (id: string) => `/leads/${id}/assume-ownership`,
+  // Post-meeting follow-up — record the sales rep's response (when the telecaller called them).
+  leadSalesUpdate: (id: string) => `/leads/${id}/sales-update`,
   // Meeting SLAs (Phase 3)
   meetingSummaryUpload: (meetingId: string) => `/meetings/${meetingId}/summary`,
   meetingSlaStatus: (meetingId: string) => `/meetings/${meetingId}/sla`,
