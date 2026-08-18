@@ -74,6 +74,7 @@ import { ClosureCard } from "./closure-form"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { repColor } from "@/lib/rep-color"
+import { stageLabel } from "@/lib/stage-label"
 import { NOT_INTERESTED_REASONS, type NotInterestedReason } from "@/lib/schemas/not-interested"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -719,7 +720,7 @@ function LeadDetailHeader({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <Badge variant="outline" className="text-[10px]">{lead.stage}</Badge>
+                <Badge variant="outline" className="text-[10px]">{stageLabel(lead.stage, lead.dripTrack)}</Badge>
                 {lead.sapLive === false && (
                   <Badge
                     variant="outline"
@@ -929,7 +930,7 @@ function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
           <CardTitle className="text-sm">Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <InfoRow icon={ChevronRight} label="Stage" value={lead.stage} />
+          <InfoRow icon={ChevronRight} label="Stage" value={stageLabel(lead.stage, lead.dripTrack)} />
           {/* SAP-native predicted closing date (live-read; "cached" when SAP was unreachable). */}
           <InfoRow
             icon={CalendarClock}

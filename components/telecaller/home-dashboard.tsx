@@ -77,7 +77,7 @@ const STAGE_LABELS: Record<string, string> = {
   no_response: "No Response",
   idle: "Idle",
   dormant: "Dormant",
-  six_month_funnel: "6+ Month",
+  six_month_funnel: "In nurture",
   closed_won: "Won",
   closed_lost: "Lost",
 }

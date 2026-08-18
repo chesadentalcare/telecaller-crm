@@ -31,6 +31,7 @@ export function LeadsExportDialog({
   const [source, setSource] = useState("__all__")
   const [state, setState] = useState("__all__")
   const [agent, setAgent] = useState("__all__")
+  const [flagged, setFlagged] = useState("__all__")
   const [busy, setBusy] = useState(false)
 
   const { data: agents = [] } = useQuery({
@@ -53,6 +54,7 @@ export function LeadsExportDialog({
     setSource("__all__")
     setState("__all__")
     setAgent("__all__")
+    setFlagged("__all__")
   }
 
   const submit = async () => {
@@ -68,6 +70,7 @@ export function LeadsExportDialog({
         source: source !== "__all__" ? source : undefined,
         state: state !== "__all__" ? state : undefined,
         agent: agent !== "__all__" ? agent : undefined,
+        flagged: flagged === "flagged" ? true : undefined,
       })
       toast.success("Export downloaded")
       onOpenChange(false)
@@ -125,6 +128,17 @@ export function LeadsExportDialog({
                 {states.map((s) => (
                   <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Flagged</Label>
+            <Select value={flagged} onValueChange={setFlagged}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All leads</SelectItem>
+                <SelectItem value="flagged">Flagged only</SelectItem>
               </SelectContent>
             </Select>
           </div>
