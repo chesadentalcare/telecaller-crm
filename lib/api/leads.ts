@@ -229,6 +229,9 @@ export interface MeetingRow {
   decision_timeline_confirmed: 0 | 1
   sla_summary_breached: 0 | 1
   sla_quote_breached: 0 | 1
+  // Soft-cancel (migration 060) — a cancelled meeting is hidden from the worklist & cockpit list.
+  cancelled_at: string | null
+  cancelled_by: string | null
 }
 
 export interface QuotationRow {
@@ -936,6 +939,16 @@ export const leadsApi = {
           meetingWhatsApp: MeetingWhatsAppResult
         }>
       >(endpoints.meetingReschedule(String(meetingId)), body),
+    ),
+
+  // Soft-cancel a booked meeting (migration 060) — removes it from the meetings-due
+  // worklist and the cockpit scheduled-meetings list. Reversible (clears cancelled_at).
+  cancelMeeting: (meetingId: number | string) =>
+    unwrap(
+      api.patch<Envelope<{ meetingId: number; meetingType: "zoom" | "physical" }>>(
+        endpoints.meetingCancel(String(meetingId)),
+        {},
+      ),
     ),
 
   // Amendment 2 (Theme 8) — send the ₹5,000 designer-fee payment link (stubbed seam).
