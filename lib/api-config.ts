@@ -116,6 +116,7 @@ export const endpoints = {
   // Resend the invite (email + WhatsApp) / reschedule an existing Zoom meeting.
   meetingResend: (meetingId: string) => `/meetings/${meetingId}/resend`,
   meetingReschedule: (meetingId: string) => `/meetings/${meetingId}/reschedule`,
+  meetingCancel: (meetingId: string) => `/meetings/${meetingId}/cancel`,
   // Quotations (Phase 4)
   quotations: `/quotations`,
   quotationDetail: (id: string) => `/quotations/${id}`,

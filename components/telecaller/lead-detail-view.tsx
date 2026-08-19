@@ -124,6 +124,7 @@ import {
   useSendDesignerFeeLink,
   useResendMeeting,
   useRescheduleMeeting,
+  useCancelMeeting,
   useEnterDrip,
   useSendReply,
   useSendSalesReply,
@@ -233,6 +234,8 @@ type LeadDetail = {
   latestPhysicalMeetingId?: number
   // Persisted Zoom meetings (join/host link + passcode survive reloads)
   zoomMeetings: ZoomMeetingSummary[]
+  // Every active meeting (zoom + physical) for the cockpit "Scheduled meetings" list
+  scheduledMeetings: ScheduledMeeting[]
   // Most recent recovery WhatsApp send (so the "sent" state persists past the toast)
   recoveryWhatsappSentAt?: Date
   // Attempts
@@ -296,6 +299,20 @@ type ZoomMeetingSummary = {
   passcode: string | null
 }
 
+// Every active (non-cancelled) meeting booked for the lead — powers the cockpit
+// "Scheduled meetings" list so reps see what already exists before booking a new one.
+type ScheduledMeeting = {
+  id: number
+  type: "zoom" | "physical"
+  meetingAt: string
+  location: string | null
+  assignedSalesperson: string | null
+  scheduledBy: string | null
+  createdAt: string
+  joinUrl: string | null
+  summaryUrl: string | null
+}
+
 // ─── Backend → UI mapper ────────────────────────────────────────────────
 // The view's LeadDetail type is the rich, UI-friendly shape. The backend
 // enriches extension with SAP BP data (phone, email, city, cardName) before
@@ -319,13 +336,17 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     d.attempts[0]?.attempted_at || d.meetings[0]?.meeting_at || ext.updated_at
   const idleDays = Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86_400_000)
 
+  // Cancelled meetings (migration 060) are hidden everywhere in the cockpit — a
+  // cancelled duplicate shouldn't drive the SLA panel, quotation linkage, or the list.
+  const activeMeetings = d.meetings.filter((m) => !m.cancelled_at)
+
   // Find the latest physical meeting for quotation linkage
-  const latestPhysicalMeeting = d.meetings.find((m) => m.meeting_type === "physical")
+  const latestPhysicalMeeting = activeMeetings.find((m) => m.meeting_type === "physical")
 
   // Zoom meetings carry the persisted join/host link + passcode columns.
   // Include ALL zoom meetings (even ones without a generated link) so the rep
   // sees the booking and a clear "no link" note instead of an empty tab.
-  const zoomMeetings: ZoomMeetingSummary[] = d.meetings
+  const zoomMeetings: ZoomMeetingSummary[] = activeMeetings
     .filter((m) => m.meeting_type === "zoom")
     .map((m) => ({
       id: m.id,
@@ -334,6 +355,19 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       startUrl: m.zoom_start_url,
       passcode: m.zoom_passcode,
     }))
+
+  // Full list (zoom + physical) for the cockpit "Scheduled meetings" card.
+  const scheduledMeetings: ScheduledMeeting[] = activeMeetings.map((m) => ({
+    id: m.id,
+    type: m.meeting_type,
+    meetingAt: m.meeting_at,
+    location: m.location,
+    assignedSalesperson: m.assigned_salesperson,
+    scheduledBy: m.scheduled_by,
+    createdAt: m.created_at,
+    joinUrl: m.zoom_join_url,
+    summaryUrl: m.meeting_summary_url,
+  }))
 
   // Latest recovery WhatsApp send — surfaces a durable "recovery sent" marker.
   const latestRecovery = d.whatsapp
@@ -418,6 +452,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     crmLockedReason: ext.crm_locked_reason ?? undefined,
     latestPhysicalMeetingId: latestPhysicalMeeting?.id,
     zoomMeetings,
+    scheduledMeetings,
     recoveryWhatsappSentAt: latestRecovery ? new Date(latestRecovery.sent_at) : undefined,
     attempts: d.attempts.map((a) => ({
       id: String(a.id),
@@ -478,6 +513,7 @@ const mockLead: LeadDetail = {
   crmLocked: false,
   inDrip: false,
   zoomMeetings: [],
+  scheduledMeetings: [],
   attempts: [
     {
       id: "a1",
@@ -3042,9 +3078,187 @@ export function MeetingsTab({ lead, autoOpen, onAutoOpened }: {
   onAutoOpened?: () => void
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <ZoomMeetingCard lead={lead} autoOpen={autoOpen === "zoom"} onAutoOpened={onAutoOpened} />
-      <PhysicalMeetingCard lead={lead} autoOpen={autoOpen === "physical"} onAutoOpened={onAutoOpened} />
+    <div className="space-y-4">
+      <ScheduledMeetingsCard lead={lead} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ZoomMeetingCard lead={lead} autoOpen={autoOpen === "zoom"} onAutoOpened={onAutoOpened} />
+        <PhysicalMeetingCard lead={lead} autoOpen={autoOpen === "physical"} onAutoOpened={onAutoOpened} />
+      </div>
+    </div>
+  )
+}
+
+// ── Scheduled meetings list (cockpit Meetings tab) ─────────────────────
+// Shows every active (non-cancelled) meeting already booked for the lead — both
+// Zoom and Physical — so reps SEE what exists and reschedule/cancel it instead of
+// re-booking a duplicate. Reschedule reuses the same useRescheduleMeeting flow the
+// Meetings-Due worklist uses; Cancel soft-cancels the row (migration 060).
+function ScheduledMeetingsCard({ lead }: { lead: LeadDetail }) {
+  const meetings = [...lead.scheduledMeetings].sort(
+    (a, b) => new Date(a.meetingAt).getTime() - new Date(b.meetingAt).getTime(),
+  )
+  if (meetings.length === 0) return null
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <CalendarClock className="size-4 text-primary" />
+          Scheduled meetings ({meetings.length})
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Every meeting already booked for this lead. Check here before scheduling a new one —
+          reschedule or cancel instead of creating a duplicate.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {meetings.map((m) => (
+          <ScheduledMeetingRow key={m.id} meeting={m} locked={lead.crmLocked} />
+        ))}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ScheduledMeetingRow({ meeting, locked }: { meeting: ScheduledMeeting; locked?: boolean }) {
+  const { mutateAsync: reschedule, isPending: rescheduling } = useRescheduleMeeting(meeting.id)
+  const { mutateAsync: cancel, isPending: cancelling } = useCancelMeeting(meeting.id)
+  const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+
+  // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in LOCAL time — same
+  // format the booking form sends, so the backend's time handling stays identical.
+  const toLocalInput = (d: string) => {
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ""
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
+  const [when, setWhen] = useState(() => toLocalInput(meeting.meetingAt))
+
+  const isZoom = meeting.type === "zoom"
+  const meetingAt = new Date(meeting.meetingAt)
+  const isPast = meetingAt.getTime() < Date.now()
+  const fmtWhen = meetingAt.toLocaleString("en-IN", {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  })
+  const fmtBooked = new Date(meeting.createdAt).toLocaleDateString("en-IN", {
+    day: "2-digit", month: "short",
+  })
+
+  const onReschedule = async () => {
+    if (!when) { toast.error("Pick a new date & time"); return }
+    try {
+      await reschedule({ meeting_at: when })
+      setRescheduleOpen(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to reschedule")
+    }
+  }
+  const onCancel = async () => {
+    try {
+      await cancel()
+      setConfirmCancel(false)
+    } catch {
+      // useCancelMeeting surfaces the server error via toast
+    }
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge
+              variant="outline"
+              className={cn("text-[10px] gap-1", isZoom ? "text-violet-700 border-violet-500/40" : "text-blue-700 border-blue-500/40")}
+            >
+              {isZoom ? <Video className="size-3" /> : <MapPinned className="size-3" />}
+              {isZoom ? "Zoom" : "Physical"}
+            </Badge>
+            <span className="text-xs font-medium">{fmtWhen}</span>
+            {isPast && (
+              meeting.summaryUrl
+                ? <Badge className="text-[10px] bg-success/10 text-success border-success/30">Done</Badge>
+                : <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">Passed · no summary</Badge>
+            )}
+          </div>
+          {meeting.location && (
+            <p className="text-[11px] text-muted-foreground truncate">
+              <MapPin className="inline size-3 mr-1 -mt-0.5" />{meeting.location}
+            </p>
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            {meeting.assignedSalesperson ? `With ${meeting.assignedSalesperson} · ` : ""}
+            Booked{meeting.scheduledBy ? ` by ${meeting.scheduledBy}` : ""} on {fmtBooked}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1 text-[11px]"
+            disabled={locked}
+            onClick={() => { setRescheduleOpen((o) => !o); setConfirmCancel(false) }}
+          >
+            <CalendarClock className="size-3" />Reschedule
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1 text-[11px] text-destructive hover:text-destructive"
+            disabled={cancelling}
+            onClick={() => { setConfirmCancel((o) => !o); setRescheduleOpen(false) }}
+          >
+            <XCircle className="size-3" />Cancel
+          </Button>
+        </div>
+      </div>
+
+      {rescheduleOpen && (
+        <div className="rounded-md border bg-card p-2 space-y-2">
+          <Label className="text-xs">New date &amp; time</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="datetime-local"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              className="h-8 w-auto text-xs"
+            />
+            <Button size="sm" className="h-8 gap-1.5" onClick={onReschedule} disabled={rescheduling}>
+              {rescheduling ? "Saving…" : "Save & re-notify"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8" onClick={() => setRescheduleOpen(false)}>Close</Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            {isZoom
+              ? "The same Zoom join link is kept — the invite is re-sent (email + WhatsApp) with the new time."
+              : "The customer and the assigned sales employee are re-notified with the new time."}
+          </p>
+        </div>
+      )}
+
+      {confirmCancel && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 space-y-2">
+          <p className="text-[11px] text-foreground">
+            Cancel this meeting? It's removed from the meetings worklist (the customer isn't notified).
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 gap-1 text-[11px]"
+              onClick={onCancel}
+              disabled={cancelling}
+            >
+              <XCircle className="size-3" />{cancelling ? "Cancelling…" : "Yes, cancel meeting"}
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setConfirmCancel(false)}>
+              Keep it
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

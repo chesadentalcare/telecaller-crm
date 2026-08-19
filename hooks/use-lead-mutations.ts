@@ -276,6 +276,20 @@ export function useRescheduleMeeting(meetingId: string | number) {
   })
 }
 
+// Soft-cancel a duplicate / no-longer-needed meeting — hides it from the worklist and
+// the cockpit scheduled-meetings list (reversible on the backend).
+export function useCancelMeeting(meetingId: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.cancelMeeting(meetingId),
+    onSuccess: () => {
+      invalidateAllLeads(qc)
+      toast.success("Meeting cancelled")
+    },
+    onError: toastError("Failed to cancel the meeting"),
+  })
+}
+
 export function useUpdateZoomOutcome(meetingId: string | number) {
   const qc = useQueryClient()
   return useMutation({
