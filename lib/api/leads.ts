@@ -28,13 +28,16 @@ interface Envelope<T> {
 const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
   p.then((res) => res.data)
 
-// Created-date range → query string for the pipeline queue endpoints.
-const qs = (r?: DateRange): string => {
-  if (!r?.from && !r?.to) return ""
+// Created-date range + global state filter → query string for the pipeline queue
+// endpoints. `state` is a lead_extensions.state NAME (exact match server-side);
+// "__all__" / empty means no state filter.
+const qs = (r?: DateRange, state?: string): string => {
   const p = new URLSearchParams()
-  if (r.from) p.set("from", r.from)
-  if (r.to) p.set("to", r.to)
-  return `?${p.toString()}`
+  if (r?.from) p.set("from", r.from)
+  if (r?.to) p.set("to", r.to)
+  if (state && state !== "__all__") p.set("state", state)
+  const s = p.toString()
+  return s ? `?${s}` : ""
 }
 
 // Result of the on-booking meeting WhatsApp send (Zoom join link / physical venue).
@@ -570,6 +573,21 @@ export interface DormantRow extends ReplyRowFields {
   equipment: string | null
   dormant_days: number
   reason: string | null
+  // The lead's drip track (1_month/3_month/6_plus_month) when it was archived after a
+  // completed drip — powers the Archived reason chips' 1/3/6-month sub-filter. Null otherwise.
+  drip_track?: "1_month" | "3_month" | "6_plus_month" | null
+}
+
+// Drip-completed leads awaiting manager/admin approval before they land in Archived.
+export interface DripCompletedRow extends ReplyRowFields {
+  id: number
+  customer_name: string | null
+  phone: string | null
+  equipment: string | null
+  state: string | null
+  reason: string | null
+  completed_days: number
+  drip_track?: "1_month" | "3_month" | "6_plus_month" | null
 }
 
 export interface LostRow extends ReplyRowFields {
@@ -723,6 +741,7 @@ export interface QueueCountsResponse {
   pipeline: number
   drip: number
   dormant: number
+  dripCompleted: number
   noResponse: number
   idle: number
   reactivation: number
@@ -1290,20 +1309,28 @@ export const leadsApi = {
 
   // ─── Queues ───────────────────────────────────────────────────────────
   queues: {
-    pipeline:     (r?: DateRange) => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline + qs(r))),
-    noResponse:   (r?: DateRange) => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse + qs(r))),
-    drip:         (r?: DateRange) => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip + qs(r))),
-    idle:         (r?: DateRange) => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle + qs(r))),
-    dormant:      (r?: DateRange) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r))),
-    lost:         (r?: DateRange) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r))),
-    won:          (r?: DateRange) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r))),
+    pipeline:     (r?: DateRange, s?: string) => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline + qs(r, s))),
+    noResponse:   (r?: DateRange, s?: string) => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse + qs(r, s))),
+    drip:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip + qs(r, s))),
+    idle:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle + qs(r, s))),
+    dormant:      (r?: DateRange, s?: string) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r, s))),
+    dripCompleted:(r?: DateRange, s?: string) => unwrap(api.get<Envelope<DripCompletedRow[]>>(endpoints.queueDripCompleted + qs(r, s))),
+    lost:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, s))),
+    won:          (r?: DateRange, s?: string) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, s))),
     repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
-    reactivation: (r?: DateRange) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r))),
-    sixMonth:     (r?: DateRange) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r))),
-    requalification: (r?: DateRange) => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification + qs(r))),
+    reactivation: (r?: DateRange, s?: string) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r, s))),
+    sixMonth:     (r?: DateRange, s?: string) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r, s))),
+    requalification: (r?: DateRange, s?: string) => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification + qs(r, s))),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),
-    counts:       (r?: DateRange) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r))),
+    counts:       (r?: DateRange, s?: string) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r, s))),
   },
+
+  // Manager/admin approval of drip-completed leads → move to Archived (approve) or
+  // back into the pipeline (reject). Both accept one or many lead ids.
+  approveArchive: (ids: number[]) =>
+    unwrap(api.post<Envelope<{ approved: number; ids: number[] }>>(endpoints.queueDripCompletedApprove, { ids })),
+  rejectArchive: (ids: number[]) =>
+    unwrap(api.post<Envelope<{ rejected: number; ids: number[] }>>(endpoints.queueDripCompletedReject, { ids })),
 }

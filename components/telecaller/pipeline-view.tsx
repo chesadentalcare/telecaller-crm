@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -40,6 +39,7 @@ import {
   Flag,
 } from "lucide-react"
 import { NoResponseBanner } from "./no-response-banner"
+import { PipelineFilterModal } from "./pipeline-filter-modal"
 import { usePipelineLeads } from "@/hooks/use-leads"
 import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
@@ -150,11 +150,6 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     isEngagedOutcome(l.lastOutcome) === (mode === "engaged")
 
   const focusLeads = leads.filter(inFocus)
-
-  const activeFilters =
-    (repliedOnly ? 1 : 0) +
-    (meetingPendingOnly ? 1 : 0) +
-    (unverifiedOnly ? 1 : 0)
 
   const repliedTotal = focusLeads.filter(isReplied).length
 
@@ -500,83 +495,14 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 )}
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5"
-                  >
-                    <Filter className="size-3.5" />
-                    Filter
-
-                    {activeFilters > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-0.5 h-4 min-w-4 px-1 text-[10px]"
-                      >
-                        {activeFilters}
-                      </Badge>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  className="w-48"
-                >
-                  <DropdownMenuLabel className="text-xs">
-                    Filter leads
-                  </DropdownMenuLabel>
-
-                  <DropdownMenuCheckboxItem
-                    checked={repliedOnly}
-                    onCheckedChange={(v) =>
-                      setRepliedOnly(!!v)
-                    }
-                    className="text-xs"
-                  >
-                    Replied on WhatsApp
-                  </DropdownMenuCheckboxItem>
-
-                  <DropdownMenuCheckboxItem
-                    checked={meetingPendingOnly}
-                    onCheckedChange={(v) =>
-                      setMeetingPendingOnly(!!v)
-                    }
-                    className="text-xs"
-                  >
-                    Meeting pending
-                  </DropdownMenuCheckboxItem>
-
-                  <DropdownMenuCheckboxItem
-                    checked={unverifiedOnly}
-                    onCheckedChange={(v) =>
-                      setUnverifiedOnly(!!v)
-                    }
-                    className="text-xs"
-                  >
-                    Unverified number
-                  </DropdownMenuCheckboxItem>
-
-                  {activeFilters > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        className="text-xs"
-                        onClick={() => {
-                          setRepliedOnly(false)
-                          setMeetingPendingOnly(false)
-                          setUnverifiedOnly(false)
-                        }}
-                      >
-                        Clear filters
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <PipelineFilterModal
+                repliedOnly={repliedOnly}
+                setRepliedOnly={setRepliedOnly}
+                meetingPendingOnly={meetingPendingOnly}
+                setMeetingPendingOnly={setMeetingPendingOnly}
+                unverifiedOnly={unverifiedOnly}
+                setUnverifiedOnly={setUnverifiedOnly}
+              />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -464,6 +464,32 @@ export function useAssumeOwnership(id: string | number) {
   })
 }
 
+// Drip-Completed approval (manager/admin). Approve → the selected leads move to Archived;
+// Reject → they go back into the pipeline (re-qualify). Both accept one or many lead ids.
+export function useApproveArchive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) => leadsApi.approveArchive(ids),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(`Approved · ${res.approved} lead${res.approved === 1 ? "" : "s"} moved to Archived`)
+    },
+    onError: toastError("Failed to approve"),
+  })
+}
+
+export function useRejectArchive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) => leadsApi.rejectArchive(ids),
+    onSuccess: (res) => {
+      invalidateAllLeads(qc)
+      toast.success(`Sent back · ${res.rejected} lead${res.rejected === 1 ? "" : "s"} returned to the pipeline`)
+    },
+    onError: toastError("Failed to send back"),
+  })
+}
+
 // Post-meeting follow-up — record the sales rep's response (from the Calls Due card, when
 // the telecaller had to call the rep). Refreshes Calls Due so the card shows the reported update.
 export function useAddSalesUpdate(id: string | number) {

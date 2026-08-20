@@ -9,6 +9,7 @@ const EMPTY_QUEUE_COUNTS: QueueCounts = {
   drip: 0,
   idle: 0,
   dormant: 0,
+  dripCompleted: 0,
   reactivation: 0,
   sixMonth: 0,
   archived: 0,

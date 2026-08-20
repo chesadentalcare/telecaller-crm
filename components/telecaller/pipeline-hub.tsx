@@ -12,7 +12,7 @@ import { useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet,
+  Inbox, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet, ClipboardCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -33,13 +33,14 @@ const IdleQueueView = dynamic(() => import("./idle-queue-view").then((m) => ({ d
 const SixMonthFunnelView = dynamic(() => import("./six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })), { loading: () => <ViewSkeleton /> })
 const RequalificationView = dynamic(() => import("./requalification-view").then((m) => ({ default: m.RequalificationView })), { loading: () => <ViewSkeleton /> })
 const ReactivationView = dynamic(() => import("./reactivation-view").then((m) => ({ default: m.ReactivationView })), { loading: () => <ViewSkeleton /> })
+const DripCompletedView = dynamic(() => import("./drip-completed-view").then((m) => ({ default: m.DripCompletedView })), { loading: () => <ViewSkeleton /> })
 const ArchivedView = dynamic(() => import("./archived-view").then((m) => ({ default: m.ArchivedView })), { loading: () => <ViewSkeleton /> })
 const LostView = dynamic(() => import("./lost-view").then((m) => ({ default: m.LostView })), { loading: () => <ViewSkeleton /> })
 const WonView = dynamic(() => import("./won-view").then((m) => ({ default: m.WonView })), { loading: () => <ViewSkeleton /> })
 
 type SegmentId =
   | "active" | "no-response" | "idle"
-  | "six-month" | "requalification" | "reactivation" | "archived" | "lost" | "won"
+  | "six-month" | "requalification" | "reactivation" | "drip-completed" | "archived" | "lost" | "won"
 
 interface Segment {
   id: SegmentId
@@ -56,6 +57,7 @@ const SEGMENTS: Segment[] = [
   { id: "six-month",      label: "Long-cycle",  icon: CalendarClock, countKey: "sixMonth",       render: (open) => <SixMonthFunnelView onOpenLead={open} /> },
   { id: "requalification", label: "Re-qualify", icon: RefreshCw,    countKey: "requalification", render: (open) => <RequalificationView onOpenLead={open} /> },
   { id: "reactivation",   label: "Reactivation", icon: RotateCcw,   countKey: "reactivation",    render: (open) => <ReactivationView onOpenLead={open} /> },
+  { id: "drip-completed", label: "Drip Completed", icon: ClipboardCheck, countKey: "dripCompleted", render: (open) => <DripCompletedView onOpenLead={open} /> },
   { id: "archived",       label: "Archived",    icon: Archive,      countKey: "archived",        render: (open) => <ArchivedView onOpenLead={open} /> },
   { id: "lost",           label: "Lost",        icon: XCircle,      countKey: "lost",            render: (open) => <LostView onOpenLead={open} /> },
   { id: "won",            label: "Won",         icon: Trophy,       countKey: "won",             render: (open) => <WonView onOpenLead={open} /> },

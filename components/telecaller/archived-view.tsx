@@ -1,20 +1,85 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { Archive, RotateCcw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
 import { useDormantLeads } from "@/hooks/use-leads"
 import { useUnarchiveToNoResponse } from "@/hooks/use-lead-mutations"
+import type { DormantLead, DripTrack } from "@/lib/types/lead"
 
-// P6.10 — Archived end-state. Filed leads (no-response exhausted, not-interested,
-// wrong-number unrecovered, opted-out). Read-only — they re-open automatically on
-// any inbound message.
+type ReasonBucket =
+  | "drip_completed" | "no_response" | "wrong_number" | "first_contact" | "not_interested" | "opted_out" | "other"
+
+const BUCKET_LABEL: Record<ReasonBucket, string> = {
+  drip_completed: "Drip completed",
+  no_response: "No response",
+  wrong_number: "Wrong number",
+  first_contact: "First contact",
+  not_interested: "Not interested",
+  opted_out: "Opted out",
+  other: "Other",
+}
+const BUCKET_ORDER: ReasonBucket[] = [
+  "drip_completed", "no_response", "wrong_number", "first_contact", "not_interested", "opted_out", "other",
+]
+const TRACK_LABEL: Record<DripTrack, string> = { "1-month": "1-Month", "3-month": "3-Month", "6-month": "6-Month" }
+
+function classifyArchiveReason(reason: string | null | undefined): ReasonBucket {
+  const r = (reason || "").toLowerCase()
+  if (r.includes("drip track completed")) return "drip_completed"
+  if (r.includes("no response") || r.includes("consecutive")) return "no_response"
+  if (r.includes("wrong number")) return "wrong_number"
+  if (r.includes("first contact")) return "first_contact"
+  if (r.includes("not interested") || r.includes("genuine no")) return "not_interested"
+  if (r.includes("opted out") || r.includes("stop")) return "opted_out"
+  return "other"
+}
+
+// P6.10 — Archived end-state. Filed leads (drip completed, no-response exhausted,
+// not-interested, wrong-number unrecovered, opted-out). Read-only — they re-open
+// automatically on any inbound message. Reason chips group leads by why they were filed.
 export function ArchivedView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data: leads = [], isLoading } = useDormantLeads()
+  const [reasonFilter, setReasonFilter] = useState<"all" | ReasonBucket>("all")
+  const [trackFilter, setTrackFilter] = useState<"all" | DripTrack>("all")
+
+  const bucketCounts = useMemo(() => {
+    const c = {} as Record<ReasonBucket, number>
+    BUCKET_ORDER.forEach((b) => { c[b] = 0 })
+    leads.forEach((l) => { c[classifyArchiveReason(l.reason)] += 1 })
+    return c
+  }, [leads])
+
+  const byReason = useMemo<DormantLead[]>(
+    () => (reasonFilter === "all" ? leads : leads.filter((l) => classifyArchiveReason(l.reason) === reasonFilter)),
+    [leads, reasonFilter],
+  )
+
+  const trackCounts = useMemo(
+    () => ({
+      "1-month": byReason.filter((l) => l.dripTrack === "1-month").length,
+      "3-month": byReason.filter((l) => l.dripTrack === "3-month").length,
+      "6-month": byReason.filter((l) => l.dripTrack === "6-month").length,
+    }),
+    [byReason],
+  )
+
+  const filtered = useMemo(
+    () =>
+      reasonFilter === "drip_completed" && trackFilter !== "all"
+        ? byReason.filter((l) => l.dripTrack === trackFilter)
+        : byReason,
+    [byReason, reasonFilter, trackFilter],
+  )
+
   if (isLoading) return <ViewSkeleton />
+
+  const setReason = (v: "all" | ReasonBucket) => { setReasonFilter(v); setTrackFilter("all") }
 
   return (
     <Card>
@@ -28,13 +93,41 @@ export function ArchivedView({ onOpenLead }: { onOpenLead?: (id: string) => void
           </div>
           <Badge variant="outline" className="text-[10px]">{leads.length} archived</Badge>
         </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Reason</span>
+          <Tabs value={reasonFilter} onValueChange={(v) => setReason(v as "all" | ReasonBucket)}>
+            <TabsList className="h-8 flex-wrap bg-muted/50">
+              <TabsTrigger value="all" className="text-xs px-3 h-6">All ({leads.length})</TabsTrigger>
+              {BUCKET_ORDER.filter((b) => bucketCounts[b] > 0).map((b) => (
+                <TabsTrigger key={b} value={b} className="text-xs px-3 h-6">
+                  {BUCKET_LABEL[b]} ({bucketCounts[b]})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {reasonFilter === "drip_completed" && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Drip track</span>
+            <Tabs value={trackFilter} onValueChange={(v) => setTrackFilter(v as "all" | DripTrack)}>
+              <TabsList className="h-8 bg-muted/50">
+                <TabsTrigger value="all" className="text-xs px-3 h-6">All ({byReason.length})</TabsTrigger>
+                <TabsTrigger value="1-month" className="text-xs px-3 h-6">1-Month ({trackCounts["1-month"]})</TabsTrigger>
+                <TabsTrigger value="3-month" className="text-xs px-3 h-6">3-Month ({trackCounts["3-month"]})</TabsTrigger>
+                <TabsTrigger value="6-month" className="text-xs px-3 h-6">6-Month ({trackCounts["6-month"]})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
-        {leads.length === 0 ? (
+        {filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">No archived leads</p>
         ) : (
           <div className="divide-y">
-            {leads.map((lead) => (
+            {filtered.map((lead) => (
               <LeadQueueRow
                 key={lead.id}
                 id={lead.id}
@@ -44,7 +137,13 @@ export function ArchivedView({ onOpenLead }: { onOpenLead?: (id: string) => void
                 replied={lead.replied}
                 onOpen={onOpenLead}
                 meta={<span>Filed {lead.dormantDays} days ago · {lead.reason}</span>}
-                badge={<Badge variant="secondary" className="text-[10px]">Archived</Badge>}
+                badge={
+                  lead.dripTrack && classifyArchiveReason(lead.reason) === "drip_completed" ? (
+                    <Badge variant="secondary" className="text-[10px]">{TRACK_LABEL[lead.dripTrack]}</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px]">Archived</Badge>
+                  )
+                }
                 actions={<ArchivedRowActions id={lead.id} onOpen={onOpenLead} />}
               />
             ))}

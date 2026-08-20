@@ -61,19 +61,25 @@ interface Ctx {
   setPreset: (p: DatePreset) => void
   custom: DateRange
   setCustom: (r: DateRange) => void
+  // Global state filter (lead_extensions.state NAME). "" / "__all__" = no filter.
+  // Applies to every pipeline segment (server-side), same as the date range.
+  state: string
+  setState: (s: string) => void
 }
 
-const EMPTY: Ctx = { range: {}, active: false, label: "All time", preset: "all", setPreset: () => {}, custom: {}, setCustom: () => {} }
+const EMPTY: Ctx = { range: {}, active: false, label: "All time", preset: "all", setPreset: () => {}, custom: {}, setCustom: () => {}, state: "", setState: () => {} }
 const DateFilterContext = createContext<Ctx>(EMPTY)
 
 // Effective created-date range for the current pipeline view. Safe to call
 // without a provider (returns "all time" — no filter).
 export const usePipelineDateRange = (): DateRange => useContext(DateFilterContext).range
+export const usePipelineStateFilter = (): string => useContext(DateFilterContext).state
 export const usePipelineDateFilter = (): Ctx => useContext(DateFilterContext)
 
 export function PipelineDateFilterProvider({ children }: { children: React.ReactNode }) {
   const [preset, setPreset] = useState<DatePreset>("all")
   const [custom, setCustom] = useState<DateRange>({})
+  const [state, setState] = useState<string>("")
 
   const range = useMemo(() => presetRange(preset, custom), [preset, custom])
   const active = !!(range.from || range.to)
@@ -81,7 +87,7 @@ export function PipelineDateFilterProvider({ children }: { children: React.React
     ? `${custom.from || "…"} → ${custom.to || "…"}`
     : PRESET_LABEL[preset]
 
-  const value = useMemo<Ctx>(() => ({ range, active, label, preset, setPreset, custom, setCustom }), [range, active, label, preset, custom])
+  const value = useMemo<Ctx>(() => ({ range, active, label, preset, setPreset, custom, setCustom, state, setState }), [range, active, label, preset, custom, state])
 
   return <DateFilterContext.Provider value={value}>{children}</DateFilterContext.Provider>
 }
