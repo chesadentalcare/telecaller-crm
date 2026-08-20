@@ -172,6 +172,7 @@ export function NoResponseView({ onOpenLead }: { onOpenLead?: (id: string) => vo
                   phone={lead.phone}
                   equipment={lead.equipment}
                   replied={lead.replied}
+                  flagged={lead.flagged}
                   onOpen={onOpenLead}
                   meta={<span>Last attempt {lead.lastAttempt}</span>}
                   badge={<Badge variant="destructive" className="text-[10px]">{lead.attempts} attempts</Badge>}

@@ -56,6 +56,7 @@ export function RequalificationView({ onOpenLead }: RequalificationViewProps) {
                   phone={lead.phone}
                   equipment={lead.equipment}
                   replied={lead.replied}
+                  flagged={lead.flagged}
                   onOpen={onOpenLead}
                   meta={<span>{lead.reason} · requested {lead.requestedAgo}</span>}
                   badge={<Badge variant="outline" className="text-[10px]">timeline: {lead.timeline}</Badge>}

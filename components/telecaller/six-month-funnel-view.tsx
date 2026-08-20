@@ -63,6 +63,7 @@ export function SixMonthFunnelView({ onOpenLead }: SixMonthFunnelViewProps) {
                 phone={lead.phone}
                 equipment={lead.equipment}
                 replied={lead.replied}
+                flagged={lead.flagged}
                 onOpen={onOpenLead}
                 meta={
                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">

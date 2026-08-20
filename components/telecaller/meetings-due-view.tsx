@@ -63,6 +63,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
         name={m.name}
         phone={m.phone}
         equipment={m.equipment}
+        flagged={m.flagged}
         onOpen={() => onOpenLead(m.id)}
         className={rowClass}
         meta={

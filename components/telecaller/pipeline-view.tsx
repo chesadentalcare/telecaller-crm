@@ -667,6 +667,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                           )
                           .join(", ") || undefined}
                         replied={lead.replied}
+                        flagged={lead.flagged}
                         onOpen={onOpenLead}
                         urgent={
                           lead.lastOutcome ===

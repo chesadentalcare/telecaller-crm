@@ -41,6 +41,7 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
                 phone={lead.phone}
                 equipment={lead.equipment}
                 replied={lead.replied}
+                flagged={lead.flagged}
                 onOpen={onOpenLead}
                 meta={
                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">

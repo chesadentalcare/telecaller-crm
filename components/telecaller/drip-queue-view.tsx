@@ -145,6 +145,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                     equipment={lead.equipment}
                     location={[lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined}
                     replied={lead.replied}
+                    flagged={lead.flagged}
                     onOpen={onOpenLead}
                     badge={
                       <Badge variant="outline" className={`text-[10px] font-medium ${trackConfig.className}`}>{trackConfig.label}</Badge>

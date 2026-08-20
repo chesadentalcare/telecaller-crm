@@ -39,6 +39,7 @@ export function DormantQueueView({ onOpenLead }: { onOpenLead?: (id: string) => 
                 phone={lead.phone}
                 equipment={lead.equipment}
                 replied={lead.replied}
+                flagged={lead.flagged}
                 onOpen={onOpenLead}
                 meta={lead.reason}
                 badge={
