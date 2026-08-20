@@ -57,6 +57,7 @@ export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string, action
                     equipment={lead.equipment}
                     location={[lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined}
                     replied={lead.replied}
+                    flagged={lead.flagged}
                     onOpen={() => toggle(lead.id)}
                     meta={
                       <span className="flex flex-wrap items-center gap-1.5">

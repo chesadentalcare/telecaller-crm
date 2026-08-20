@@ -135,6 +135,7 @@ export function ArchivedView({ onOpenLead }: { onOpenLead?: (id: string) => void
                 phone={lead.phone}
                 equipment={lead.equipment}
                 replied={lead.replied}
+                flagged={lead.flagged}
                 onOpen={onOpenLead}
                 meta={<span>Filed {lead.dormantDays} days ago · {lead.reason}</span>}
                 badge={

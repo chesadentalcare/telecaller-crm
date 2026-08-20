@@ -135,6 +135,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
                     phone={lead.phone}
                     equipment={lead.equipment}
                     replied={lead.replied}
+                    flagged={lead.flagged}
                     onOpen={onOpenLead}
                     meta={<span>Completed {lead.completedDays} days ago · {lead.reason}</span>}
                     badge={

@@ -41,6 +41,9 @@ export interface LeadBase {
   // Issue 3 — present on queues that surface inbound replies (pipeline/drip/
   // no-response/idle/calls-due). Undefined elsewhere.
   replied?: ReplyIndicator
+  // Telecaller-flagged as high-priority. Surfaced on the lead in EVERY tab it lands in
+  // (Archived / Lost / Won / No-Response / …), so a flag never gets lost when a lead moves.
+  flagged?: boolean
 }
 
 // Pipeline tab — the active call queue
@@ -74,8 +77,7 @@ export interface PipelineLead extends LeadBase {
   dripLastChannel?: "call" | "whatsapp" | null
   dripLastLabel?: string | null
   projection?: DripProjection
-  // Telecaller-flagged as high-priority — floats to top, shown with amber highlight.
-  flagged?: boolean
+  // (flagged now lives on LeadBase — floats to top of Active, shown with amber highlight)
 }
 
 // Drip campaign queue

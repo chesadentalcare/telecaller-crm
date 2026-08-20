@@ -88,6 +88,7 @@ export function IdleQueueView() {
                   phone={lead.phone}
                   equipment={lead.equipment}
                   replied={lead.replied}
+                  flagged={lead.flagged}
                   onOpen={openLead}
                   meta={<span>Last activity {lead.lastActivity}</span>}
                   badge={

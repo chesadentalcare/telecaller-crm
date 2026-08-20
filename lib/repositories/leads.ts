@@ -112,6 +112,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   lastAttemptTime: parseDate(r.last_attempt_time),
   value: r.budget_range || undefined,
   replied: toReplied(r),
+  flagged: !!r.flagged,
   lastOutcome: r.last_outcome ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
@@ -126,7 +127,6 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   dripLastChannel: r.drip_last_channel ?? null,
   dripLastLabel: r.drip_last_label ?? null,
   projection: toProjection(r.projection),
-  flagged: !!r.flagged,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {
@@ -145,6 +145,7 @@ const toDrip = (r: DripQueueRow): DripLead => {
     city: r.city ?? null,
     state: r.state ?? null,
     replied: toReplied(r),
+    flagged: !!r.flagged,
     dripNextChannel: r.drip_next_channel ?? null,
     dripNextLabel: r.drip_next_label ?? null,
     dripLastChannel: r.drip_last_channel ?? null,
@@ -161,6 +162,7 @@ const toNoResponse = (r: NoResponseRow): NoResponseLead => ({
   lastAttempt: humanAgo(r.last_attempt),
   equipment: r.equipment ?? "—",
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toIdle = (r: IdleRow): IdleLead => ({
@@ -171,6 +173,7 @@ const toIdle = (r: IdleRow): IdleLead => ({
   lastActivity: humanAgo(r.last_activity),
   equipment: r.equipment ?? "—",
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toDormant = (r: DormantRow): DormantLead => ({
@@ -182,6 +185,7 @@ const toDormant = (r: DormantRow): DormantLead => ({
   reason: r.reason ?? "no response",
   dripTrack: r.drip_track ? trackBackToFront(r.drip_track) : null,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 const toDripCompleted = (r: DripCompletedRow): DripCompletedLead => ({
   id: String(r.id),
@@ -192,6 +196,7 @@ const toDripCompleted = (r: DripCompletedRow): DripCompletedLead => ({
   reason: r.reason ?? "Drip track completed",
   dripTrack: r.drip_track ? trackBackToFront(r.drip_track) : null,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 const toLost = (r: LostRow): LostLead => ({
   id: String(r.id),
@@ -202,6 +207,7 @@ const toLost = (r: LostRow): LostLead => ({
   lostReason: r.lost_reason ?? null,
   lostDaysAgo: r.lost_days,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 const toWon = (r: WonRow): WonLead => ({
   id: String(r.id),
@@ -212,6 +218,7 @@ const toWon = (r: WonRow): WonLead => ({
   installationDate: r.installation_date ?? null,
   wonBy: r.won_by ?? null,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 const toRepliesDue = (r: RepliesDueRow): RepliesDueLead => ({
   id: String(r.id),
@@ -224,6 +231,7 @@ const toRepliesDue = (r: RepliesDueRow): RepliesDueLead => ({
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
@@ -238,6 +246,7 @@ const toReactivation = (r: ReactivationRow): ReactivationLead => ({
   dripMessageIndex: r.drip_message_index ?? null,
   dripNextAt: r.drip_next_at ?? null,
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
@@ -250,6 +259,7 @@ const toSixMonth = (r: SixMonthRow): SixMonthLead => ({
   reason: r.reason ?? "—",
   retouch: !!r.retouch, // MySQL boolean expr → 0/1; coerce to bool
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toRequalification = (r: RequalificationRow): RequalificationLead => ({
@@ -261,6 +271,7 @@ const toRequalification = (r: RequalificationRow): RequalificationLead => ({
   requestedAgo: humanAgo(r.requalify_at),
   equipment: r.equipment ?? "—",
   replied: toReplied(r),
+  flagged: !!r.flagged,
 })
 
 const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
@@ -275,6 +286,7 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   state: r.state ?? null,
   whatsappNumber: r.whatsapp_number ?? undefined,
   replied: toReplied(r),
+  flagged: !!r.flagged,
   lastOutcome: r.last_outcome ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
@@ -303,6 +315,7 @@ const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
   joinUrl: r.zoom_join_url,
   assignedSalesperson: r.assigned_salesperson,
   summaryUploaded: !!r.meeting_summary_url,
+  flagged: !!r.flagged,
 })
 
 const toDripCall = (r: DripCallRow): UpcomingDripCall => ({

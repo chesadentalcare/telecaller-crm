@@ -12,7 +12,7 @@
 // component owns identity + the cross-cutting reply indicator.
 
 import type { ReactNode } from "react"
-import { MessageSquare, AlertTriangle, CalendarClock, MapPin } from "lucide-react"
+import { MessageSquare, AlertTriangle, CalendarClock, MapPin, Flag } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
@@ -43,6 +43,9 @@ export interface LeadQueueRowProps {
   /** Amber "attention" flag next to the name (e.g. engaged lead with no meeting booked
       yet). Less severe than `urgent`. Undefined = no flag. */
   flag?: { label: string }
+  /** Telecaller high-priority flag — renders a persistent amber "Flagged" badge so the flag
+      follows the lead into every tab (Archived / Lost / Won / …), not just the Active pipeline. */
+  flagged?: boolean
   /** Row actions (call, WhatsApp, menu). */
   actions?: ReactNode
   onOpen?: (id: string) => void
@@ -51,7 +54,7 @@ export interface LeadQueueRowProps {
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, location, meta, badge, replied, urgent, flag, actions, onOpen, className,
+  id, name, phone, equipment, location, meta, badge, replied, urgent, flag, flagged, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
@@ -72,6 +75,11 @@ export function LeadQueueRow({
               {name}
             </button>
             <span className="font-mono text-xs text-primary">#{id}</span>
+            {flagged && (
+              <Badge className="gap-1 bg-amber-500/20 text-amber-700 border-amber-500/40 text-[10px] font-semibold">
+                <Flag className="size-3" />Flagged
+              </Badge>
+            )}
             {/* URGENT flag (e.g. wrong number — calling is locked, needs recovery). Shown
                 first so it's the thing the eye lands on when scanning the pipeline. */}
             {urgent && (

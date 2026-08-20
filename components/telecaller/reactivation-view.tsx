@@ -137,6 +137,7 @@ export function ReactivationView({ onOpenLead }: ReactivationViewProps) {
                   phone={lead.phone}
                   equipment={lead.equipment}
                   replied={lead.replied}
+                  flagged={lead.flagged}
                   onOpen={onOpenLead}
                   meta={
                     <span>

@@ -62,6 +62,9 @@ export interface ReplyRowFields {
   last_inbound_at?: string | null
   last_inbound_body?: string | null
   last_inbound_intent?: "stop" | "meeting" | "zoom" | "vague" | null
+  // Telecaller high-priority flag — every queue endpoint returns it (via replyFields) so the
+  // flag indicator can render on the lead in any tab.
+  flagged?: 0 | 1 | boolean
 }
 
 // Issue 4 — projected nurture closure returned by drip endpoints.
@@ -700,6 +703,7 @@ export interface MeetingDueRow {
   equipment: string | null
   customer_name: string | null
   phone: string | null
+  flagged?: 0 | 1 | boolean
 }
 
 // Upcoming calls (future-dated, beyond today). Two parts: real scheduled call_nudges
