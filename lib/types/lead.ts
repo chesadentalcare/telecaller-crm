@@ -115,6 +115,17 @@ export interface DormantLead extends LeadBase {
   dormantDays: number
   reason: string
   equipment: string
+  // Set when the lead was archived after a completed drip — drives the Archived
+  // tab's 1/3/6-month reason sub-chip. Null for non-drip archive reasons.
+  dripTrack?: DripTrack | null
+}
+
+// Drip-completed leads parked for manager/admin approval before Archived.
+export interface DripCompletedLead extends LeadBase {
+  completedDays: number
+  reason: string
+  equipment: string
+  dripTrack?: DripTrack | null
 }
 
 // Closed-lost end state — the lead told us they already purchased / bought elsewhere.
@@ -251,6 +262,8 @@ export interface QueueCounts {
   drip: number
   idle: number
   dormant: number
+  // Drip-completed leads awaiting manager/admin approval (pre-Archived).
+  dripCompleted: number
   reactivation: number
   sixMonth: number
   // P7.6 — badge counts for the four Phase-6 views

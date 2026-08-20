@@ -78,6 +78,7 @@ export const MOCK_QUEUE_COUNTS: QueueCounts = {
   drip: 8,
   idle: 3,
   dormant: 2,
+  dripCompleted: 1,
   reactivation: 2,
   sixMonth: 5,
   archived: 6,

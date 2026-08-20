@@ -7,6 +7,7 @@ import {
   fetchNoResponseLeads,
   fetchIdleLeads,
   fetchDormantLeads,
+  fetchDripCompletedLeads,
   fetchLostLeads,
   fetchWonLeads,
   fetchRepliesDueLeads,
@@ -20,7 +21,7 @@ import {
   fetchLeadById,
 } from "@/lib/repositories/leads"
 import { leadsApi } from "@/lib/api/leads"
-import { usePipelineDateRange } from "@/lib/pipeline-date-filter"
+import { usePipelineDateRange, usePipelineStateFilter } from "@/lib/pipeline-date-filter"
 
 // Single source of truth for query keys. Group prefix `leads` lets us
 // invalidate everything with `queryClient.invalidateQueries({ queryKey: ['leads'] })`.
@@ -32,6 +33,7 @@ export const leadKeys = {
   noResponse: () => [...leadKeys.all, "no-response"] as const,
   idle: () => [...leadKeys.all, "idle"] as const,
   dormant: () => [...leadKeys.all, "dormant"] as const,
+  dripCompleted: () => [...leadKeys.all, "drip-completed"] as const,
   lost: () => [...leadKeys.all, "lost"] as const,
   won: () => [...leadKeys.all, "won"] as const,
   repliesDue: () => [...leadKeys.all, "replies-due"] as const,
@@ -66,46 +68,61 @@ const keepList = { placeholderData: keepPreviousData } as const
 
 export function usePipelineLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.pipeline(), r],    queryFn: () => fetchPipelineLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.pipeline(), r, s],    queryFn: () => fetchPipelineLeads(r, s), ...keepList })
 }
 export function useDripLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.drip(), r],        queryFn: () => fetchDripLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.drip(), r, s],        queryFn: () => fetchDripLeads(r, s), ...keepList })
 }
 export function useNoResponseLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.noResponse(), r],  queryFn: () => fetchNoResponseLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.noResponse(), r, s],  queryFn: () => fetchNoResponseLeads(r, s), ...keepList })
 }
 export function useIdleLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.idle(), r],        queryFn: () => fetchIdleLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.idle(), r, s],        queryFn: () => fetchIdleLeads(r, s), ...keepList })
 }
 export function useDormantLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.dormant(), r],     queryFn: () => fetchDormantLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.dormant(), r, s],     queryFn: () => fetchDormantLeads(r, s), ...keepList })
+}
+export function useDripCompletedLeads() {
+  const r = usePipelineDateRange()
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.dripCompleted(), r, s], queryFn: () => fetchDripCompletedLeads(r, s), ...keepList })
 }
 export function useWonLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.won(), r],         queryFn: () => fetchWonLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.won(), r, s],         queryFn: () => fetchWonLeads(r, s), ...keepList })
 }
 export function useRepliesDueLeads() {
   return useQuery({ queryKey: leadKeys.repliesDue(),  queryFn: fetchRepliesDueLeads, ...keepList })
 }
 export function useLostLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.lost(), r],        queryFn: () => fetchLostLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.lost(), r, s],        queryFn: () => fetchLostLeads(r, s), ...keepList })
 }
 export function useReactivationLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.reactivation(), r], queryFn: () => fetchReactivationLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.reactivation(), r, s], queryFn: () => fetchReactivationLeads(r, s), ...keepList })
 }
 export function useSixMonthLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.sixMonth(), r],    queryFn: () => fetchSixMonthLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.sixMonth(), r, s],    queryFn: () => fetchSixMonthLeads(r, s), ...keepList })
 }
 export function useRequalificationLeads() {
   const r = usePipelineDateRange()
-  return useQuery({ queryKey: [...leadKeys.requalification(), r], queryFn: () => fetchRequalificationLeads(r), ...keepList })
+  const s = usePipelineStateFilter()
+  return useQuery({ queryKey: [...leadKeys.requalification(), r, s], queryFn: () => fetchRequalificationLeads(r, s), ...keepList })
 }
 export function useCallsDueLeads() {
   return useQuery({ queryKey: leadKeys.callsDue(),    queryFn: fetchCallsDueLeads, ...keepList })
@@ -308,9 +325,10 @@ export function useUnreadNotificationCount() {
 
 export function useQueueCountsQuery() {
   const r = usePipelineDateRange()
+  const s = usePipelineStateFilter()
   return useQuery({
-    queryKey: [...leadKeys.queueCounts(), r],
-    queryFn: () => fetchQueueCounts(r),
+    queryKey: [...leadKeys.queueCounts(), r, s],
+    queryFn: () => fetchQueueCounts(r, s),
     // Badges update more often than reference data — let stale go after 30s.
     staleTime: 30_000,
     ...keepList,
