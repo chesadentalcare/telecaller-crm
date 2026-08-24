@@ -172,6 +172,7 @@ const toIdle = (r: IdleRow): IdleLead => ({
   idleDays: r.idle_days,
   lastActivity: humanAgo(r.last_activity),
   equipment: r.equipment ?? "—",
+  currentTrack: r.drip_track ?? null,
   replied: toReplied(r),
   flagged: !!r.flagged,
 })
