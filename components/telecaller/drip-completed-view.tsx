@@ -18,7 +18,10 @@ const TRACK_LABEL: Record<DripTrack, string> = { "1-month": "1-Month", "3-month"
 
 export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const { data: leads = [], isLoading } = useDripCompletedLeads()
-  const { isManagerOrAbove } = useRole()
+  const { isManagerOrAbove, isTelecaller } = useRole()
+  // Drip-completed review used to be manager/admin-only; telecallers may now
+  // approve (archive) or reject (send back to re-qualify) too.
+  const canReview = isManagerOrAbove || isTelecaller
   const approve = useApproveArchive()
   const reject = useRejectArchive()
   const [trackFilter, setTrackFilter] = useState<"all" | DripTrack>("all")
@@ -85,7 +88,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
               <ClipboardCheck className="size-4 text-muted-foreground" />Drip Completed
             </CardTitle>
             <CardDescription>
-              Finished their nurture drip — awaiting {isManagerOrAbove ? "your" : "manager/admin"} approval before Archived
+              Finished their nurture drip — awaiting {canReview ? "your" : "manager/admin"} approval before Archived
             </CardDescription>
           </div>
           <Badge variant="outline" className="text-[10px]">{leads.length} pending</Badge>
@@ -103,7 +106,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
           </Tabs>
         </div>
 
-        {isManagerOrAbove && filtered.length > 0 && (
+        {canReview && filtered.length > 0 && (
           <div className="mt-2 flex items-center gap-2">
             <Checkbox id="dc-all" checked={allInViewSelected} onCheckedChange={toggleAllInView} />
             <label htmlFor="dc-all" className="text-xs text-muted-foreground cursor-pointer">
@@ -120,7 +123,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
           <div className="divide-y">
             {filtered.map((lead) => (
               <div key={lead.id} className="flex items-start gap-2 pl-3">
-                {isManagerOrAbove && (
+                {canReview && (
                   <Checkbox
                     className="mt-5 shrink-0"
                     checked={selected.has(lead.id)}
@@ -144,7 +147,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
                       ) : undefined
                     }
                     actions={
-                      isManagerOrAbove ? (
+                      canReview ? (
                         <div className="flex items-center gap-1.5">
                           <Button
                             size="sm"
@@ -183,7 +186,7 @@ export function DripCompletedView({ onOpenLead }: { onOpenLead?: (id: string) =>
         )}
       </CardContent>
 
-      {isManagerOrAbove && selected.size > 0 && (
+      {canReview && selected.size > 0 && (
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-card/95 px-4 py-3 backdrop-blur">
           <span className="text-sm font-medium">{selected.size} selected</span>
           <div className="flex items-center gap-2">

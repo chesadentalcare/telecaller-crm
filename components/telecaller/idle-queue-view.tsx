@@ -8,13 +8,38 @@ import { Clock, Droplets, Loader2, Phone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 import { LeadQueueRow } from "./lead-queue-row"
 import { RepliesFilterToggle, isAwaitingReply } from "./replies-filter"
 import { ViewSkeleton } from "./view-skeleton"
 import { useIdleLeads, leadKeys } from "@/hooks/use-leads"
 import { leadsApi } from "@/lib/api/leads"
 import { ApiError } from "@/lib/api/client"
+import type { IdleLead } from "@/lib/types/lead"
 import { useQueryClient } from "@tanstack/react-query"
+
+type DripTrackKey = "1_month" | "3_month" | "6_plus_month"
+
+const TRACK_OPTIONS: { key: DripTrackKey; label: string; blurb: string }[] = [
+  { key: "1_month", label: "1-Month · Hot", blurb: "9 WhatsApp touches over ~17 days — near-term buyers." },
+  { key: "3_month", label: "3-Month · Warm", blurb: "Steady touches over ~90 days — mid-cycle interest." },
+  { key: "6_plus_month", label: "6-Month · Long / Cold", blurb: "Slow nurture over ~168 days — gone-quiet leads." },
+]
+
+const TRACK_LABEL: Record<DripTrackKey, string> = {
+  "1_month": "1-month",
+  "3_month": "3-month",
+  "6_plus_month": "6-month",
+}
 
 export function IdleQueueView() {
   const { data: leads = [], isLoading } = useIdleLeads()
@@ -22,10 +47,13 @@ export function IdleQueueView() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  // Track which row is mid-flight so only its button spins. A Map keeps the
-  // state per-lead — using a single boolean would disable every row at once.
-  const [pendingId, setPendingId] = useState<string | null>(null)
   const [repliedOnly, setRepliedOnly] = useState(false)
+  // The lead whose track picker is open (null = dialog closed), the chosen track,
+  // and whether the confirm call is mid-flight.
+  const [dialogLead, setDialogLead] = useState<IdleLead | null>(null)
+  const [selectedTrack, setSelectedTrack] = useState<DripTrackKey>("6_plus_month")
+  const [saving, setSaving] = useState(false)
+
   const repliedCount = leads.filter(isAwaitingReply).length
   const shown = repliedOnly ? leads.filter(isAwaitingReply) : leads
 
@@ -38,21 +66,25 @@ export function IdleQueueView() {
     window.history.pushState(null, "", `${pathname}?${params.toString()}`)
   }
 
-  const addToDrip = async (id: string) => {
-    setPendingId(id)
+  // Open the picker pre-selected to the track the lead is already on; when it's on
+  // no drip, fall back to the 6-month long-cycle track (the historical default).
+  const openTrackPicker = (lead: IdleLead) => {
+    setDialogLead(lead)
+    setSelectedTrack((lead.currentTrack as DripTrackKey) ?? "6_plus_month")
+  }
+
+  const confirmAddToDrip = async () => {
+    if (!dialogLead) return
+    setSaving(true)
     try {
-      // Idle leads default to the 6+ month nurture track per Track1 spec §6.1
-      // (long-cycle leads with no recent activity). Telecaller can later move
-      // the lead to a faster track from the Drip tab.
-      await leadsApi.enterDrip(id, { track: "6_plus_month" })
-      toast.success(`Lead #${id} added to the 6-month drip`)
-      // Refresh everything queue-y so the lead drops out of Idle and shows up
-      // in the Drip view.
+      await leadsApi.enterDrip(dialogLead.id, { track: selectedTrack })
+      toast.success(`Lead #${dialogLead.id} added to the ${TRACK_LABEL[selectedTrack]} drip`)
       qc.invalidateQueries({ queryKey: leadKeys.all })
+      setDialogLead(null)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to add lead to drip")
     } finally {
-      setPendingId(null)
+      setSaving(false)
     }
   }
 
@@ -109,14 +141,9 @@ export function IdleQueueView() {
                         variant="outline"
                         size="sm"
                         className="h-8 px-2.5 gap-1.5"
-                        onClick={() => addToDrip(lead.id)}
-                        disabled={pendingId === lead.id}
+                        onClick={() => openTrackPicker(lead)}
                       >
-                        {pendingId === lead.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Droplets className="size-3.5" />
-                        )}
+                        <Droplets className="size-3.5" />
                         Add to Drip
                       </Button>
                       <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={() => openLead(lead.id)}>
@@ -130,6 +157,49 @@ export function IdleQueueView() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={!!dialogLead} onOpenChange={(open) => !open && !saving && setDialogLead(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add to nurture drip</DialogTitle>
+            <DialogDescription>
+              {dialogLead ? `${dialogLead.name} · #${dialogLead.id}` : ""} — choose which cadence to run.
+            </DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup value={selectedTrack} onValueChange={(v) => setSelectedTrack(v as DripTrackKey)} className="gap-2">
+            {TRACK_OPTIONS.map((opt) => {
+              const isCurrent = dialogLead?.currentTrack === opt.key
+              return (
+                <Label
+                  key={opt.key}
+                  htmlFor={`track-${opt.key}`}
+                  className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                >
+                  <RadioGroupItem id={`track-${opt.key}`} value={opt.key} className="mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      {opt.label}
+                      {isCurrent && (
+                        <Badge variant="secondary" className="text-[10px] font-normal">Currently on this</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{opt.blurb}</p>
+                  </div>
+                </Label>
+              )
+            })}
+          </RadioGroup>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDialogLead(null)} disabled={saving}>Cancel</Button>
+            <Button onClick={confirmAddToDrip} disabled={saving} className="gap-1.5">
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Droplets className="size-3.5" />}
+              Add to {TRACK_LABEL[selectedTrack]} drip
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

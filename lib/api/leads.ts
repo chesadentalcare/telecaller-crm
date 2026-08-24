@@ -567,6 +567,9 @@ export interface IdleRow extends ReplyRowFields {
   phone: string | null
   idle_days: number
   last_activity: string
+  // The lead's currently-running drip track (null when it isn't on an active drip) —
+  // pre-selects the track picker on the "Add to Drip" button.
+  drip_track?: "1_month" | "3_month" | "6_plus_month" | null
 }
 
 export interface DormantRow extends ReplyRowFields {

@@ -110,6 +110,7 @@ export interface IdleLead extends LeadBase {
   idleDays: number
   lastActivity: string
   equipment: string
+  currentTrack?: "1_month" | "3_month" | "6_plus_month" | null
 }
 
 // Long-inactive — candidates for archive
