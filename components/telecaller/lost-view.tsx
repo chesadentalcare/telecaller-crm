@@ -1,6 +1,6 @@
 "use client"
 
-import { XCircle } from "lucide-react"
+import { XCircle, CalendarCheck, Handshake } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,14 @@ function lostLabel(reason: string, lostReason?: string | null): string {
     return "Bought from another brand — already purchased elsewhere"
   }
   return reason || "Lost"
+}
+
+function meetingDate(iso?: string | null): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  return isNaN(d.getTime())
+    ? ""
+    : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
 }
 
 export function LostView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
@@ -47,12 +55,29 @@ export function LostView({ onOpenLead }: { onOpenLead?: (id: string) => void }) 
                 name={lead.name}
                 phone={lead.phone}
                 equipment={lead.equipment}
+                location={
+                  [lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined
+                }
                 replied={lead.replied}
                 flagged={lead.flagged}
                 onOpen={onOpenLead}
                 meta={
                   <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                    <span className="font-medium text-rose-600">{lostLabel(lead.reason, lead.lostReason)}</span>
+                    <span className="rounded bg-rose-500/10 px-1.5 py-0.5 font-semibold text-rose-600">
+                      {lostLabel(lead.reason, lead.lostReason)}
+                    </span>
+                    {lead.handedOffAt && (
+                      <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 font-bold text-indigo-700">
+                        <Handshake className="size-3" />
+                        Handed to sales{lead.salesPerson ? ` · ${lead.salesPerson}` : ""}
+                      </span>
+                    )}
+                    {!!lead.meetingCount && (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 font-bold text-amber-700">
+                        <CalendarCheck className="size-3" />
+                        Meeting given{lead.lastMeetingAt ? ` · ${meetingDate(lead.lastMeetingAt)}` : ""}
+                      </span>
+                    )}
                     {lead.lostDaysAgo != null && (
                       <>
                         <span>•</span>

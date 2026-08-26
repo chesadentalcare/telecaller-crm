@@ -601,9 +601,15 @@ export interface LostRow extends ReplyRowFields {
   customer_name: string | null
   phone: string | null
   equipment: string | null
+  city: string | null
+  state: string | null
   lost_days: number
   reason: string | null
   lost_reason: string | null
+  handed_off_at: string | null
+  sales_person: string | null
+  meeting_count: number | null
+  last_meeting_at: string | null
 }
 
 export interface WonRow extends ReplyRowFields {
