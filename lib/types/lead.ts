@@ -134,9 +134,15 @@ export interface DripCompletedLead extends LeadBase {
 // Closed-lost end state — the lead told us they already purchased / bought elsewhere.
 export interface LostLead extends LeadBase {
   equipment: string
+  city?: string | null
+  state?: string | null
   reason: string
   lostReason?: string | null
   lostDaysAgo?: number
+  handedOffAt?: string | null
+  salesPerson?: string | null
+  meetingCount?: number
+  lastMeetingAt?: string | null
 }
 
 // Closed-won end state — the deal was won (via the app or synced from SAP).
