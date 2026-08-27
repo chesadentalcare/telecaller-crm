@@ -545,35 +545,89 @@ function NoResponseGuide() {
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           When a doctor doesn&rsquo;t pick up and you log <b>&ldquo;No response&rdquo;</b>, the lead is <b>not lost</b> — the
-          system keeps trying for you on a fixed calendar and drops the next reminder <b>call</b> into your Calls Due on set
-          days. It tries up to <b>4 calls</b>, then closes the lead.
+          system keeps trying for you and drops the next reminder <b>call</b> into your Calls Due on set days. It handles this in
+          <b> two different ways</b>, depending on where the lead is:
+        </p>
+        <ul className="ml-4 mt-2 list-disc space-y-1 text-sm text-muted-foreground">
+          <li><b>Case 1 — a brand-new lead you have never reached</b> (the very first call didn&rsquo;t connect).</li>
+          <li><b>Case 2 — a lead you already reached once, now on a follow-up plan (drip),</b> that stops answering.</li>
+        </ul>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Both end the same way: <b>4 no-answer calls in a row → the lead is parked and one recovery WhatsApp goes out.</b>
         </p>
       </div>
 
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-        <b>Important — it does NOT come back the same day.</b> After your first no-answer call, the next reminder call
-        (<b>call #2</b>) is scheduled for <b>Day 3</b> — so a lead you enter today shows up again in Calls Due about
-        <b> 3–4 days later</b>, then again around Day 9 and Day 12. That gap is normal, not a bug.
+        <b>Important — it does NOT come back the same day.</b> After a no-answer call, the next reminder call is scheduled a few
+        <b> days</b> later (not hours). A lead you enter today typically shows up again in Calls Due about <b>3–4 days later</b>,
+        then again a few days after that. Those gaps are deliberate, not a bug.
       </div>
 
-      <Section n="1" title="The full timeline" icon={CalendarClock}>
-        <Chart>{`Day 0   ☎  You call (call #1) — no answer  →  log "No response"
-              Lead saved · retry cycle starts (counts as attempt 1 of 4)
-Day 1   💬  System sends a light WhatsApp follow-up (automatic)
+      <Section n="1" title="Case 1 — a brand-new lead you have never reached" icon={PhoneOff}>
+        <p>The very first call didn&rsquo;t connect. The lead enters the <b>opening sequence</b> — a fixed ~12-day plan that
+          <b> mixes reminder calls with automatic WhatsApps</b>. Your first call already counts as <b>attempt 1 of 4</b>.</p>
+        <Chart>{`Day 0   💬  System sends the WELCOME WhatsApp (automatic, right away)
+Day 0   ☎  You call (call #1) — no answer  →  log "No response"  (attempt 1 of 4)
+Day 1   💬  Automatic WhatsApp follow-up #1
 Day 3   ☎  CALL #2  ← first time it returns to your CALLS DUE   → you call
-Day 6   💬  System sends a WhatsApp follow-up (automatic)
+Day 6   💬  Automatic WhatsApp follow-up #2
 Day 9   ☎  CALL #3  → appears in your Calls Due                 → you call
 Day 12  ☎  CALL #4  → appears in your Calls Due                 → you call
    │
-   └─►  still no answer after call #4  ──►  CLOSED (archived)
-                                            "No response — attempts exhausted"`}</Chart>
+   └─►  still no answer after call #4
+         ──►  PARKED (archived) + one recovery WhatsApp goes out
+              "No response — first contact, all attempts done"`}</Chart>
         <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
-          You never schedule these — each call appears in <b>Calls Due</b> automatically on its day (overdue ones stay at the
-          top until you clear them). Days are <b>working days</b>: a weekend/holiday pushes the touch to the next working morning.
+          So a never-reached lead gets <b>4 calls</b> (days 0, 3, 9, 12) with <b>3 automatic WhatsApps</b> woven in between
+          (welcome + 2 follow-ups). You never schedule these — each call appears in <b>Calls Due</b> on its day (overdue ones
+          stay at the top). Days are <b>working days</b>: a weekend/holiday pushes the touch to the next working morning.
         </p>
       </Section>
 
-      <Section n="2" title="What you do at each return" icon={PhoneCall}>
+      <Section n="2" title="Case 2 — no answer while already on a follow-up plan (drip)" icon={Droplets}>
+        <p>Here the doctor was <b>reached at least once</b> and is being nurtured on a drip track
+          (1-Month / 3-Month / 6-Month+ / 24-Month). A no-answer now behaves <b>differently</b>:</p>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>The <b>WhatsApp nurture keeps running</b> — a missed call does <b>not</b> pause the drip. The messages that go out
+            are the <b>track&rsquo;s own nurture messages</b>, not the first-contact ones.</li>
+          <li>The reminder calls are the drip&rsquo;s built-in <b>&ldquo;anchor calls&rdquo;</b>, spaced across the track (see the
+            <b> Drip Engine</b> tab) — not the day 0 / 3 / 9 / 12 opening cadence.</li>
+          <li>The counter is <b>&ldquo;4 in a row&rdquo;</b>: any call the doctor <b>answers resets it to zero</b>, and the drip
+            simply carries on.</li>
+          <li>Only when <b>4 anchor calls in a row</b> get no answer is the lead <b>pulled out of the drip and parked</b> — and the
+            same one-time recovery WhatsApp goes out.</li>
+        </ul>
+        <Chart>{`Lead is nurturing on a drip  (WhatsApp + anchor calls)
+      │
+      ▼  an anchor call gets no answer  →  log "No response"
+   drip KEEPS running · count = 1 in a row
+      │
+      ├─ doctor answers ANY later call ──►  count resets to 0, drip continues
+      │
+      ▼  4 anchor calls in a row, all no answer
+   PULLED from the drip  +  PARKED  +  one recovery WhatsApp
+   "No response — attempts exhausted"`}</Chart>
+        <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">
+          ✅ The big difference: in Case 2 the lead <b>stays warm</b> — nurture messages keep flowing while you keep trying to
+          reach them, and a single pickup puts it fully back on track.
+        </p>
+      </Section>
+
+      <Section n="3" title="The recovery WhatsApp — the final nudge" icon={Send}>
+        <p>In <b>both</b> cases, the moment the <b>4th no-answer</b> is logged the system does two things at once:</p>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li><b>Parks the lead</b> (archived) so it stops cluttering your Calls Due — it moves to the <b>No Response</b> pile and
+            can be revived any time.</li>
+          <li>Offers a one-tap <b>&ldquo;Send recovery WhatsApp&rdquo;</b> on the lead — a final <b>&ldquo;we tried to reach
+            you&rdquo;</b> message. You can also fire it for a whole batch from the <b>No Response</b> queue.</li>
+        </ul>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          This is the <b>one recovery message</b> — a last re-engagement after the 4 calls. If the doctor replies to it, the lead
+          is pulled back to <b>you</b> to re-qualify.
+        </p>
+      </Section>
+
+      <Section n="4" title="What you do at each return" icon={PhoneCall}>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-xs">
             <thead className="bg-muted/50 text-muted-foreground">
@@ -586,21 +640,27 @@ Day 12  ☎  CALL #4  → appears in your Calls Due                 → you call
             <tbody className="divide-y">
               <tr><td className="p-2">They finally pick up &amp; are interested</td><td className="p-2 font-medium text-foreground">Interested</td><td className="p-2 text-muted-foreground">Books a meeting / starts a follow-up plan</td></tr>
               <tr><td className="p-2">&ldquo;Call me later&rdquo;</td><td className="p-2 font-medium text-foreground">Call back later</td><td className="p-2 text-muted-foreground">Schedules the callback at your time</td></tr>
-              <tr><td className="p-2">Still no answer</td><td className="p-2 font-medium text-foreground">No response</td><td className="p-2 text-muted-foreground">Waits for the next scheduled call day</td></tr>
+              <tr><td className="p-2">Still no answer</td><td className="p-2 font-medium text-foreground">No response</td><td className="p-2 text-muted-foreground">Waits for the next scheduled call day (in a drip, the drip keeps running)</td></tr>
               <tr><td className="p-2">Not interested</td><td className="p-2 font-medium text-foreground">Not interested</td><td className="p-2 text-muted-foreground">Routes by reason (closed / nurture)</td></tr>
             </tbody>
           </table>
         </div>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          Reaching the doctor on <b>any</b> retry — in either case — <b>resets the &ldquo;4 in a row&rdquo; count</b> and routes the
+          lead on the real outcome.
+        </p>
       </Section>
 
-      <Section n="3" title="How it ends" icon={LogOut}>
+      <Section n="5" title="How it ends" icon={LogOut}>
         <Chart>{`Leaves the No-Response cycle when ANY of these happen:
 
-  You reach the doctor          ──►  log the real outcome → routed
-  Doctor REPLIES on WhatsApp    ──►  pulled out, comes back to YOU (re-qualify)
-  4 calls made, still no answer ──►  CLOSED (archived) — revivable`}</Chart>
+  You reach the doctor            ──►  log the real outcome → routed
+                                        (in a drip, one pickup resets the count)
+  Doctor REPLIES on WhatsApp      ──►  pulled out, comes back to YOU (re-qualify)
+  4 calls in a row, still no answer──►  PARKED (archived) + one recovery WhatsApp
+                                        — revivable any time`}</Chart>
         <p className="rounded-md bg-emerald-500/10 p-2 text-foreground/80">
-          ✅ A closed no-response lead isn&rsquo;t gone — you can <b>revive</b> it (&ldquo;Bring back as No Response&rdquo;) and it
+          ✅ A parked no-response lead isn&rsquo;t gone — you can <b>revive</b> it (&ldquo;Bring back as No Response&rdquo;) and it
           re-enters the cycle from the top.
         </p>
       </Section>
