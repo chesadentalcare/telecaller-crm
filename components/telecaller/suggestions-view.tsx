@@ -1,10 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Flame, AlertTriangle, Target, ShieldAlert, Check, X, Clock } from "lucide-react"
+import { Flame, AlertTriangle, Target, ShieldAlert, Clock, ChevronDown } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
@@ -24,9 +28,10 @@ export function SuggestionsView({ onOpenLead }: { onOpenLead?: (id: string) => v
   const qc = useQueryClient()
   const [busy, setBusy] = useState<string | null>(null)
 
+  type OutcomeBody = Parameters<typeof leadsApi.logSuggestionOutcome>[1]
   const mark = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "acted" | "dismissed" }) =>
-      leadsApi.markSuggestion(id, status),
+    mutationFn: ({ id, body }: { id: string; body: OutcomeBody }) =>
+      leadsApi.logSuggestionOutcome(id, body),
     onMutate: (v) => setBusy(v.id),
     onSettled: () => {
       setBusy(null)
@@ -34,6 +39,7 @@ export function SuggestionsView({ onOpenLead }: { onOpenLead?: (id: string) => v
       qc.invalidateQueries({ queryKey: leadKeys.queueCounts() })
     },
   })
+  const log = (id: string, body: OutcomeBody) => mark.mutate({ id, body })
 
   if (isLoading) return <ViewSkeleton />
 
@@ -136,20 +142,50 @@ export function SuggestionsView({ onOpenLead }: { onOpenLead?: (id: string) => v
                     >
                       Open
                     </Button>
-                    <Button
-                      variant="ghost" size="icon" className="h-8 w-8 text-emerald-600"
-                      title="Mark worked" disabled={busy === lead.suggestionId}
-                      onClick={() => mark.mutate({ id: lead.suggestionId, status: "acted" })}
-                    >
-                      <Check className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
-                      title="Skip / not relevant" disabled={busy === lead.suggestionId}
-                      onClick={() => mark.mutate({ id: lead.suggestionId, status: "dismissed" })}
-                    >
-                      <X className="size-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline" size="sm" className="h-8 gap-1"
+                          disabled={busy === lead.suggestionId}
+                        >
+                          Log outcome<ChevronDown className="size-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "won" })}>
+                          🎉 Won / Closing
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "progressing" })}>
+                          👍 Progressing
+                        </DropdownMenuItem>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>⏳ Needs time — remind me</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "needs_time", snoozeDays: 3 })}>in 3 days</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "needs_time", snoozeDays: 7 })}>in 1 week</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "needs_time", snoozeDays: 14 })}>in 2 weeks</DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>📵 Couldn&apos;t reach</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "no_answer", snoozeDays: 1 })}>retry tomorrow</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "no_answer", snoozeDays: 3 })}>retry in 3 days</DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "dead" })}>
+                          ❌ Dead — not interested / bought elsewhere
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => log(lead.suggestionId, { outcome: "bad_pick" })}>
+                          🚫 Bad pick — shouldn&apos;t have surfaced
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => log(lead.suggestionId, { hide: true })}>
+                          Hide for now
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </span>
                 }
               />

@@ -1371,9 +1371,24 @@ export const leadsApi = {
     counts:       (r?: DateRange, s?: string) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r, s))),
   },
 
-  // Close Today — telecaller marks a pick acted (worked it) or dismissed (skip it).
-  markSuggestion: (id: number | string, status: "acted" | "dismissed" | "new") =>
-    unwrap(api.patch<Envelope<{ id: number; status: string }>>(endpoints.queueSuggestionAction(String(id)), { status })),
+  // Close Today — telecaller logs what happened with a pick. This verdict is the signal
+  // the next analysis run learns from. `hide` clears a pick with no verdict; `snoozeDays`
+  // (for needs_time / no_answer) bars re-suggesting the lead until that many days out.
+  logSuggestionOutcome: (
+    id: number | string,
+    body: {
+      outcome?: "won" | "progressing" | "needs_time" | "no_answer" | "dead" | "bad_pick"
+      snoozeDays?: number
+      note?: string
+      hide?: boolean
+    },
+  ) =>
+    unwrap(
+      api.patch<Envelope<{ id: number; status: string; outcome: string | null; snooze_until: string | null }>>(
+        endpoints.queueSuggestionAction(String(id)),
+        body,
+      ),
+    ),
 
   // Manager/admin approval of drip-completed leads → move to Archived (approve) or
   // back into the pipeline (reject). Both accept one or many lead ids.
