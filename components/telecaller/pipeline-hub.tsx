@@ -12,7 +12,7 @@ import { useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet, ClipboardCheck, Flame,
+  Inbox, PhoneOff, Moon, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet, ClipboardCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -37,10 +37,9 @@ const DripCompletedView = dynamic(() => import("./drip-completed-view").then((m)
 const ArchivedView = dynamic(() => import("./archived-view").then((m) => ({ default: m.ArchivedView })), { loading: () => <ViewSkeleton /> })
 const LostView = dynamic(() => import("./lost-view").then((m) => ({ default: m.LostView })), { loading: () => <ViewSkeleton /> })
 const WonView = dynamic(() => import("./won-view").then((m) => ({ default: m.WonView })), { loading: () => <ViewSkeleton /> })
-const SuggestionsView = dynamic(() => import("./suggestions-view").then((m) => ({ default: m.SuggestionsView })), { loading: () => <ViewSkeleton /> })
 
 type SegmentId =
-  | "close-today" | "active" | "no-response" | "idle"
+  | "active" | "no-response" | "idle"
   | "six-month" | "requalification" | "reactivation" | "drip-completed" | "archived" | "lost" | "won"
 
 interface Segment {
@@ -52,7 +51,6 @@ interface Segment {
 }
 
 const SEGMENTS: Segment[] = [
-  { id: "close-today",    label: "Close Today", icon: Flame,        countKey: "closeToday",      render: (open) => <SuggestionsView onOpenLead={open} /> },
   { id: "active",         label: "Active",      icon: Inbox,        countKey: "pipeline",        render: (open) => (<div className="space-y-4"><PipelineView onOpenLead={open} /><PendingFollowUpsCard /></div>) },
   { id: "no-response",    label: "No Response", icon: PhoneOff,     countKey: "noResponse",      render: (open) => <NoResponseView onOpenLead={open} /> },
   { id: "idle",           label: "Idle",        icon: Moon,         countKey: "idle",            render: () => <IdleQueueView /> },

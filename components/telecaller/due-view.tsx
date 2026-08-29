@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
-import { PhoneCall, CalendarClock, FileSpreadsheet, MessageSquare } from "lucide-react"
+import { PhoneCall, CalendarClock, FileSpreadsheet, MessageSquare, Flame } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,12 @@ import { cn } from "@/lib/utils"
 import { CallsDueView } from "./calls-due-view"
 import { MeetingsDueView } from "./meetings-due-view"
 import { RepliesDueView } from "./replies-due-view"
+import { SuggestionsView } from "./suggestions-view"
 import { DueExportDialog } from "./due-export-dialog"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
 
-type DueTab = "calls" | "meetings" | "replies"
+type DueTab = "close" | "calls" | "meetings" | "replies"
 
 interface DueViewProps {
   onOpenLead: (id: string, action?: string) => void
@@ -24,11 +25,12 @@ interface DueViewProps {
 // "Due" merges the old Calls Due + Meetings Due into one screen with two tabs,
 // so the sidebar carries a single item. Each tab keeps its own internal
 // Today / Past / Upcoming views (rendered by CallsDueView / MeetingsDueView).
-export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
+export function DueView({ onOpenLead, initialTab = "close" }: DueViewProps) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const urlTab = searchParams.get("duetab")
-  const tab: DueTab = urlTab === "calls" || urlTab === "meetings" || urlTab === "replies" ? urlTab : initialTab
+  const tab: DueTab =
+    urlTab === "close" || urlTab === "calls" || urlTab === "meetings" || urlTab === "replies" ? urlTab : initialTab
   const setTab = (t: DueTab) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("duetab", t)
@@ -39,6 +41,7 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
   const { data: meetings = [] } = useMeetingsDueLeads()
 
   const tabs = [
+    { key: "close" as const, label: "Close Today", icon: Flame, count: counts.closeToday },
     { key: "calls" as const, label: "Calls", icon: PhoneCall, count: counts.callsDue },
     { key: "meetings" as const, label: "Meetings", icon: CalendarClock, count: meetings.length },
     { key: "replies" as const, label: "WhatsApp Replies", icon: MessageSquare, count: counts.pipelineAwaitingReply },
@@ -47,7 +50,7 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-muted-foreground">Calls &amp; meetings due</p>
+        <p className="text-sm font-medium text-muted-foreground">Close today, calls &amp; meetings</p>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
           <FileSpreadsheet className="size-4" />Export to Excel
         </Button>
@@ -55,7 +58,7 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
 
       <DueExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
-      <div className="grid grid-cols-3 gap-1.5 rounded-xl border bg-muted/30 p-1">
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-4">
         {tabs.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -81,7 +84,9 @@ export function DueView({ onOpenLead, initialTab = "calls" }: DueViewProps) {
         })}
       </div>
 
-      {tab === "calls" ? (
+      {tab === "close" ? (
+        <SuggestionsView onOpenLead={onOpenLead} />
+      ) : tab === "calls" ? (
         <CallsDueView onOpenLead={onOpenLead} />
       ) : tab === "meetings" ? (
         <MeetingsDueView onOpenLead={onOpenLead} />
