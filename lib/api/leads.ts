@@ -629,6 +629,9 @@ export interface SuggestionRow extends ReplyRowFields {
   status: "new" | "acted" | "dismissed"
   rank_order: number | null
   run_at: string
+  // Overlap flags — this pick also has a scheduled call / meeting due today.
+  call_due_today?: 0 | 1 | boolean
+  meeting_due_today?: 0 | 1 | boolean
   customer_name: string | null
   phone: string | null
   city: string | null
