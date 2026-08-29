@@ -4,6 +4,7 @@ import type { QueueCounts } from "@/lib/types/lead"
 import { useQueueCountsQuery } from "@/hooks/use-leads"
 
 const EMPTY_QUEUE_COUNTS: QueueCounts = {
+  closeToday: 0,
   pipeline: 0,
   noResponse: 0,
   drip: 0,

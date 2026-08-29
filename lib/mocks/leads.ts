@@ -73,6 +73,7 @@ export const MOCK_SIX_MONTH_LEADS: SixMonthLead[] = [
 ]
 
 export const MOCK_QUEUE_COUNTS: QueueCounts = {
+  closeToday: 3,
   pipeline: 12,
   noResponse: 4,
   drip: 8,

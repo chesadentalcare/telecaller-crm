@@ -9,6 +9,7 @@ import {
   fetchDormantLeads,
   fetchDripCompletedLeads,
   fetchLostLeads,
+  fetchSuggestions,
   fetchWonLeads,
   fetchRepliesDueLeads,
   fetchReactivationLeads,
@@ -35,6 +36,7 @@ export const leadKeys = {
   dormant: () => [...leadKeys.all, "dormant"] as const,
   dripCompleted: () => [...leadKeys.all, "drip-completed"] as const,
   lost: () => [...leadKeys.all, "lost"] as const,
+  suggestions: () => [...leadKeys.all, "suggestions"] as const,
   won: () => [...leadKeys.all, "won"] as const,
   repliesDue: () => [...leadKeys.all, "replies-due"] as const,
   reactivation: () => [...leadKeys.all, "reactivation"] as const,
@@ -108,6 +110,9 @@ export function useLostLeads() {
   const r = usePipelineDateRange()
   const s = usePipelineStateFilter()
   return useQuery({ queryKey: [...leadKeys.lost(), r, s],        queryFn: () => fetchLostLeads(r, s), ...keepList })
+}
+export function useSuggestions() {
+  return useQuery({ queryKey: leadKeys.suggestions(), queryFn: fetchSuggestions, ...keepList })
 }
 export function useReactivationLeads() {
   const r = usePipelineDateRange()
