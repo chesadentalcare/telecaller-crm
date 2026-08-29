@@ -145,6 +145,29 @@ export interface LostLead extends LeadBase {
   lastMeetingAt?: string | null
 }
 
+// Close Today — an agent-picked, closeable lead with its explicit closing case.
+export interface SuggestionLead extends LeadBase {
+  suggestionId: string
+  equipment: string
+  city?: string | null
+  state?: string | null
+  priority: "hot" | "at_risk"
+  readiness?: number | null
+  urgency?: number | null
+  whyHot?: string | null
+  whyCloseable?: string | null
+  closingLever?: string | null
+  riskIfDelayed?: string | null
+  evidence?: string | null
+  suggestedAction?: string | null
+  confidence?: "high" | "medium" | null
+  status: "new" | "acted" | "dismissed"
+  runAt?: string | null
+  assignedTo?: string | null
+  lastOutcome?: CallOutcome | null
+  lastOutcomeAt?: string | null
+}
+
 // Closed-won end state — the deal was won (via the app or synced from SAP).
 export interface WonLead extends LeadBase {
   equipment: string
@@ -266,6 +289,8 @@ export interface UpcomingCalls {
 
 // Counts surfaced in sidebar / bottom-tab badges
 export interface QueueCounts {
+  // Close Today — live agent picks from the latest run.
+  closeToday: number
   pipeline: number
   noResponse: number
   drip: number

@@ -612,6 +612,34 @@ export interface LostRow extends ReplyRowFields {
   last_meeting_at: string | null
 }
 
+// Close Today — an agent-generated pick from the latest run of the Close Today analysis.
+export interface SuggestionRow extends ReplyRowFields {
+  suggestion_id: number
+  id: number
+  priority: "hot" | "at_risk"
+  readiness: number | null
+  urgency: number | null
+  why_hot: string | null
+  why_closeable: string | null
+  closing_lever: string | null
+  risk_if_delayed: string | null
+  evidence: string | null
+  suggested_action: string | null
+  confidence: "high" | "medium" | null
+  status: "new" | "acted" | "dismissed"
+  rank_order: number | null
+  run_at: string
+  customer_name: string | null
+  phone: string | null
+  city: string | null
+  state: string | null
+  equipment: string | null
+  assigned_to: string | null
+  last_outcome?: CallOutcome | null
+  last_outcome_at?: string | null
+  last_outcome_by?: string | null
+}
+
 export interface WonRow extends ReplyRowFields {
   id: number
   customer_name: string | null
@@ -751,6 +779,8 @@ export interface UpcomingCallsResponse {
 }
 
 export interface QueueCountsResponse {
+  // Close Today — live agent picks from the latest run.
+  closeToday: number
   pipeline: number
   drip: number
   dormant: number
@@ -1337,8 +1367,13 @@ export const leadsApi = {
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),
+    suggestions:  () => unwrap(api.get<Envelope<SuggestionRow[]>>(endpoints.queueSuggestions)),
     counts:       (r?: DateRange, s?: string) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r, s))),
   },
+
+  // Close Today — telecaller marks a pick acted (worked it) or dismissed (skip it).
+  markSuggestion: (id: number | string, status: "acted" | "dismissed" | "new") =>
+    unwrap(api.patch<Envelope<{ id: number; status: string }>>(endpoints.queueSuggestionAction(String(id)), { status })),
 
   // Manager/admin approval of drip-completed leads → move to Archived (approve) or
   // back into the pipeline (reject). Both accept one or many lead ids.

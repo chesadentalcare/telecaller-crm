@@ -16,6 +16,7 @@ import type {
   DormantLead,
   DripCompletedLead,
   LostLead,
+  SuggestionLead,
   WonLead,
   RepliesDueLead,
   ReactivationLead,
@@ -39,6 +40,7 @@ import type {
   DormantRow,
   DripCompletedRow,
   LostRow,
+  SuggestionRow,
   WonRow,
   RepliesDueRow,
   ReactivationRow,
@@ -403,6 +405,38 @@ export const fetchLostLeads = async (range?: DateRange, state?: string): Promise
   return rows.map(toLost)
 }
 
+const toSuggestion = (r: SuggestionRow): SuggestionLead => ({
+  id: String(r.id),
+  suggestionId: String(r.suggestion_id),
+  name: r.customer_name || placeholderName(r.id),
+  phone: r.phone || placeholderPhone,
+  equipment: r.equipment ?? "—",
+  city: r.city ?? null,
+  state: r.state ?? null,
+  priority: r.priority,
+  readiness: r.readiness ?? null,
+  urgency: r.urgency ?? null,
+  whyHot: r.why_hot ?? null,
+  whyCloseable: r.why_closeable ?? null,
+  closingLever: r.closing_lever ?? null,
+  riskIfDelayed: r.risk_if_delayed ?? null,
+  evidence: r.evidence ?? null,
+  suggestedAction: r.suggested_action ?? null,
+  confidence: r.confidence ?? null,
+  status: r.status,
+  runAt: r.run_at ?? null,
+  assignedTo: r.assigned_to ?? null,
+  lastOutcome: r.last_outcome ?? null,
+  lastOutcomeAt: r.last_outcome_at ?? null,
+  replied: toReplied(r),
+  flagged: !!r.flagged,
+})
+
+export const fetchSuggestions = async (): Promise<SuggestionLead[]> => {
+  const rows = await leadsApi.queues.suggestions()
+  return rows.map(toSuggestion)
+}
+
 export const fetchWonLeads = async (range?: DateRange, state?: string): Promise<WonLead[]> => {
   const rows = await leadsApi.queues.won(range, state)
   return rows.map(toWon)
@@ -449,6 +483,7 @@ export const fetchUpcomingCalls = async (): Promise<UpcomingCalls> => {
 export const fetchQueueCounts = async (range?: DateRange, state?: string): Promise<QueueCounts> => {
   const c = await leadsApi.queues.counts(range, state)
   return {
+    closeToday: c.closeToday ?? 0,
     pipeline: c.pipeline,
     noResponse: c.noResponse,
     drip: c.drip,
