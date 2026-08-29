@@ -208,9 +208,9 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
   },
   due: {
     title: "Due",
-    subtitle: "Your calls & meetings",
+    subtitle: "Close today, calls & meetings",
     roles: ["telecaller"],
-    render: ({ openLead }) => <DueView onOpenLead={openLead} initialTab="calls" />,
+    render: ({ openLead }) => <DueView onOpenLead={openLead} initialTab="close" />,
   },
   // Legacy links keep working — both land on the merged "Due" screen on the right tab.
   "calls-due": {
