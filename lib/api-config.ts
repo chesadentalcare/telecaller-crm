@@ -184,6 +184,7 @@ export const endpoints = {
   queueMeetingsDue: "/queue/meetings-due",
   // Close Today — the daily agent-generated shortlist of closeable leads + mark acted/dismissed.
   queueSuggestions: "/queue/suggestions",
+  queueSuggestionsExport: "/queue/suggestions/export",
   queueSuggestionAction: (id: string) => `/queue/suggestions/${id}`,
   queueCounts: "/queue/counts",
   dueExport: "/queue/export",

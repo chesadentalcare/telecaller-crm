@@ -24,6 +24,7 @@ const TYPE_OPTIONS: { key: DueExportType; label: string }[] = [
   { key: "calls", label: "Calls" },
   { key: "meetings", label: "Meetings" },
   { key: "replies", label: "Replies" },
+  { key: "close-today", label: "Close Today" },
 ]
 
 const OUTCOME_OPTIONS: { value: string; label: string }[] = [
@@ -58,7 +59,8 @@ export function DueExportDialog({
     staleTime: 5 * 60 * 1000,
   })
 
-  const outcomeDisabled = type === "meetings"
+  const closeToday = type === "close-today"
+  const outcomeDisabled = type === "meetings" || closeToday
 
   const reset = () => {
     setType("both")
@@ -109,7 +111,7 @@ export function DueExportDialog({
         <div className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Include</Label>
-            <div className="grid grid-cols-4 gap-1.5 rounded-lg border bg-muted/30 p-1">
+            <div className="grid grid-cols-3 gap-1.5 rounded-lg border bg-muted/30 p-1">
               {TYPE_OPTIONS.map((t) => (
                 <button
                   key={t.key}
@@ -128,6 +130,13 @@ export function DueExportDialog({
             </div>
           </div>
 
+          {closeToday ? (
+            <p className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              Exports today&apos;s Close Today list — every pick with its reason, closing lever,
+              evidence, and whether it&apos;s been worked. The filters below don&apos;t apply to this list.
+            </p>
+          ) : (
+          <>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="due-from" className="text-xs text-muted-foreground">From</Label>
@@ -173,6 +182,8 @@ export function DueExportDialog({
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
