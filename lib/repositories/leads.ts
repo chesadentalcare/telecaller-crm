@@ -424,6 +424,8 @@ const toSuggestion = (r: SuggestionRow): SuggestionLead => ({
   suggestedAction: r.suggested_action ?? null,
   confidence: r.confidence ?? null,
   status: r.status,
+  callDueToday: !!r.call_due_today,
+  meetingDueToday: !!r.meeting_due_today,
   runAt: r.run_at ?? null,
   assignedTo: r.assigned_to ?? null,
   lastOutcome: r.last_outcome ?? null,

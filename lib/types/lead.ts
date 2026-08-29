@@ -162,6 +162,8 @@ export interface SuggestionLead extends LeadBase {
   suggestedAction?: string | null
   confidence?: "high" | "medium" | null
   status: "new" | "acted" | "dismissed"
+  callDueToday?: boolean
+  meetingDueToday?: boolean
   runAt?: string | null
   assignedTo?: string | null
   lastOutcome?: CallOutcome | null
