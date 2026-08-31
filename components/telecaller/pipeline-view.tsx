@@ -49,6 +49,9 @@ import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
 import type { PipelineLead, DripTrack } from "@/lib/types/lead"
 
+const IDLE_DAYS = 14
+const DRIP_STUCK_DAYS = 2
+
 function getStatusConfig(status: PipelineLead["status"]) {
   switch (status) {
     case "new":
@@ -639,6 +642,20 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 const statusConfig = getStatusConfig(lead.status)
                 const tel = lead.phone.replace(/\D/g, "")
                 const expanded = expandedIds.has(lead.id)
+                const lastActivityMs = Math.max(
+                  lead.lastAttemptTime?.getTime() ?? 0,
+                  lead.lastEngagement?.getTime() ?? 0,
+                )
+                const idleDays = lastActivityMs
+                  ? Math.floor((Date.now() - lastActivityMs) / 86_400_000)
+                  : null
+                const dripOverdueDays =
+                  lead.dripTrack && lead.dripNextAt
+                    ? Math.floor((Date.now() - lead.dripNextAt.getTime()) / 86_400_000)
+                    : null
+                const isIdle = lead.dripTrack
+                  ? dripOverdueDays != null && dripOverdueDays >= DRIP_STUCK_DAYS
+                  : idleDays != null && idleDays >= IDLE_DAYS
 
                 return (
                   <div key={lead.id}>
@@ -814,6 +831,17 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                             >
                               {statusConfig.label}
                             </Badge>
+                            {isIdle && (
+                              <Badge
+                                variant="outline"
+                                className={[
+                                  "text-[10px]",
+                                  lead.flagged ? "border-amber-400/50 text-amber-300" : "text-warning border-warning/40",
+                                ].join(" ")}
+                              >
+                                {(lead.dripTrack ? dripOverdueDays : idleDays) ?? 0}d idle
+                              </Badge>
+                            )}
                             {lead.status === "meeting-scheduled" && (
                               <Badge variant="outline" className="text-[10px] border-primary/30 bg-primary/10 text-primary">
                                 With sales
