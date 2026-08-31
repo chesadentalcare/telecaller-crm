@@ -603,6 +603,12 @@ export function useCloseLead(id: string | number) {
   })
 }
 
+export function useLookupSapOrder(id: string | number) {
+  return useMutation({
+    mutationFn: (docNum: string | number) => leadsApi.lookupSapOrder(id, docNum),
+  })
+}
+
 export function useHandover(id: string | number) {
   const qc = useQueryClient()
   return useMutation({

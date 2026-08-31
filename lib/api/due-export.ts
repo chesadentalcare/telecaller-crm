@@ -8,7 +8,7 @@ interface Envelope<T> {
   data: T
 }
 
-export type DueExportType = "both" | "calls" | "meetings" | "replies"
+export type DueExportType = "both" | "calls" | "meetings" | "replies" | "close-today"
 
 export interface DueExportFilters {
   type: DueExportType
@@ -37,7 +37,13 @@ const buildQuery = (f: DueExportFilters): string => {
 
 export async function downloadDueExport(filters: DueExportFilters): Promise<void> {
   const token = tokenStorage.get()
-  const res = await fetch(`${apiUrl(endpoints.dueExport)}${buildQuery(filters)}`, {
+  // Close Today rides the same dialog but its own endpoint (the latest run's list);
+  // the Due filters don't apply to it.
+  const target =
+    filters.type === "close-today"
+      ? apiUrl(endpoints.queueSuggestionsExport)
+      : `${apiUrl(endpoints.dueExport)}${buildQuery(filters)}`
+  const res = await fetch(target, {
     method: "GET",
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   })
