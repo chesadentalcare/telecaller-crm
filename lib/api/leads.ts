@@ -369,8 +369,46 @@ export interface ClosureRecordRow {
   price_gap_range: string | null
   reactivation_flag: 0 | 1
   sap_order_doc_entry: number | null
+  sap_order_source: "created" | "linked" | null
+  sap_order_doc_num: number | null
   closed_by: string
   closed_at: string
+}
+
+export interface SapOrderLine {
+  itemCode: string
+  description: string | null
+  quantity: number
+  unitPrice: number | null
+  lineTotal: number | null
+}
+
+export interface SapOrderHeader {
+  docEntry: number
+  docNum: number
+  docDate: string | null
+  docDueDate: string | null
+  docTotal: number | null
+  documentStatus: string | null
+  cardName: string | null
+}
+
+export interface ClosureOrderContext {
+  customer: { cardCode: string | null; cardName: string | null }
+  quotation: {
+    id: number
+    quoteNumber: string
+    grandTotal: number
+    lines: SapOrderLine[]
+  } | null
+  existingOrders: SapOrderHeader[]
+}
+
+export interface SapOrderLookup {
+  order: SapOrderHeader & { cardCode: string | null; lines: SapOrderLine[] }
+  leadCardCode: string | null
+  cardCodeMatches: boolean
+  alreadyLinked: { leadId: number } | null
 }
 
 // ─── Sales handover / pipeline ──────────────────────────────────────────
@@ -1294,13 +1332,23 @@ export const leadsApi = {
   closeLead: (id: number | string, formData: FormData) =>
     unwrap(
       api.put<Envelope<{
-        opportunityDocEntry: number; outcome: string;
-        sapOrderDocEntry?: number; stage?: string; reactivationFlag?: boolean
+        opportunityDocEntry: number; outcome: string; orderMode?: "link" | "create";
+        sapOrderDocEntry?: number; sapOrderDocNum?: number; stage?: string; reactivationFlag?: boolean
       }>>(endpoints.closeLead(String(id)), formData),
     ),
 
   getClosureRecord: (id: number | string) =>
     unwrap(api.get<Envelope<ClosureRecordRow | null>>(endpoints.closureRecord(String(id)))),
+
+  getClosureOrderContext: (id: number | string) =>
+    unwrap(api.get<Envelope<ClosureOrderContext>>(endpoints.closureOrderContext(String(id)))),
+
+  lookupSapOrder: (id: number | string, docNum: number | string) =>
+    unwrap(
+      api.get<Envelope<SapOrderLookup>>(
+        `${endpoints.closureSapOrderLookup(String(id))}?docNum=${encodeURIComponent(String(docNum))}`,
+      ),
+    ),
 
   // ─── Sales handover / pipeline ──────────────────────────────────
   handover: (id: number | string, body: { salesUsername: string }) =>

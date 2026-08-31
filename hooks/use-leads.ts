@@ -56,6 +56,7 @@ export const leadKeys = {
   approvalStatus: (id: string) => [...leadKeys.all, "approval-status", id] as const,
   pendingApprovals: () => [...leadKeys.all, "pending-approvals"] as const,
   closureRecord: (id: string) => [...leadKeys.all, "closure", id] as const,
+  closureOrderContext: (id: string) => [...leadKeys.all, "closure-order-context", id] as const,
   discountLimit: () => [...leadKeys.all, "discount-limit"] as const,
   salesPipeline: () => [...leadKeys.all, "sales-pipeline"] as const,
   salesUsers: () => [...leadKeys.all, "sales-users"] as const,
@@ -249,6 +250,15 @@ export function useClosureRecord(leadId: string | number | undefined) {
     queryKey: leadKeys.closureRecord(String(leadId ?? "__noop__")),
     queryFn: () => leadsApi.getClosureRecord(leadId!),
     enabled: Boolean(leadId),
+  })
+}
+
+export function useClosureOrderContext(leadId: string | number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: leadKeys.closureOrderContext(String(leadId ?? "__noop__")),
+    queryFn: () => leadsApi.getClosureOrderContext(leadId!),
+    enabled: Boolean(leadId) && enabled,
+    staleTime: 60_000,
   })
 }
 
