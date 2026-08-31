@@ -59,10 +59,6 @@ const NoResponseView = dynamic(
   () => import("@/components/telecaller/no-response-view").then((m) => ({ default: m.NoResponseView })),
   { loading: () => <ViewSkeleton /> },
 )
-const IdleQueueView = dynamic(
-  () => import("@/components/telecaller/idle-queue-view").then((m) => ({ default: m.IdleQueueView })),
-  { loading: () => <ViewSkeleton /> },
-)
 const DormantQueueView = dynamic(
   () => import("@/components/telecaller/dormant-queue-view").then((m) => ({ default: m.DormantQueueView })),
   { loading: () => <ViewSkeleton /> },
@@ -185,11 +181,6 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     title: "No Response",
     subtitle: "Leads with failed contact attempts",
     render: ({ openLead }) => <NoResponseView onOpenLead={openLead} />,
-  },
-  idle: {
-    title: "Idle Queue",
-    subtitle: "Leads with no recent activity",
-    render: () => <IdleQueueView />,
   },
   dormant: {
     title: "Dormant",

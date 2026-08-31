@@ -71,6 +71,7 @@ export interface PipelineLead extends LeadBase {
   messagesSent?: number
   totalMessages?: number
   nextMessageIn?: number
+  dripNextAt?: Date | null
   lastEngagement?: Date | null
   dripNextChannel?: "call" | "whatsapp" | null
   dripNextLabel?: string | null

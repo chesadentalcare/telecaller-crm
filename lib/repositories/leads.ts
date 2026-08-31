@@ -123,6 +123,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   messagesSent: r.drip_track ? (r.drip_index ?? 0) : undefined,
   totalMessages: r.drip_track ? (r.drip_track === "1_month" ? 9 : r.drip_track === "3_month" ? 19 : 13) : undefined,
   nextMessageIn: r.drip_next_at ? Math.max(0, Math.floor((new Date(r.drip_next_at).getTime() - Date.now()) / 1000)) : undefined,
+  dripNextAt: r.drip_next_at ? new Date(r.drip_next_at) : null,
   lastEngagement: r.drip_last_engagement ? new Date(r.drip_last_engagement) : null,
   dripNextChannel: r.drip_next_channel ?? null,
   dripNextLabel: r.drip_next_label ?? null,
