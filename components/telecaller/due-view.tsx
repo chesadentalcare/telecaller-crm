@@ -14,6 +14,7 @@ import { SuggestionsView } from "./suggestions-view"
 import { DueExportDialog } from "./due-export-dialog"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useMeetingsDueLeads } from "@/hooks/use-leads"
+import { SHOW_CLOSE_TODAY } from "@/lib/feature-flags"
 
 type DueTab = "close" | "calls" | "meetings" | "replies"
 
@@ -29,8 +30,9 @@ export function DueView({ onOpenLead, initialTab = "close" }: DueViewProps) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const urlTab = searchParams.get("duetab")
-  const tab: DueTab =
+  const rawTab: DueTab =
     urlTab === "close" || urlTab === "calls" || urlTab === "meetings" || urlTab === "replies" ? urlTab : initialTab
+  const tab: DueTab = !SHOW_CLOSE_TODAY && rawTab === "close" ? "calls" : rawTab
   const setTab = (t: DueTab) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("duetab", t)
@@ -41,7 +43,9 @@ export function DueView({ onOpenLead, initialTab = "close" }: DueViewProps) {
   const { data: meetings = [] } = useMeetingsDueLeads()
 
   const tabs = [
-    { key: "close" as const, label: "Close Today", icon: Flame, count: counts.closeToday },
+    ...(SHOW_CLOSE_TODAY
+      ? [{ key: "close" as const, label: "Close Today", icon: Flame, count: counts.closeToday }]
+      : []),
     { key: "calls" as const, label: "Calls", icon: PhoneCall, count: counts.callsDue },
     { key: "meetings" as const, label: "Meetings", icon: CalendarClock, count: meetings.length },
     { key: "replies" as const, label: "WhatsApp Replies", icon: MessageSquare, count: counts.pipelineAwaitingReply },
@@ -58,7 +62,10 @@ export function DueView({ onOpenLead, initialTab = "close" }: DueViewProps) {
 
       <DueExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-4">
+      <div className={cn(
+        "grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1",
+        tabs.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-3",
+      )}>
         {tabs.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
