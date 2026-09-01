@@ -67,10 +67,6 @@ const ReactivationView = dynamic(
   () => import("@/components/telecaller/reactivation-view").then((m) => ({ default: m.ReactivationView })),
   { loading: () => <ViewSkeleton /> },
 )
-const SixMonthFunnelView = dynamic(
-  () => import("@/components/telecaller/six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })),
-  { loading: () => <ViewSkeleton /> },
-)
 const RequalificationView = dynamic(
   () => import("@/components/telecaller/requalification-view").then((m) => ({ default: m.RequalificationView })),
   { loading: () => <ViewSkeleton /> },
@@ -191,11 +187,6 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     title: "Reactivation Inbox",
     subtitle: "Leads returned from sales",
     render: ({ openLead }) => <ReactivationView onOpenLead={openLead} />,
-  },
-  "six-month": {
-    title: "6+ Month Funnel",
-    subtitle: "Long-cycle nurture pool",
-    render: ({ openLead }) => <SixMonthFunnelView onOpenLead={openLead} />,
   },
   due: {
     title: "Due",

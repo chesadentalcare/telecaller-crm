@@ -12,7 +12,7 @@ import { useMemo, useState } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, usePathname } from "next/navigation"
 import {
-  Inbox, PhoneOff, CalendarClock, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet, ClipboardCheck,
+  Inbox, PhoneOff, RotateCcw, Archive, RefreshCw, XCircle, Trophy, FileSpreadsheet, ClipboardCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +29,6 @@ import type { QueueCounts } from "@/lib/types/lead"
 const PipelineView = dynamic(() => import("./pipeline-view").then((m) => ({ default: m.PipelineView })), { loading: () => <ViewSkeleton /> })
 const PendingFollowUpsCard = dynamic(() => import("./drip-queue-view").then((m) => ({ default: m.PendingFollowUpsCard })), { loading: () => null })
 const NoResponseView = dynamic(() => import("./no-response-view").then((m) => ({ default: m.NoResponseView })), { loading: () => <ViewSkeleton /> })
-const SixMonthFunnelView = dynamic(() => import("./six-month-funnel-view").then((m) => ({ default: m.SixMonthFunnelView })), { loading: () => <ViewSkeleton /> })
 const RequalificationView = dynamic(() => import("./requalification-view").then((m) => ({ default: m.RequalificationView })), { loading: () => <ViewSkeleton /> })
 const ReactivationView = dynamic(() => import("./reactivation-view").then((m) => ({ default: m.ReactivationView })), { loading: () => <ViewSkeleton /> })
 const DripCompletedView = dynamic(() => import("./drip-completed-view").then((m) => ({ default: m.DripCompletedView })), { loading: () => <ViewSkeleton /> })
@@ -39,7 +38,7 @@ const WonView = dynamic(() => import("./won-view").then((m) => ({ default: m.Won
 
 type SegmentId =
   | "active" | "no-response"
-  | "six-month" | "requalification" | "reactivation" | "drip-completed" | "archived" | "lost" | "won"
+  | "requalification" | "reactivation" | "drip-completed" | "archived" | "lost" | "won"
 
 interface Segment {
   id: SegmentId
@@ -52,7 +51,6 @@ interface Segment {
 const SEGMENTS: Segment[] = [
   { id: "active",         label: "Active",      icon: Inbox,        countKey: "pipeline",        render: (open) => (<div className="space-y-4"><PipelineView onOpenLead={open} /><PendingFollowUpsCard /></div>) },
   { id: "no-response",    label: "No Response", icon: PhoneOff,     countKey: "noResponse",      render: (open) => <NoResponseView onOpenLead={open} /> },
-  { id: "six-month",      label: "Long-cycle",  icon: CalendarClock, countKey: "sixMonth",       render: (open) => <SixMonthFunnelView onOpenLead={open} /> },
   { id: "requalification", label: "Re-qualify", icon: RefreshCw,    countKey: "requalification", render: (open) => <RequalificationView onOpenLead={open} /> },
   { id: "reactivation",   label: "Reactivation", icon: RotateCcw,   countKey: "reactivation",    render: (open) => <ReactivationView onOpenLead={open} /> },
   { id: "drip-completed", label: "Drip Completed", icon: ClipboardCheck, countKey: "dripCompleted", render: (open) => <DripCompletedView onOpenLead={open} /> },
