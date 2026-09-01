@@ -18,13 +18,14 @@ import { useRole } from "@/hooks/use-role"
 import {
   downloadDueExport, fetchDueExportAgents, type DueExportType,
 } from "@/lib/api/due-export"
+import { SHOW_CLOSE_TODAY } from "@/lib/feature-flags"
 
 const TYPE_OPTIONS: { key: DueExportType; label: string }[] = [
   { key: "both", label: "Both" },
   { key: "calls", label: "Calls" },
   { key: "meetings", label: "Meetings" },
   { key: "replies", label: "Replies" },
-  { key: "close-today", label: "Close Today" },
+  ...(SHOW_CLOSE_TODAY ? [{ key: "close-today" as const, label: "Close Today" }] : []),
 ]
 
 const OUTCOME_OPTIONS: { value: string; label: string }[] = [
