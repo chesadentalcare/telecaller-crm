@@ -38,6 +38,13 @@ const isIncluded = (v: number | string): boolean =>
 const inr = (n: number) =>
   n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+const withDoctorTitle = (raw?: string): string => {
+  const s = (raw ?? "").trim().replace(/\s+/g, " ")
+  if (!s) return s
+  const stripped = s.replace(/^(?:dr|doctor)\b\.?\s*/i, "").replace(/^Dr\.?(?=[A-Z])/, "").trim()
+  return stripped ? `Dr. ${stripped}` : s
+}
+
 // Row total: "Included" when the unit price is Included, else price × qty.
 function lineTotal(unitPrice: number | string, qty: number): number | string {
   if (isIncluded(unitPrice)) return INCLUDED
@@ -211,7 +218,7 @@ export function QuotationAshvaBuilder({
   const [open, setOpen] = useState(false)
 
   // Customer fields.
-  const [to, setTo] = useState(customerName ?? "")
+  const [to, setTo] = useState(withDoctorTitle(customerName))
   const [contact, setContact] = useState(customerContact ?? "")
   const [address, setAddress] = useState(customerAddress ?? "")
   const [quotationNo, setQuotationNo] = useState(suggestQuotationNo)
