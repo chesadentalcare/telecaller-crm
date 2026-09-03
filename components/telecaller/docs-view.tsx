@@ -558,29 +558,31 @@ function NoResponseGuide() {
       </div>
 
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-        <b>Important — it does NOT come back the same day.</b> After a no-answer call, the next reminder call is scheduled a few
-        <b> days</b> later (not hours). A lead you enter today typically shows up again in Calls Due about <b>3–4 days later</b>,
-        then again a few days after that. Those gaps are deliberate, not a bug.
+        <b>The reminder calls now come back-to-back.</b> After a no-answer call, the next reminder call is scheduled for the
+        <b> next working morning</b> (11:00) and an evening WhatsApp goes out the <b>same day</b>. A lead you enter today is back
+        in Calls Due <b>tomorrow morning</b>, and every working morning after that — no multi-day gaps.
       </div>
 
       <Section n="1" title="Case 1 — a brand-new lead you have never reached" icon={PhoneOff}>
-        <p>The very first call didn&rsquo;t connect. The lead enters the <b>opening sequence</b> — a fixed ~12-day plan that
-          <b> mixes reminder calls with automatic WhatsApps</b>. Your first call already counts as <b>attempt 1 of 4</b>.</p>
-        <Chart>{`Day 0   💬  System sends the WELCOME WhatsApp (automatic, right away)
-Day 0   ☎  You call (call #1) — no answer  →  log "No response"  (attempt 1 of 4)
-Day 1   💬  Automatic WhatsApp follow-up #1
-Day 3   ☎  CALL #2  ← first time it returns to your CALLS DUE   → you call
-Day 6   💬  Automatic WhatsApp follow-up #2
-Day 9   ☎  CALL #3  → appears in your Calls Due                 → you call
-Day 12  ☎  CALL #4  → appears in your Calls Due                 → you call
+        <p>The very first call didn&rsquo;t connect. The lead enters the <b>opening sequence</b> — a tight <b>4-day plan</b>: a
+          reminder <b>call every morning</b> and an automatic &ldquo;we tried to reach you&rdquo; <b>WhatsApp every evening</b>.
+          Your first call already counts as <b>attempt 1 of 4</b>.</p>
+        <Chart>{`Day 0   ☎  You call (call #1) — no answer  →  log "No response"  (attempt 1 of 4)
+Day 0   💬  Evening WhatsApp — "we tried to reach you today…"
+Day 1   ☎  CALL #2  ← back in your CALLS DUE next morning        → you call
+Day 1   💬  Evening WhatsApp
+Day 2   ☎  CALL #3  → appears in your Calls Due                  → you call
+Day 2   💬  Evening WhatsApp
+Day 3   ☎  CALL #4  → appears in your Calls Due                  → you call
+Day 3   💬  Evening WhatsApp
    │
    └─►  still no answer after call #4
          ──►  PARKED (archived) + one recovery WhatsApp goes out
               "No response — first contact, all attempts done"`}</Chart>
         <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
-          So a never-reached lead gets <b>4 calls</b> (days 0, 3, 9, 12) with <b>3 automatic WhatsApps</b> woven in between
-          (welcome + 2 follow-ups). You never schedule these — each call appears in <b>Calls Due</b> on its day (overdue ones
-          stay at the top). Days are <b>working days</b>: a weekend/holiday pushes the touch to the next working morning.
+          So a never-reached lead gets <b>4 calls on 4 back-to-back working days</b> (days 0–3), each with an <b>evening WhatsApp</b>
+          follow-up. You never schedule these — each call appears in <b>Calls Due</b> on its morning (overdue ones stay at the top).
+          Days are <b>working days</b>: a weekend/holiday pushes the touch to the next working morning.
         </p>
       </Section>
 
@@ -591,7 +593,7 @@ Day 12  ☎  CALL #4  → appears in your Calls Due                 → you call
           <li>The <b>WhatsApp nurture keeps running</b> — a missed call does <b>not</b> pause the drip. The messages that go out
             are the <b>track&rsquo;s own nurture messages</b>, not the first-contact ones.</li>
           <li>The reminder calls are the drip&rsquo;s built-in <b>&ldquo;anchor calls&rdquo;</b>, spaced across the track (see the
-            <b> Drip Engine</b> tab) — not the day 0 / 3 / 9 / 12 opening cadence.</li>
+            <b> Drip Engine</b> tab) — not the back-to-back first-contact opening cadence.</li>
           <li>The counter is <b>&ldquo;4 in a row&rdquo;</b>: any call the doctor <b>answers resets it to zero</b>, and the drip
             simply carries on.</li>
           <li>Only when <b>4 anchor calls in a row</b> get no answer is the lead <b>pulled out of the drip and parked</b> — and the

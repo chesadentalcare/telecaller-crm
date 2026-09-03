@@ -1208,11 +1208,11 @@ function attemptEffect(a: CallAttempt): { summary: string; flow: OutcomeFlow | n
   return { summary, flow, ctx, reasonLabel: a.notInterestedReason ? NI_REASON_LABEL[a.notInterestedReason] : undefined }
 }
 
-// P6.7 — automated first-contact campaign progress (6 touches / 12 days · 4 calls).
+// P6.7 — automated first-contact campaign progress (8 touches / 4 days · 4 calls).
 function FirstContactStrip({ lead }: { lead: LeadDetail }) {
   const fc = lead.firstContact
   if (!fc || fc.status !== "active") return null
-  const TOTAL = 6
+  const TOTAL = 8
   const CALL_LIMIT = 4
   return (
     <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 space-y-1.5">
@@ -1225,7 +1225,7 @@ function FirstContactStrip({ lead }: { lead: LeadDetail }) {
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div className="h-full bg-primary transition-all" style={{ width: `${Math.min(100, (fc.touchIndex / TOTAL) * 100)}%` }} />
       </div>
-      <p className="text-[10px] text-muted-foreground">Touch {Math.min(fc.touchIndex, TOTAL)} of {TOTAL} · 6 touches / 12 days</p>
+      <p className="text-[10px] text-muted-foreground">Touch {Math.min(fc.touchIndex, TOTAL)} of {TOTAL} · morning calls + evening messages · 4 days</p>
     </div>
   )
 }
