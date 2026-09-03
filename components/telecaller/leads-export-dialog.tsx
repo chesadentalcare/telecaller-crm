@@ -99,8 +99,8 @@ export function LeadsExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-md">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="size-5 text-primary" />Export all lead data
           </DialogTitle>
@@ -110,25 +110,21 @@ export function LeadsExportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
+        <div className="-mr-2 min-h-0 flex-1 space-y-3 overflow-y-auto py-1 pr-2">
           <div className="space-y-2 rounded-md border p-3">
-            <Label className="text-xs text-muted-foreground">Include sheets</Label>
-            <div className="flex items-start gap-2 opacity-70">
-              <Checkbox checked disabled className="mt-0.5" />
-              <div className="grid gap-0.5 leading-tight">
-                <span className="text-sm font-medium">Lead summary</span>
-                <span className="text-xs text-muted-foreground">Always included — one row per lead with rollup counts</span>
-              </div>
+            <div className="flex items-baseline justify-between">
+              <Label className="text-xs font-medium">Include sheets</Label>
+              <span className="text-[11px] text-muted-foreground">Lead summary always included</span>
             </div>
-            {SHEET_OPTIONS.map((o) => (
-              <label key={o.key} htmlFor={`lx-sheet-${o.key}`} className="flex cursor-pointer items-start gap-2">
-                <Checkbox id={`lx-sheet-${o.key}`} checked={sheets[o.key]} onCheckedChange={() => toggleSheet(o.key)} className="mt-0.5" />
-                <div className="grid gap-0.5 leading-tight">
-                  <span className="text-sm font-medium">{o.label}</span>
-                  <span className="text-xs text-muted-foreground">{o.hint}</span>
-                </div>
-              </label>
-            ))}
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              {SHEET_OPTIONS.map((o) => (
+                <label key={o.key} htmlFor={`lx-sheet-${o.key}`} className="flex cursor-pointer items-center gap-2">
+                  <Checkbox id={`lx-sheet-${o.key}`} checked={sheets[o.key]} onCheckedChange={() => toggleSheet(o.key)} />
+                  <span className="text-sm">{o.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">WhatsApp messages = conversation + sent + received sheets.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -142,62 +138,64 @@ export function LeadsExportDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Source</Label>
-            <Select value={source} onValueChange={setSource}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All sources</SelectItem>
-                {sources.map((s) => (
-                  <SelectItem key={s.sequenceNo} value={s.description}>{s.description}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">State</Label>
-            <Select value={state} onValueChange={setState}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All states</SelectItem>
-                {states.map((s) => (
-                  <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Flagged</Label>
-            <Select value={flagged} onValueChange={setFlagged}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All leads</SelectItem>
-                <SelectItem value="flagged">Flagged only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isManagerOrAbove && (
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Telecaller</Label>
-              <Select value={agent} onValueChange={setAgent}>
+              <Label className="text-xs text-muted-foreground">Source</Label>
+              <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All agents</SelectItem>
-                  {agents.map((a) => (
-                    <SelectItem key={a.username} value={a.username}>
-                      {a.full_name || a.username}{a.role !== "telecaller" ? ` (${a.role})` : ""}
-                    </SelectItem>
+                  <SelectItem value="__all__">All sources</SelectItem>
+                  {sources.map((s) => (
+                    <SelectItem key={s.sequenceNo} value={s.description}>{s.description}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">State</Label>
+              <Select value={state} onValueChange={setState}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All states</SelectItem>
+                  {states.map((s) => (
+                    <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className={`space-y-1.5${isManagerOrAbove ? "" : " col-span-2"}`}>
+              <Label className="text-xs text-muted-foreground">Flagged</Label>
+              <Select value={flagged} onValueChange={setFlagged}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All leads</SelectItem>
+                  <SelectItem value="flagged">Flagged only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isManagerOrAbove && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Telecaller</Label>
+                <Select value={agent} onValueChange={setAgent}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All agents</SelectItem>
+                    {agents.map((a) => (
+                      <SelectItem key={a.username} value={a.username}>
+                        {a.full_name || a.username}{a.role !== "telecaller" ? ` (${a.role})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className="shrink-0 gap-2 sm:justify-between">
           <Button type="button" variant="ghost" onClick={reset} className="gap-1.5">
             <RotateCcw className="size-3.5" />Reset
           </Button>
