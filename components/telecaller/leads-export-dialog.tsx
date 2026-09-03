@@ -9,13 +9,24 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, type LeadsExportSection } from "@/lib/api/leads-export"
+
+const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
+  { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
+  { key: "messages", label: "WhatsApp messages", hint: "Conversation + sent + received" },
+  { key: "meetings", label: "Meetings", hint: "Scheduled visits and demos" },
+  { key: "quotes", label: "Quotations", hint: "Quotes sent" },
+]
+const ALL_SHEETS: Record<LeadsExportSection, boolean> = {
+  attempts: true, messages: true, meetings: true, quotes: true,
+}
 
 export function LeadsExportDialog({
   open,
@@ -32,7 +43,10 @@ export function LeadsExportDialog({
   const [state, setState] = useState("__all__")
   const [agent, setAgent] = useState("__all__")
   const [flagged, setFlagged] = useState("__all__")
+  const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
   const [busy, setBusy] = useState(false)
+
+  const toggleSheet = (k: LeadsExportSection) => setSheets((s) => ({ ...s, [k]: !s[k] }))
 
   const { data: agents = [] } = useQuery({
     queryKey: ["due-export-agents"],
@@ -55,6 +69,7 @@ export function LeadsExportDialog({
     setState("__all__")
     setAgent("__all__")
     setFlagged("__all__")
+    setSheets({ ...ALL_SHEETS })
   }
 
   const submit = async () => {
@@ -71,6 +86,7 @@ export function LeadsExportDialog({
         state: state !== "__all__" ? state : undefined,
         agent: agent !== "__all__" ? agent : undefined,
         flagged: flagged === "flagged" ? true : undefined,
+        sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
       })
       toast.success("Export downloaded")
       onOpenChange(false)
@@ -89,12 +105,32 @@ export function LeadsExportDialog({
             <FileSpreadsheet className="size-5 text-primary" />Export all lead data
           </DialogTitle>
           <DialogDescription>
-            One Excel workbook with every lead plus its calls, messages sent/received, meetings and
-            quotations — each on its own sheet, joined by Lead ID. Leave filters blank to export everything.
+            One Excel workbook, each data type on its own sheet, joined by Lead ID. Pick which sheets to
+            include and leave filters blank to export everything.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          <div className="space-y-2 rounded-md border p-3">
+            <Label className="text-xs text-muted-foreground">Include sheets</Label>
+            <div className="flex items-start gap-2 opacity-70">
+              <Checkbox checked disabled className="mt-0.5" />
+              <div className="grid gap-0.5 leading-tight">
+                <span className="text-sm font-medium">Lead summary</span>
+                <span className="text-xs text-muted-foreground">Always included — one row per lead with rollup counts</span>
+              </div>
+            </div>
+            {SHEET_OPTIONS.map((o) => (
+              <label key={o.key} htmlFor={`lx-sheet-${o.key}`} className="flex cursor-pointer items-start gap-2">
+                <Checkbox id={`lx-sheet-${o.key}`} checked={sheets[o.key]} onCheckedChange={() => toggleSheet(o.key)} className="mt-0.5" />
+                <div className="grid gap-0.5 leading-tight">
+                  <span className="text-sm font-medium">{o.label}</span>
+                  <span className="text-xs text-muted-foreground">{o.hint}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="lx-from" className="text-xs text-muted-foreground">Created from</Label>

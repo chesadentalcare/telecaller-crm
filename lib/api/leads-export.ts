@@ -12,6 +12,8 @@ interface Envelope<T> { success: boolean; data: T }
 export const fetchLeadStates = () =>
   api.get<Envelope<LeadStateOption[]>>(endpoints.leadStates).then((res) => res.data)
 
+export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
+
 export interface LeadsExportFilters {
   from?: string
   to?: string
@@ -20,6 +22,7 @@ export interface LeadsExportFilters {
   state?: string
   agent?: string
   flagged?: boolean
+  sections?: LeadsExportSection[]
 }
 
 const buildQuery = (f: LeadsExportFilters): string => {
@@ -31,6 +34,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.state) p.set("state", f.state)
   if (f.agent) p.set("agent", f.agent)
   if (f.flagged) p.set("flagged", "1")
+  if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
   const s = p.toString()
   return s ? `?${s}` : ""
 }
