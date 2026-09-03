@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates, type LeadsExportSection } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
 
 const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
   { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
@@ -43,6 +43,7 @@ export function LeadsExportDialog({
   const [state, setState] = useState("__all__")
   const [agent, setAgent] = useState("__all__")
   const [flagged, setFlagged] = useState("__all__")
+  const [outcome, setOutcome] = useState<LeadsExportOutcome>("exclude")
   const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
   const [busy, setBusy] = useState(false)
 
@@ -69,6 +70,7 @@ export function LeadsExportDialog({
     setState("__all__")
     setAgent("__all__")
     setFlagged("__all__")
+    setOutcome("exclude")
     setSheets({ ...ALL_SHEETS })
   }
 
@@ -86,6 +88,7 @@ export function LeadsExportDialog({
         state: state !== "__all__" ? state : undefined,
         agent: agent !== "__all__" ? agent : undefined,
         flagged: flagged === "flagged" ? true : undefined,
+        outcome,
         sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
       })
       toast.success("Export downloaded")
@@ -140,6 +143,19 @@ export function LeadsExportDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Won / Lost</Label>
+              <Select value={outcome} onValueChange={(v) => setOutcome(v as LeadsExportOutcome)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exclude">Exclude won &amp; lost</SelectItem>
+                  <SelectItem value="all">Include won &amp; lost</SelectItem>
+                  <SelectItem value="won">Won only</SelectItem>
+                  <SelectItem value="lost">Lost only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Source</Label>
               <Select value={source} onValueChange={setSource}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -165,7 +181,7 @@ export function LeadsExportDialog({
               </Select>
             </div>
 
-            <div className={`space-y-1.5${isManagerOrAbove ? "" : " col-span-2"}`}>
+            <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Flagged</Label>
               <Select value={flagged} onValueChange={setFlagged}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -177,7 +193,7 @@ export function LeadsExportDialog({
             </div>
 
             {isManagerOrAbove && (
-              <div className="space-y-1.5">
+              <div className="col-span-2 space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Telecaller</Label>
                 <Select value={agent} onValueChange={setAgent}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>

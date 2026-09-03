@@ -13,6 +13,7 @@ export const fetchLeadStates = () =>
   api.get<Envelope<LeadStateOption[]>>(endpoints.leadStates).then((res) => res.data)
 
 export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
+export type LeadsExportOutcome = "all" | "exclude" | "won" | "lost"
 
 export interface LeadsExportFilters {
   from?: string
@@ -22,6 +23,7 @@ export interface LeadsExportFilters {
   state?: string
   agent?: string
   flagged?: boolean
+  outcome?: LeadsExportOutcome
   sections?: LeadsExportSection[]
 }
 
@@ -34,6 +36,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.state) p.set("state", f.state)
   if (f.agent) p.set("agent", f.agent)
   if (f.flagged) p.set("flagged", "1")
+  if (f.outcome && f.outcome !== "all") p.set("outcome", f.outcome)
   if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
   const s = p.toString()
   return s ? `?${s}` : ""
@@ -57,9 +60,10 @@ export async function downloadLeadsExport(filters: LeadsExportFilters): Promise<
   }
 
   const blob = await res.blob()
-  const disposition = res.headers.get("Content-Disposition") || ""
-  const match = disposition.match(/filename="?([^"]+)"?/)
-  const filename = match?.[1] || "chesa-leads-export.xlsx"
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
+  const filename = `chesa-leads-export-${stamp}.xlsx`
 
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
