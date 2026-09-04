@@ -31,9 +31,11 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
 
   // Split by the meeting's DAY (the server returns today + upcoming + past meetings
   // that still lack a summary):
-  //   • today   — scheduled for today; a passed time shows pastel-red.
-  //   • pastDue — an earlier day with no summary yet → its own "Past Meetings Due"
-  //               catch-up section (parallel to Past Calls Due).
+  //   • today    — scheduled for today; a passed time shows pastel-red.
+  //   • upcoming — a later day; listed inline too because meetings are few (unlike
+  //                calls, whose future list is long and stays on the calendar).
+  //   • pastDue  — an earlier day with no summary yet → its own "Past Meetings Due"
+  //                catch-up section (parallel to Past Calls Due).
   const now = new Date()
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
@@ -42,6 +44,7 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const today = meetings.filter(
     (m) => m.meetingAt.getTime() >= startOfToday.getTime() && m.meetingAt.getTime() <= endOfToday.getTime(),
   )
+  const upcoming = meetings.filter((m) => m.meetingAt.getTime() > endOfToday.getTime())
   const pastDue = meetings.filter((m) => m.meetingAt.getTime() < startOfToday.getTime() && !m.summaryUploaded)
 
   // Shared row renderer. `tone` drives the pastel-red highlight, matching Calls Due:
@@ -136,6 +139,28 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Upcoming Meetings — later days, listed inline since meetings are few. */}
+        {upcoming.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarClock className="size-4 text-primary" />Upcoming Meetings
+                  </CardTitle>
+                  <CardDescription>Meetings scheduled for the days ahead — earliest first.</CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">{upcoming.length} upcoming</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {upcoming.map((m) => renderRow(m, "due"))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Past Meetings Due — an earlier day, still no summary. Kept separate from
             Today so a stale meeting can't masquerade as a today task. */}
