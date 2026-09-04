@@ -25,6 +25,7 @@ export interface QuotationLine {
   unitPrice: number | string
   // Per-line discount as a percentage (0–100). Optional; defaults to 0.
   discountPct?: number
+  image?: string | null
 }
 
 export interface QuotationPackage {
