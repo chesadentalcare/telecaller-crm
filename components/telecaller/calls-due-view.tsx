@@ -4,7 +4,8 @@
 // segmented page:
 //   • Calls Today    — today's worklist + a "Past Calls Due" catch-up section, each
 //                      row expandable into the full inline cockpit (log/qualify/meeting).
-//                      A call whose time has passed turns pastel-red.
+//                      Auto calls stay plain all day; only a missed callback turns
+//                      pastel-red, and prior-day unlogged calls sit in Past Calls Due.
 //   • Upcoming Calls  — a big month calendar of every future call; click a day for its
 //                      full schedule (UpcomingCallsCalendar).
 
@@ -278,7 +279,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
             <CardTitle className="flex items-center gap-2 text-base">
               <PhoneCall className="size-4 text-primary" />Calls due today
             </CardTitle>
-            <CardDescription>Scheduled for today, oldest first — overdue calls are highlighted in red.</CardDescription>
+            <CardDescription>Ready from the start of your shift — you have the full day to clear these. Only a missed callback shows red; unlogged calls roll to Past Calls Due tomorrow.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {today.length === 0 ? (
@@ -286,7 +287,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
             ) : (
               <div className="divide-y">
                 {today.map((lead) =>
-                  renderRow(lead, lead.scheduledAt.getTime() < now.getTime() ? "overdue" : "due"),
+                  renderRow(lead, lead.reason === "callback" && lead.scheduledAt.getTime() < now.getTime() ? "overdue" : "due"),
                 )}
               </div>
             )}
