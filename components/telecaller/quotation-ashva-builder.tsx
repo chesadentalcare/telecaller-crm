@@ -117,6 +117,7 @@ interface EditableLine {
   qty: number
   unitPrice: number | string
   discountPct: string
+  image?: string | null
 }
 
 const emptyLine = (): EditableLine => ({ id: nextLineId(), spec: "", warranty: "", qty: 1, unitPrice: "", discountPct: "" })
@@ -129,6 +130,7 @@ function toApiLines(lines: EditableLine[]): QuotationLine[] {
     qty: Number(l.qty) || 0,
     unitPrice: isIncluded(l.unitPrice) ? INCLUDED : Number(l.unitPrice) || 0,
     discountPct: Math.min(Math.max(Number(l.discountPct) || 0, 0), 100),
+    ...(l.image ? { image: l.image } : {}),
   }))
 }
 
@@ -277,6 +279,7 @@ export function QuotationAshvaBuilder({
         qty: 1,
         unitPrice: product.mrp > 0 ? product.mrp : "",
         discountPct: "",
+        image: product.image || null,
       }]
     })
   }

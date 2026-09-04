@@ -61,6 +61,7 @@ export interface CatalogueProduct {
   warranty: string
   description: string
   category: string
+  image: string | null
 }
 
 async function fetchProductCatalogue(): Promise<CatalogueProduct[]> {
@@ -85,6 +86,7 @@ async function fetchProductCatalogue(): Promise<CatalogueProduct[]> {
         warranty: "",
         description: "",
         category: String(p.category ?? ""),
+        image: typeof p.image === "string" ? p.image : null,
       }
     })
     .filter((p) => p.name)
