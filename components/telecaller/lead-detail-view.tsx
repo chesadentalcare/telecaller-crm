@@ -1307,6 +1307,7 @@ export function CallsTab({
   onNavigate?: (tab: string) => void
 }) {
   const { mutateAsync: logAttempt } = useLogAttempt(lead.id)
+  const { mutate: flagLead } = useFlagLead()
   const [editTarget, setEditTarget] = useState<CallAttempt | null>(null)
 
   // Smart Call Log — derive the disposition state from the chronological call
@@ -1817,6 +1818,29 @@ export function CallsTab({
                 </div>
               )}
             />
+
+            <button
+              type="button"
+              onClick={() => flagLead({ id: lead.id, flagged: !lead.flagged })}
+              aria-pressed={!!lead.flagged}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition",
+                lead.flagged ? "border-amber-500 bg-amber-500/10" : "border-border bg-card hover:bg-muted/40",
+              )}
+            >
+              <span className="text-lg leading-none" aria-hidden>🚩</span>
+              <span className="min-w-0">
+                <span className={cn("block text-sm font-semibold", lead.flagged ? "text-amber-700" : "text-foreground")}>
+                  {lead.flagged ? "Flagged as important" : "Mark as important"}
+                </span>
+                <span className="block text-[11px] text-muted-foreground">
+                  {lead.flagged
+                    ? "This lead is highlighted for the whole team — tap to remove the flag."
+                    : "If this call could convert into a sale, flag it — the lead stays highlighted for the whole team."}
+                </span>
+              </span>
+            </button>
+
             <div className="flex justify-end gap-2">
               <Button
                 type="submit"
