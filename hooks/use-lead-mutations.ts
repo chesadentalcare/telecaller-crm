@@ -628,6 +628,18 @@ export function useHandover(id: string | number) {
   })
 }
 
+export function useAllocateSales(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { salesUsername: string }) => leadsApi.allocateSales(id, body),
+    onSuccess: (data) => {
+      toast.success(`Allocated to ${data.salesPersonName}`)
+      invalidateAllLeads(qc)
+    },
+    onError: toastError("Failed to allocate the lead to sales"),
+  })
+}
+
 export function useMarkNotificationRead() {
   const qc = useQueryClient()
   return useMutation({

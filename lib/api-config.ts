@@ -150,6 +150,7 @@ export const endpoints = {
   closureSapOrderLookup: (id: string) => `/leads/${id}/closure/sap-order`,
   // Sales handover (Phase 6 / Sales-track FE)
   handover: (id: string) => `/leads/${id}/handover`,
+  allocateSales: (id: string) => `/leads/${id}/allocate-sales`,
   salesPipeline: `/sales/pipeline`,
   salesUsers: `/sales/users`,
   // Analytics (Phase 7)

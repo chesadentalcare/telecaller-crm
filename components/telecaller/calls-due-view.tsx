@@ -30,6 +30,7 @@ import { useCallsDueLeads, useUpcomingCalls } from "@/hooks/use-leads"
 import { useAddSalesUpdate } from "@/hooks/use-lead-mutations"
 import { REASON_LABEL, lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
+import { AllocateSalesButton } from "./allocate-sales-button"
 import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { ApiError } from "@/lib/api/client"
 import type { CallsDueLead } from "@/lib/types/lead"
@@ -243,6 +244,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
                   <LogRepResponseButton leadId={lead.id} salesName={lead.salesName} />
                 </>
               )}
+              <AllocateSalesButton leadId={lead.id} assignedName={lead.salesAssignedName} className={lead.flagged ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""} />
               <Button size="sm" variant="outline" onClick={() => toggle(lead.id)} className={`gap-1${lead.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`} title="Open cockpit">
                 {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                 <SlidersHorizontal className="size-3.5" />Cockpit
