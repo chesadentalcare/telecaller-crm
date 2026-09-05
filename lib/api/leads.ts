@@ -780,6 +780,7 @@ export interface MeetingDueRow {
   zoom_join_url: string | null
   duration_minutes: number | null
   meeting_summary_url: string | null
+  stage: string
   equipment: string | null
   customer_name: string | null
   phone: string | null

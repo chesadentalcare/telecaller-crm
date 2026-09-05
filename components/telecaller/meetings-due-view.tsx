@@ -27,6 +27,7 @@ interface MeetingsDueViewProps {
 export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const { data: meetings = [], isLoading } = useMeetingsDueLeads()
   const [rescheduleTarget, setRescheduleTarget] = useState<MeetingsDueLead | null>(null)
+  const [status, setStatus] = useState<"active" | "won" | "lost" | "all">("active")
   if (isLoading) return <ViewSkeleton />
 
   // Split by the meeting's DAY (the server returns today + upcoming + past meetings
@@ -36,16 +37,29 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   //                calls, whose future list is long and stays on the calendar).
   //   • pastDue  — an earlier day with no summary yet → its own "Past Meetings Due"
   //                catch-up section (parallel to Past Calls Due).
+  const isWon = (s: string) => s === "won" || s === "closed_won"
+  const isLost = (s: string) => s === "lost" || s === "closed_lost"
+  const isClosed = (s: string) => isWon(s) || isLost(s) || s === "archived" || s === "dormant"
+  const counts = {
+    active: meetings.filter((m) => !isClosed(m.stage)).length,
+    won: meetings.filter((m) => isWon(m.stage)).length,
+    lost: meetings.filter((m) => isLost(m.stage)).length,
+    all: meetings.length,
+  }
+  const visible = meetings.filter((m) =>
+    status === "all" ? true : status === "won" ? isWon(m.stage) : status === "lost" ? isLost(m.stage) : !isClosed(m.stage),
+  )
+
   const now = new Date()
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
   const endOfToday = new Date(now)
   endOfToday.setHours(23, 59, 59, 999)
-  const today = meetings.filter(
+  const today = visible.filter(
     (m) => m.meetingAt.getTime() >= startOfToday.getTime() && m.meetingAt.getTime() <= endOfToday.getTime(),
   )
-  const upcoming = meetings.filter((m) => m.meetingAt.getTime() > endOfToday.getTime())
-  const pastDue = meetings.filter((m) => m.meetingAt.getTime() < startOfToday.getTime() && !m.summaryUploaded)
+  const upcoming = visible.filter((m) => m.meetingAt.getTime() > endOfToday.getTime())
+  const pastDue = visible.filter((m) => m.meetingAt.getTime() < startOfToday.getTime() && !m.summaryUploaded)
 
   // Shared row renderer. `tone` drives the pastel-red highlight, matching Calls Due:
   //   'overdue' — due today but the time has passed.
@@ -53,8 +67,9 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const renderRow = (m: MeetingsDueLead, tone: "due" | "overdue" | "past") => {
     const tel = m.phone.replace(/\D/g, "")
     const isZoom = m.meetingType === "zoom"
-    const rowClass =
-      tone === "past"
+    const rowClass = m.flagged
+      ? "bg-slate-900 text-white border-l-4 border-l-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-slate-900 [&_*]:text-white [&_*]:hover:text-white"
+      : tone === "past"
         ? "bg-rose-100/60 hover:bg-rose-100"
         : tone === "overdue"
           ? "bg-rose-50 hover:bg-rose-100/70"
@@ -92,9 +107,9 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             {isZoom && m.joinUrl ? (
               <Button asChild size="sm" className="gap-1.5"><a href={m.joinUrl} target="_blank" rel="noreferrer"><Video className="size-3.5" />Join</a></Button>
             ) : tel.length >= 10 ? (
-              <Button asChild size="sm" variant="outline" className="gap-1.5"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
+              <Button asChild size="sm" variant="outline" className={`gap-1.5${m.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`}><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
             ) : null}
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setRescheduleTarget(m)}><CalendarClock className="size-3.5" />Reschedule</Button>
+            <Button size="sm" variant="outline" className={`gap-1.5${m.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`} onClick={() => setRescheduleTarget(m)}><CalendarClock className="size-3.5" />Reschedule</Button>
             <Button size="sm" variant="ghost" onClick={() => onOpenLead(m.id)}>Open</Button>
           </div>
         }
@@ -104,6 +119,24 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
 
   return (
     <>
+    <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-0.5 w-fit">
+      {([
+        { key: "active", label: "Active", n: counts.active },
+        { key: "won", label: "Won", n: counts.won },
+        { key: "lost", label: "Lost", n: counts.lost },
+        { key: "all", label: "All", n: counts.all },
+      ] as const).map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          onClick={() => setStatus(o.key)}
+          aria-pressed={status === o.key}
+          className={`rounded-md px-2.5 py-1 text-xs font-medium transition whitespace-nowrap ${status === o.key ? "bg-card text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          {o.label}{o.n > 0 ? ` ${o.n}` : ""}
+        </button>
+      ))}
+    </div>
     <Tabs defaultValue="today" className="gap-4">
       <TabsList className="h-auto w-full justify-start gap-5 rounded-none border-b bg-transparent p-0">
         <TabsTrigger value="today" className="gap-1.5 rounded-none border-b-2 border-transparent px-0.5 pb-2.5 text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
