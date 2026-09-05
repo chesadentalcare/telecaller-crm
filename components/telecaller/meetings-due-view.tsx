@@ -93,11 +93,11 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             {!isZoom && m.location && <span>· {m.location}</span>}
             {m.assignedSalesperson && <span>· with {m.assignedSalesperson}</span>}
             {m.summaryUploaded ? (
-              <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="size-3" />Summary in</span>
+              <span className="inline-flex items-center gap-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white"><CheckCircle2 className="size-3" />Summary in</span>
             ) : tone === "overdue" ? (
-              <span className="inline-flex items-center gap-1 font-medium text-rose-600"><AlertCircle className="size-3" />Meeting time passed</span>
+              <span className="inline-flex items-center gap-1 rounded bg-rose-600 px-1.5 py-0.5 text-[10px] font-semibold text-white"><AlertCircle className="size-3" />Meeting time passed</span>
             ) : tone === "past" ? (
-              <span className="inline-flex items-center gap-1 font-medium text-rose-700"><AlertCircle className="size-3" />Missed — no summary yet</span>
+              <span className="inline-flex items-center gap-1 rounded bg-rose-700 px-1.5 py-0.5 text-[10px] font-semibold text-white"><AlertCircle className="size-3" />Missed — no summary yet</span>
             ) : null}
           </span>
         }
