@@ -80,10 +80,16 @@ export function useFlagLead() {
       const prev = qc.getQueriesData({ queryKey: leadKeys.all })
       // Optimistically update every cached pipeline list.
       qc.setQueriesData({ queryKey: leadKeys.all }, (old: unknown) => {
-        if (!Array.isArray(old)) return old
-        return old.map((lead: { id: string }) =>
-          String(lead.id) === String(id) ? { ...lead, flagged } : lead,
-        )
+        if (Array.isArray(old)) {
+          return old.map((lead: { id: string }) =>
+            String(lead.id) === String(id) ? { ...lead, flagged } : lead,
+          )
+        }
+        const detail = old as { extension?: { opportunity_doc_entry?: number | string; flagged?: number } } | null
+        if (detail?.extension && String(detail.extension.opportunity_doc_entry) === String(id)) {
+          return { ...detail, extension: { ...detail.extension, flagged: flagged ? 1 : 0 } }
+        }
+        return old
       })
       return { prev }
     },
