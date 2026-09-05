@@ -22,6 +22,8 @@ export function useRole() {
     isAdmin: role === "admin",
     /** Manager or admin — can approve discounts, view all leads, etc. */
     isManagerOrAbove: role === "manager" || role === "admin",
+    /** Full-access surfaces: manager, admin, or telecaller. */
+    isFullAccess: role === "manager" || role === "admin" || role === "telecaller",
     /** Any sales-track role (sale_staff/coordinator/sale_head, plus manager/admin). */
     isSalesTrack: isSales || role === "manager" || role === "admin",
     /**
@@ -29,7 +31,7 @@ export function useRole() {
      * Mirrors the backend gate on POST /leads/:id/hand-back, which allows the
      * sale_staff / coordinator / sale_head roles plus manager and admin.
      */
-    canHandBack: isSales || role === "manager" || role === "admin",
+    canHandBack: isSales || role === "manager" || role === "admin" || role === "telecaller",
     /** Check if user has one of the given roles. */
     hasRole: (...roles: UserRole[]) => role !== null && roles.includes(role),
   }

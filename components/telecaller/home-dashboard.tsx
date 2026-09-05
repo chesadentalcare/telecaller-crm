@@ -98,7 +98,7 @@ interface HomeDashboardProps {
 
 export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
   const { user } = useAuth()
-  const { isManagerOrAbove } = useRole()
+  const { isManagerOrAbove, isFullAccess } = useRole()
   const { data: analytics, isLoading } = useDashboardAnalytics()
   const queueCounts = useQueueCounts()
 
@@ -531,7 +531,7 @@ export function HomeDashboard({ onNavigate }: HomeDashboardProps = {}) {
       </div>
 
       {/* Team Leaderboard — manager/admin only */}
-      {isManagerOrAbove && analytics?.teamBreakdown && analytics.teamBreakdown.length > 0 && (
+      {isFullAccess && analytics?.teamBreakdown && analytics.teamBreakdown.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">

@@ -64,7 +64,7 @@ interface NavItem {
 export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNavProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
-  const { role, isManagerOrAbove } = useRole()
+  const { role, isFullAccess } = useRole()
 
   const displayName = user?.fullName || user?.username || "—"
   const roleLabel = user?.role
@@ -98,10 +98,10 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
 
   const stages = useMemo(
     () =>
-      isManagerOrAbove
+      isFullAccess
         ? allStages
         : allStages.filter((s) => s.roles == null || (role !== null && s.roles.includes(role))),
-    [allStages, role, isManagerOrAbove],
+    [allStages, role, isFullAccess],
   )
 
   const renderItem = (item: NavItem) => {

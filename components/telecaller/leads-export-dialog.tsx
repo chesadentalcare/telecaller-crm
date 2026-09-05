@@ -35,7 +35,7 @@ export function LeadsExportDialog({
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
-  const { isManagerOrAbove } = useRole()
+  const { isFullAccess } = useRole()
 
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
@@ -52,7 +52,7 @@ export function LeadsExportDialog({
   const { data: agents = [] } = useQuery({
     queryKey: ["due-export-agents"],
     queryFn: fetchDueExportAgents,
-    enabled: open && isManagerOrAbove,
+    enabled: open && isFullAccess,
     staleTime: 5 * 60 * 1000,
   })
   const { data: sources = [] } = useSapSources()
@@ -192,7 +192,7 @@ export function LeadsExportDialog({
               </Select>
             </div>
 
-            {isManagerOrAbove && (
+            {isFullAccess && (
               <div className="col-span-2 space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Telecaller</Label>
                 <Select value={agent} onValueChange={setAgent}>

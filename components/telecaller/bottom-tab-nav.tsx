@@ -35,7 +35,7 @@ export function BottomTabNav({
   queueCounts,
 }: BottomTabNavProps) {
   const [moreOpen, setMoreOpen] = useState(false)
-  const { isManagerOrAbove, isSalesperson, isTelecaller } = useRole()
+  const { isManagerOrAbove, isFullAccess, isSalesperson, isTelecaller } = useRole()
   // A pure sales role (sale_staff/coordinator/sale_head) — not a telecaller and
   // not a manager/admin. Their bottom nav is sales-centric, not intake-centric.
   const salesOnly = isSalesperson && !isManagerOrAbove && !isTelecaller
@@ -74,14 +74,14 @@ export function BottomTabNav({
   // telecaller/sales everything lives in the primary tabs + Pipeline segments.
   const moreItems = useMemo(
     () =>
-      isManagerOrAbove
+      isFullAccess
         ? [
             { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase,      subtitle: "Handed-over leads" },
             { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       subtitle: "Team analytics & health" },
             { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, subtitle: "Discount requests" },
           ]
         : [],
-    [isManagerOrAbove],
+    [isFullAccess],
   )
 
   const isMoreActive = moreItems.some((i) => i.id === activeView)

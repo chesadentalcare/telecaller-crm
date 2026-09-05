@@ -44,7 +44,7 @@ export function DueExportDialog({
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
-  const { isManagerOrAbove } = useRole()
+  const { isFullAccess } = useRole()
 
   const [type, setType] = useState<DueExportType>("both")
   const [from, setFrom] = useState("")
@@ -56,7 +56,7 @@ export function DueExportDialog({
   const { data: agents = [] } = useQuery({
     queryKey: ["due-export-agents"],
     queryFn: fetchDueExportAgents,
-    enabled: open && isManagerOrAbove,
+    enabled: open && isFullAccess,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -149,7 +149,7 @@ export function DueExportDialog({
             </div>
           </div>
 
-          {isManagerOrAbove && (
+          {isFullAccess && (
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Telecaller</Label>
               <Select value={agent} onValueChange={setAgent}>

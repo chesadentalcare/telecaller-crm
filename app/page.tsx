@@ -259,7 +259,7 @@ function TelecallerDashboardInner() {
   const searchParams = useSearchParams()
 
   const queueCounts = useQueueCounts()
-  const { role, hasRole, isManagerOrAbove } = useRole()
+  const { role, hasRole, isManagerOrAbove, isFullAccess } = useRole()
 
   // One session-long SSE connection: live-refresh the WhatsApp chat + awaiting-reply
   // badges the moment a customer replies or a rep sends a reply.
@@ -330,7 +330,7 @@ function TelecallerDashboardInner() {
   // telecaller-only view (e.g. Calls Due) as an admin silently showed the Home
   // dashboard instead.
   const view =
-    requested && (!requested.roles || isManagerOrAbove || (role !== null && hasRole(...requested.roles)))
+    requested && (!requested.roles || isFullAccess || (role !== null && hasRole(...requested.roles)))
       ? requested
       : FALLBACK_VIEW
   const pageInfo = useMemo(() => ({ title: view.title, subtitle: view.subtitle }), [view])
