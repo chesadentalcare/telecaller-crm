@@ -146,6 +146,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   const [timeline, setTimeline] = useState("")
   const [outcome, setOutcome] = useState("")
   const [readyNow, setReadyNow] = useState(false)
+  const [important, setImportant] = useState(false)
   // When "Not yet — follow up" is chosen: Zoom consult (a virtual meeting) vs Add to Drip.
   const [nurtureRoute, setNurtureRoute] = useState<"zoom" | "drip">("drip")
   const [niReason, setNiReason] = useState("")
@@ -198,7 +199,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   const reset = () => {
     setLeadName(""); setPhoneNumber(""); setWaSame(true); setWhatsappNumber(""); setEmail("")
     setState(""); setCity(""); setSource(""); setEquipmentInterest(""); setInterestLevel(""); setBudget(""); setTimeline("")
-    setOutcome(""); setReadyNow(false); setNurtureRoute("drip"); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
+    setOutcome(""); setReadyNow(false); setImportant(false); setNurtureRoute("drip"); setNiReason(""); setCallbackAt(""); setPredictedClosingDate(""); setNotes(""); clearQualification()
   }
 
   const validate = (): string | null => {
@@ -277,6 +278,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
       timeline: timelineNeeded && timeline ? (timeline as QuickLeadInput["timeline"]) : undefined,
       ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: engagedMeeting === "physical" ? "physical_meeting" : engagedMeeting === "zoom" ? "online_meeting" : "drip_info" } : {}),
       firstResponse,
+      flagged: important,
     }
 
     try {
@@ -329,9 +331,24 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   return (
     <Card className="p-0">
       <CardContent className="space-y-5 p-5 sm:p-6">
-        <div>
-          <h2 className="text-lg font-semibold">Add a new lead</h2>
-          <p className="text-sm text-muted-foreground">Fill the details, then log what happened on your call. We'll take care of the follow-up.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Add a new lead</h2>
+            <p className="text-sm text-muted-foreground">Fill the details, then log what happened on your call. We'll take care of the follow-up.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setImportant((v) => !v)}
+            aria-pressed={important}
+            title="Flag as important (hot / ASAP) so it stays highlighted for the team"
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition",
+              important ? "border-amber-500 bg-amber-500/15 text-amber-700" : "border-border bg-card text-muted-foreground hover:bg-muted/40",
+            )}
+          >
+            <span aria-hidden>🚩</span>
+            {important ? "Important" : "Mark important"}
+          </button>
         </div>
 
         {/* ── Step 1: who is the lead ─────────────────────────────── */}

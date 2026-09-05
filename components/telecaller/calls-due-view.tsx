@@ -148,8 +148,9 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
     const tel = lead.phone.replace(/\D/g, "")
     const salesTel = (lead.salesPhone ?? "").replace(/\D/g, "")
     const expanded = expandedIds.has(lead.id)
-    const rowClass =
-      tone === "past"
+    const rowClass = lead.flagged
+      ? "bg-slate-900 text-white border-l-4 border-l-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-slate-900 [&_*]:text-white [&_*]:hover:text-white"
+      : tone === "past"
         ? "bg-rose-100/60 hover:bg-rose-100"
         : tone === "overdue"
           ? "bg-rose-50 hover:bg-rose-100/70"
@@ -235,14 +236,14 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               {lead.reason === "post_meeting" && !lead.salesUpdate && lead.salesPhone && (
                 <>
                   {salesTel.length >= 10 && (
-                    <Button asChild size="sm" variant="outline" className="gap-1.5">
+                    <Button asChild size="sm" variant="outline" className={`gap-1.5${lead.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`}>
                       <a href={`tel:${salesTel}`}><PhoneCall className="size-3.5" />Call {lead.salesName || "sales rep"}</a>
                     </Button>
                   )}
                   <LogRepResponseButton leadId={lead.id} salesName={lead.salesName} />
                 </>
               )}
-              <Button size="sm" variant="outline" onClick={() => toggle(lead.id)} className="gap-1" title="Open cockpit">
+              <Button size="sm" variant="outline" onClick={() => toggle(lead.id)} className={`gap-1${lead.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`} title="Open cockpit">
                 {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                 <SlidersHorizontal className="size-3.5" />Cockpit
               </Button>
