@@ -53,8 +53,9 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
   const renderRow = (m: MeetingsDueLead, tone: "due" | "overdue" | "past") => {
     const tel = m.phone.replace(/\D/g, "")
     const isZoom = m.meetingType === "zoom"
-    const rowClass =
-      tone === "past"
+    const rowClass = m.flagged
+      ? "bg-slate-900 text-white border-l-4 border-l-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-slate-900 [&_*]:text-white [&_*]:hover:text-white"
+      : tone === "past"
         ? "bg-rose-100/60 hover:bg-rose-100"
         : tone === "overdue"
           ? "bg-rose-50 hover:bg-rose-100/70"
@@ -92,9 +93,9 @@ export function MeetingsDueView({ onOpenLead }: MeetingsDueViewProps) {
             {isZoom && m.joinUrl ? (
               <Button asChild size="sm" className="gap-1.5"><a href={m.joinUrl} target="_blank" rel="noreferrer"><Video className="size-3.5" />Join</a></Button>
             ) : tel.length >= 10 ? (
-              <Button asChild size="sm" variant="outline" className="gap-1.5"><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
+              <Button asChild size="sm" variant="outline" className={`gap-1.5${m.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`}><a href={`tel:${tel}`}><PhoneCall className="size-3.5" />Call</a></Button>
             ) : null}
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setRescheduleTarget(m)}><CalendarClock className="size-3.5" />Reschedule</Button>
+            <Button size="sm" variant="outline" className={`gap-1.5${m.flagged ? " border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""}`} onClick={() => setRescheduleTarget(m)}><CalendarClock className="size-3.5" />Reschedule</Button>
             <Button size="sm" variant="ghost" onClick={() => onOpenLead(m.id)}>Open</Button>
           </div>
         }
