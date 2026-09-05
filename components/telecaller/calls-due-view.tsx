@@ -189,7 +189,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               {lead.lastOutcome && lead.lastOutcomeBy && (
                 <span className="text-[10px] text-muted-foreground">
                   by{" "}
-                  <span className="font-bold" style={{ color: repColor(lead.lastOutcomeBy) }}>
+                  <span className="font-bold" style={{ color: lead.flagged ? "#fbbf24" : repColor(lead.lastOutcomeBy) }}>
                     {lead.lastOutcomeBy}
                   </span>
                   {lead.lastOutcomeAt
