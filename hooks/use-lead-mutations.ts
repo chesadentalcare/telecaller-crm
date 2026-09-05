@@ -633,7 +633,11 @@ export function useAllocateSales(id: string | number) {
   return useMutation({
     mutationFn: (body: { salesUsername: string }) => leadsApi.allocateSales(id, body),
     onSuccess: (data) => {
-      toast.success(`Allocated to ${data.salesPersonName}`)
+      if (data.sapSynced === false) {
+        toast.warning(`Saved ${data.salesPersonName}, but SAP sync failed — it'll retry automatically`)
+      } else {
+        toast.success(`Allocated to ${data.salesPersonName}`)
+      }
       invalidateAllLeads(qc)
     },
     onError: toastError("Failed to allocate the lead to sales"),
