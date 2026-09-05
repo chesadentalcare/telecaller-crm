@@ -331,24 +331,9 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
   return (
     <Card className="p-0">
       <CardContent className="space-y-5 p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Add a new lead</h2>
-            <p className="text-sm text-muted-foreground">Fill the details, then log what happened on your call. We'll take care of the follow-up.</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setImportant((v) => !v)}
-            aria-pressed={important}
-            title="Flag as important (hot / ASAP) so it stays highlighted for the team"
-            className={cn(
-              "shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition",
-              important ? "border-amber-500 bg-amber-500/15 text-amber-700" : "border-border bg-card text-muted-foreground hover:bg-muted/40",
-            )}
-          >
-            <span aria-hidden>🚩</span>
-            {important ? "Important" : "Mark important"}
-          </button>
+        <div>
+          <h2 className="text-lg font-semibold">Add a new lead</h2>
+          <p className="text-sm text-muted-foreground">Fill the details, then log what happened on your call. We'll take care of the follow-up.</p>
         </div>
 
         {/* ── Step 1: who is the lead ─────────────────────────────── */}
@@ -624,6 +609,26 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
             <Label>Notes<Optional /></Label>
             <Textarea rows={2} placeholder="Anything worth remembering from the call" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setImportant((v) => !v)}
+            aria-pressed={important}
+            className={cn(
+              "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition",
+              important ? "border-amber-500 bg-amber-500/10" : "border-border bg-card hover:bg-muted/40",
+            )}
+          >
+            <span className="text-lg leading-none" aria-hidden>🚩</span>
+            <span className="min-w-0">
+              <span className={cn("block text-sm font-semibold", important ? "text-amber-700" : "text-foreground")}>
+                {important ? "Flagged as important" : "Mark as important"}
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                If the call sounds like it could convert into a sale, flag it — the lead stays highlighted for the whole team.
+              </span>
+            </span>
+          </button>
         </div>
 
         <Button type="button" onClick={submit} disabled={isPending} size="lg" className="w-full gap-2">
