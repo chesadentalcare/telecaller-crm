@@ -30,7 +30,7 @@ import { useCallsDueLeads, useUpcomingCalls } from "@/hooks/use-leads"
 import { useAddSalesUpdate } from "@/hooks/use-lead-mutations"
 import { REASON_LABEL, lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
-import { useEngagementMode, isEngagedReason } from "@/lib/engagement-mode"
+import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { ApiError } from "@/lib/api/client"
 import type { CallsDueLead } from "@/lib/types/lead"
 
@@ -137,7 +137,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
   const now = new Date()
   const startOfToday = new Date(now)
   startOfToday.setHours(0, 0, 0, 0)
-  const modeLeads = mode === "all" ? leads : leads.filter((l) => isEngagedReason(l.reason) === (mode === "engaged"))
+  const modeLeads = mode === "all" ? leads : leads.filter((l) => isEngagedOutcome(l.lastOutcome) === (mode === "engaged"))
   const today = modeLeads.filter((l) => l.scheduledAt.getTime() >= startOfToday.getTime())
   const pastDue = modeLeads.filter((l) => l.scheduledAt.getTime() < startOfToday.getTime())
 
