@@ -40,6 +40,7 @@ import {
   Check,
   CheckCheck,
   ExternalLink,
+  Flag,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -106,6 +107,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { SalesUserOptions } from "./sales-user-options"
 import {
   useLogAttempt,
+  useFlagLead,
   useEditAttempt,
   useZoomMeeting,
   usePhysicalMeeting,
@@ -209,6 +211,7 @@ type LeadDetail = {
   // Rapid qual
   rapidQualified: boolean
   phoneVerified: boolean
+  flagged?: boolean
   dentistType?: string
   practiceType?: string
   timelineBucket?: string
@@ -432,6 +435,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     customerName: ext.customer_name ?? undefined,
     rapidQualified: !!(ext.dentist_type && ext.practice_type),
     phoneVerified: !!ext.phone_verified,
+    flagged: !!ext.flagged,
     dentistType: ext.dentist_type ?? undefined,
     practiceType: ext.practice_type ?? undefined,
     timelineBucket: ext.timeline ?? undefined,
@@ -723,6 +727,7 @@ function LeadDetailHeader({
   onCall?: () => void
 }) {
   const verifyPhone = useVerifyPhone(lead.id)
+  const { mutate: flagLead } = useFlagLead()
   const [editOpen, setEditOpen] = useState(false)
 
   const hasPhone = lead.phone !== "—"
@@ -740,7 +745,23 @@ function LeadDetailHeader({
               {lead.name.split(" ").slice(-2).map((n) => n[0]).join("")}
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-foreground truncate">{lead.name}</h2>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2 className="text-base font-semibold text-foreground truncate">{lead.name}</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={cn(
+                    "h-7 w-7 p-0 shrink-0 transition-colors",
+                    lead.flagged
+                      ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                      : "text-muted-foreground/40 hover:text-amber-500 hover:bg-amber-50/50",
+                  )}
+                  title={lead.flagged ? "Remove flag" : "Flag as high-priority"}
+                  onClick={() => flagLead({ id: lead.id, flagged: !lead.flagged })}
+                >
+                  <Flag className={cn("size-4", lead.flagged && "fill-amber-500")} />
+                </Button>
+              </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
                 <span className="flex items-center gap-1">
                   <Phone className="size-3" />

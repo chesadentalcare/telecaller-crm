@@ -112,6 +112,7 @@ export interface QuickLeadInput {
   source?: string
   equipmentInterest?: string
   timeline?: "1_month" | "3_months" | "6_plus_months"
+  flagged?: boolean
   firstResponse?: QuickFirstResponse
   purchaseType?: string
   decisionMaker?: string
@@ -143,6 +144,7 @@ export interface LeadExtensionRow {
   interest_level: string | null
   source: string | null
   phone_verified: 0 | 1
+  flagged: 0 | 1
   timeline: string | null
   decision_maker: string | null
   dentist_type: string | null
