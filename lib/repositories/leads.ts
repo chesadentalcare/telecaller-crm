@@ -326,6 +326,7 @@ const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
   assignedSalesperson: r.assigned_salesperson,
   summaryUploaded: !!r.meeting_summary_url,
   flagged: !!r.flagged,
+  stage: r.stage,
 })
 
 const toDripCall = (r: DripCallRow): UpcomingDripCall => ({

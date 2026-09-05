@@ -259,6 +259,7 @@ export interface MeetingsDueLead extends LeadBase {
   joinUrl?: string | null
   assignedSalesperson?: string | null
   summaryUploaded: boolean
+  stage: string
 }
 
 // Upcoming calls (future-dated) shown in the "Upcoming Calls" modal on the Calls Due
