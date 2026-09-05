@@ -45,6 +45,7 @@ import { useEngagementMode, isEngagedOutcome } from "@/lib/engagement-mode"
 import { lastOutcomeLabel } from "@/lib/calls/flatten-upcoming"
 import { repColor } from "@/lib/rep-color"
 import { useFlagLead, useRecoveryWhatsapp } from "@/hooks/use-lead-mutations"
+import { AllocateSalesButton } from "./allocate-sales-button"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
 import type { PipelineLead, DripTrack } from "@/lib/types/lead"
@@ -917,6 +918,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                                 Call
                               </Button>
                             )}
+
+                            <AllocateSalesButton leadId={lead.id} assignedName={lead.salesAssignedName} className={lead.flagged ? "border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:text-white" : ""} />
 
                             {/* Cockpit */}
                             <Button

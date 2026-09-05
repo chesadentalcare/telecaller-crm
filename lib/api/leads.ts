@@ -65,6 +65,7 @@ export interface ReplyRowFields {
   // Telecaller high-priority flag — every queue endpoint returns it (via replyFields) so the
   // flag indicator can render on the lead in any tab.
   flagged?: 0 | 1 | boolean
+  sales_assigned_name?: string | null
 }
 
 // Issue 4 — projected nurture closure returned by drip endpoints.
@@ -1360,6 +1361,13 @@ export const leadsApi = {
         opportunityDocEntry: number; assignedTo: string;
         salesPersonCode: number; sapEmployeeId: number; sapSynced: boolean
       }>>(endpoints.handover(String(id)), body),
+    ),
+
+  allocateSales: (id: number | string, body: { salesUsername: string }) =>
+    unwrap(
+      api.post<Envelope<{
+        opportunityDocEntry: number; salesPersonName: string; salesPersonCode: number; sapSynced: boolean
+      }>>(endpoints.allocateSales(String(id)), body),
     ),
 
   getSalesUsers: (oppId?: number | string) =>

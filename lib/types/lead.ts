@@ -44,6 +44,7 @@ export interface LeadBase {
   // Telecaller-flagged as high-priority. Surfaced on the lead in EVERY tab it lands in
   // (Archived / Lost / Won / No-Response / …), so a flag never gets lost when a lead moves.
   flagged?: boolean
+  salesAssignedName?: string | null
 }
 
 // Pipeline tab — the active call queue
