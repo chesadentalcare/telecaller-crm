@@ -1,8 +1,10 @@
 "use client"
 
 import { createContext, useContext, useMemo, useState } from "react"
-import { CalendarDays, X } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { CalendarDays, MapPin, X } from "lucide-react"
 import type { DateRange } from "@/lib/types/lead"
+import { fetchLeadStates } from "@/lib/api/leads-export"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -124,6 +126,39 @@ export function PipelineDateBar() {
             <X className="size-3" />Clear
           </Button>
         </>
+      )}
+    </div>
+  )
+}
+
+export function PipelineStateBar() {
+  const { state, setState } = usePipelineDateFilter()
+  const { data: states = [] } = useQuery({
+    queryKey: ["lead-states"],
+    queryFn: fetchLeadStates,
+    staleTime: 5 * 60 * 1000,
+  })
+  const active = !!state && state !== "__all__"
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <MapPin className="size-4" />
+        <span className="hidden sm:inline">State:</span>
+      </div>
+      <Select value={state || "__all__"} onValueChange={(v) => setState(v === "__all__" ? "" : v)}>
+        <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__all__">All states</SelectItem>
+          {states.map((s) => (
+            <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {active && (
+        <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => setState("")}>
+          <X className="size-3" />Clear
+        </Button>
       )}
     </div>
   )
