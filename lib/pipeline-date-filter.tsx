@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarDays, MapPin, X } from "lucide-react"
+import { CalendarDays, Flag, MapPin, X } from "lucide-react"
 import type { DateRange } from "@/lib/types/lead"
 import { fetchLeadStates } from "@/lib/api/leads-export"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -63,25 +63,37 @@ interface Ctx {
   setPreset: (p: DatePreset) => void
   custom: DateRange
   setCustom: (r: DateRange) => void
-  // Global state filter (lead_extensions.state NAME). "" / "__all__" = no filter.
-  // Applies to every pipeline segment (server-side), same as the date range.
   state: string
   setState: (s: string) => void
+  flagged: boolean
+  setFlagged: (v: boolean) => void
+  salesPerson: string
+  setSalesPerson: (s: string) => void
 }
 
-const EMPTY: Ctx = { range: {}, active: false, label: "All time", preset: "all", setPreset: () => {}, custom: {}, setCustom: () => {}, state: "", setState: () => {} }
+const EMPTY: Ctx = {
+  range: {}, active: false, label: "All time", preset: "all", setPreset: () => {}, custom: {}, setCustom: () => {},
+  state: "", setState: () => {}, flagged: false, setFlagged: () => {}, salesPerson: "", setSalesPerson: () => {},
+}
 const DateFilterContext = createContext<Ctx>(EMPTY)
+
+export interface PipelineQueueFilters { state: string; flagged: boolean; salesPerson: string }
 
 // Effective created-date range for the current pipeline view. Safe to call
 // without a provider (returns "all time" — no filter).
 export const usePipelineDateRange = (): DateRange => useContext(DateFilterContext).range
-export const usePipelineStateFilter = (): string => useContext(DateFilterContext).state
+export const usePipelineQueueFilters = (): PipelineQueueFilters => {
+  const { state, flagged, salesPerson } = useContext(DateFilterContext)
+  return { state, flagged, salesPerson }
+}
 export const usePipelineDateFilter = (): Ctx => useContext(DateFilterContext)
 
 export function PipelineDateFilterProvider({ children }: { children: React.ReactNode }) {
   const [preset, setPreset] = useState<DatePreset>("all")
   const [custom, setCustom] = useState<DateRange>({})
   const [state, setState] = useState<string>("")
+  const [flagged, setFlagged] = useState<boolean>(false)
+  const [salesPerson, setSalesPerson] = useState<string>("")
 
   const range = useMemo(() => presetRange(preset, custom), [preset, custom])
   const active = !!(range.from || range.to)
@@ -89,7 +101,10 @@ export function PipelineDateFilterProvider({ children }: { children: React.React
     ? `${custom.from || "…"} → ${custom.to || "…"}`
     : PRESET_LABEL[preset]
 
-  const value = useMemo<Ctx>(() => ({ range, active, label, preset, setPreset, custom, setCustom, state, setState }), [range, active, label, preset, custom, state])
+  const value = useMemo<Ctx>(
+    () => ({ range, active, label, preset, setPreset, custom, setCustom, state, setState, flagged, setFlagged, salesPerson, setSalesPerson }),
+    [range, active, label, preset, custom, state, flagged, salesPerson],
+  )
 
   return <DateFilterContext.Provider value={value}>{children}</DateFilterContext.Provider>
 }
@@ -161,5 +176,20 @@ export function PipelineStateBar() {
         </Button>
       )}
     </div>
+  )
+}
+
+export function PipelineFlaggedToggle() {
+  const { flagged, setFlagged } = usePipelineDateFilter()
+  return (
+    <Button
+      variant={flagged ? "default" : "outline"}
+      size="sm"
+      className="h-8 gap-1.5 text-xs"
+      onClick={() => setFlagged(!flagged)}
+      title="Show only flagged leads"
+    >
+      <Flag className="size-3.5" />Flagged only
+    </Button>
   )
 }

@@ -28,14 +28,22 @@ interface Envelope<T> {
 const unwrap = <T,>(p: Promise<Envelope<T>>): Promise<T> =>
   p.then((res) => res.data)
 
-// Created-date range + global state filter → query string for the pipeline queue
-// endpoints. `state` is a lead_extensions.state NAME (exact match server-side);
-// "__all__" / empty means no state filter.
-const qs = (r?: DateRange, state?: string): string => {
+export interface QueueFilters {
+  state?: string
+  flagged?: boolean
+  salesPerson?: string
+}
+
+// Created-date range + global filters → query string for the pipeline queue
+// endpoints. `state` is a lead_extensions.state NAME, `salesPerson` the assigned
+// sales_assigned_code (both exact match server-side); "__all__" / empty = no filter.
+const qs = (r?: DateRange, f?: QueueFilters): string => {
   const p = new URLSearchParams()
   if (r?.from) p.set("from", r.from)
   if (r?.to) p.set("to", r.to)
-  if (state && state !== "__all__") p.set("state", state)
+  if (f?.state && f.state !== "__all__") p.set("state", f.state)
+  if (f?.flagged) p.set("flagged", "1")
+  if (f?.salesPerson && f.salesPerson !== "__all__") p.set("salesPerson", f.salesPerson)
   const s = p.toString()
   return s ? `?${s}` : ""
 }
@@ -1414,23 +1422,23 @@ export const leadsApi = {
 
   // ─── Queues ───────────────────────────────────────────────────────────
   queues: {
-    pipeline:     (r?: DateRange, s?: string) => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline + qs(r, s))),
-    noResponse:   (r?: DateRange, s?: string) => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse + qs(r, s))),
-    drip:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip + qs(r, s))),
-    idle:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle + qs(r, s))),
-    dormant:      (r?: DateRange, s?: string) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r, s))),
-    dripCompleted:(r?: DateRange, s?: string) => unwrap(api.get<Envelope<DripCompletedRow[]>>(endpoints.queueDripCompleted + qs(r, s))),
-    lost:         (r?: DateRange, s?: string) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, s))),
-    won:          (r?: DateRange, s?: string) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, s))),
+    pipeline:     (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<PipelineRow[]>>(endpoints.queuePipeline + qs(r, f))),
+    noResponse:   (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<NoResponseRow[]>>(endpoints.queueNoResponse + qs(r, f))),
+    drip:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DripQueueRow[]>>(endpoints.queueDrip + qs(r, f))),
+    idle:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<IdleRow[]>>(endpoints.queueIdle + qs(r, f))),
+    dormant:      (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r, f))),
+    dripCompleted:(r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DripCompletedRow[]>>(endpoints.queueDripCompleted + qs(r, f))),
+    lost:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, f))),
+    won:          (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, f))),
     repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
-    reactivation: (r?: DateRange, s?: string) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r, s))),
-    sixMonth:     (r?: DateRange, s?: string) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r, s))),
-    requalification: (r?: DateRange, s?: string) => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification + qs(r, s))),
+    reactivation: (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r, f))),
+    sixMonth:     (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r, f))),
+    requalification: (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<RequalificationRow[]>>(endpoints.queueRequalification + qs(r, f))),
     calling:      () => unwrap(api.get<Envelope<CallNudgeRow[]>>(endpoints.queueCalling)),
     dripCalls:    () => unwrap(api.get<Envelope<UpcomingCallsResponse>>(endpoints.queueDripCalls)),
     meetingsDue:  () => unwrap(api.get<Envelope<MeetingDueRow[]>>(endpoints.queueMeetingsDue)),
     suggestions:  () => unwrap(api.get<Envelope<SuggestionRow[]>>(endpoints.queueSuggestions)),
-    counts:       (r?: DateRange, s?: string) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r, s))),
+    counts:       (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<QueueCountsResponse>>(endpoints.queueCounts + qs(r, f))),
   },
 
   // Close Today — telecaller logs what happened with a pick. This verdict is the signal
