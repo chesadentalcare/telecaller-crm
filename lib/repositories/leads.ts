@@ -52,6 +52,7 @@ import type {
   ScheduledCallRow,
   ReplyRowFields,
 } from "@/lib/api/leads"
+import type { QueueFilters } from "@/lib/api/leads"
 import type { ReplyIndicator, DripProjection, DateRange } from "@/lib/types/lead"
 
 // ─── helpers ────────────────────────────────────────────────────────────
@@ -374,38 +375,38 @@ function humanAgo(iso: string): string {
 }
 
 // ─── public fetchers ────────────────────────────────────────────────────
-export const fetchPipelineLeads = async (range?: DateRange, state?: string): Promise<PipelineLead[]> => {
-  const rows = await leadsApi.queues.pipeline(range, state)
+export const fetchPipelineLeads = async (range?: DateRange, f?: QueueFilters): Promise<PipelineLead[]> => {
+  const rows = await leadsApi.queues.pipeline(range, f)
   return rows.map(toPipeline)
 }
 
-export const fetchDripLeads = async (range?: DateRange, state?: string): Promise<DripLead[]> => {
-  const rows = await leadsApi.queues.drip(range, state)
+export const fetchDripLeads = async (range?: DateRange, f?: QueueFilters): Promise<DripLead[]> => {
+  const rows = await leadsApi.queues.drip(range, f)
   return rows.map(toDrip)
 }
 
-export const fetchNoResponseLeads = async (range?: DateRange, state?: string): Promise<NoResponseLead[]> => {
-  const rows = await leadsApi.queues.noResponse(range, state)
+export const fetchNoResponseLeads = async (range?: DateRange, f?: QueueFilters): Promise<NoResponseLead[]> => {
+  const rows = await leadsApi.queues.noResponse(range, f)
   return rows.map(toNoResponse)
 }
 
-export const fetchIdleLeads = async (range?: DateRange, state?: string): Promise<IdleLead[]> => {
-  const rows = await leadsApi.queues.idle(range, state)
+export const fetchIdleLeads = async (range?: DateRange, f?: QueueFilters): Promise<IdleLead[]> => {
+  const rows = await leadsApi.queues.idle(range, f)
   return rows.map(toIdle)
 }
 
-export const fetchDormantLeads = async (range?: DateRange, state?: string): Promise<DormantLead[]> => {
-  const rows = await leadsApi.queues.dormant(range, state)
+export const fetchDormantLeads = async (range?: DateRange, f?: QueueFilters): Promise<DormantLead[]> => {
+  const rows = await leadsApi.queues.dormant(range, f)
   return rows.map(toDormant)
 }
 
-export const fetchDripCompletedLeads = async (range?: DateRange, state?: string): Promise<DripCompletedLead[]> => {
-  const rows = await leadsApi.queues.dripCompleted(range, state)
+export const fetchDripCompletedLeads = async (range?: DateRange, f?: QueueFilters): Promise<DripCompletedLead[]> => {
+  const rows = await leadsApi.queues.dripCompleted(range, f)
   return rows.map(toDripCompleted)
 }
 
-export const fetchLostLeads = async (range?: DateRange, state?: string): Promise<LostLead[]> => {
-  const rows = await leadsApi.queues.lost(range, state)
+export const fetchLostLeads = async (range?: DateRange, f?: QueueFilters): Promise<LostLead[]> => {
+  const rows = await leadsApi.queues.lost(range, f)
   return rows.map(toLost)
 }
 
@@ -443,8 +444,8 @@ export const fetchSuggestions = async (): Promise<SuggestionLead[]> => {
   return rows.map(toSuggestion)
 }
 
-export const fetchWonLeads = async (range?: DateRange, state?: string): Promise<WonLead[]> => {
-  const rows = await leadsApi.queues.won(range, state)
+export const fetchWonLeads = async (range?: DateRange, f?: QueueFilters): Promise<WonLead[]> => {
+  const rows = await leadsApi.queues.won(range, f)
   return rows.map(toWon)
 }
 
@@ -453,18 +454,18 @@ export const fetchRepliesDueLeads = async (): Promise<RepliesDueLead[]> => {
   return rows.map(toRepliesDue)
 }
 
-export const fetchReactivationLeads = async (range?: DateRange, state?: string): Promise<ReactivationLead[]> => {
-  const rows = await leadsApi.queues.reactivation(range, state)
+export const fetchReactivationLeads = async (range?: DateRange, f?: QueueFilters): Promise<ReactivationLead[]> => {
+  const rows = await leadsApi.queues.reactivation(range, f)
   return rows.map(toReactivation)
 }
 
-export const fetchSixMonthLeads = async (range?: DateRange, state?: string): Promise<SixMonthLead[]> => {
-  const rows = await leadsApi.queues.sixMonth(range, state)
+export const fetchSixMonthLeads = async (range?: DateRange, f?: QueueFilters): Promise<SixMonthLead[]> => {
+  const rows = await leadsApi.queues.sixMonth(range, f)
   return rows.map(toSixMonth)
 }
 
-export const fetchRequalificationLeads = async (range?: DateRange, state?: string): Promise<RequalificationLead[]> => {
-  const rows = await leadsApi.queues.requalification(range, state)
+export const fetchRequalificationLeads = async (range?: DateRange, f?: QueueFilters): Promise<RequalificationLead[]> => {
+  const rows = await leadsApi.queues.requalification(range, f)
   return rows.map(toRequalification)
 }
 
@@ -486,8 +487,8 @@ export const fetchUpcomingCalls = async (): Promise<UpcomingCalls> => {
   }
 }
 
-export const fetchQueueCounts = async (range?: DateRange, state?: string): Promise<QueueCounts> => {
-  const c = await leadsApi.queues.counts(range, state)
+export const fetchQueueCounts = async (range?: DateRange, f?: QueueFilters): Promise<QueueCounts> => {
+  const c = await leadsApi.queues.counts(range, f)
   return {
     closeToday: c.closeToday ?? 0,
     pipeline: c.pipeline,
