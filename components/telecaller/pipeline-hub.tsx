@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadsExportDialog } from "./leads-export-dialog"
-import { PipelineDateFilterProvider, PipelineDateBar } from "@/lib/pipeline-date-filter"
+import { PipelineDateFilterProvider, PipelineDateBar, PipelineStateBar } from "@/lib/pipeline-date-filter"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useRole } from "@/hooks/use-role"
 import type { QueueCounts } from "@/lib/types/lead"
@@ -103,7 +103,10 @@ function PipelineHubInner({ onOpenLead }: PipelineHubProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <PipelineDateBar />
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <PipelineDateBar />
+          <PipelineStateBar />
+        </div>
         {(isManagerOrAbove || isTelecaller) && (
           <div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
