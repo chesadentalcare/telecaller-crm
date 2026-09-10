@@ -609,6 +609,14 @@ export function useCloseLead(id: string | number) {
   })
 }
 
+export function useMarkWon(id: string | number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.markWon(id),
+    onSuccess: () => invalidateAllLeads(qc),
+  })
+}
+
 export function useLookupSapOrder(id: string | number) {
   return useMutation({
     mutationFn: (docNum: string | number) => leadsApi.lookupSapOrder(id, docNum),

@@ -727,6 +727,14 @@ export interface OrderLinesData {
   lines: OrderLine[]
 }
 
+export interface LeadSapOrder {
+  orderNumber: string
+  amount: number | null
+  postingDate: string | null
+  salesEmployee: string | null
+  customerName: string | null
+}
+
 export interface RepliesDueRow extends ReplyRowFields {
   id: number
   customer_name: string | null
@@ -1373,6 +1381,11 @@ export const leadsApi = {
         sapOrderDocEntry?: number; sapOrderDocNum?: number; stage?: string; reactivationFlag?: boolean
       }>>(endpoints.closeLead(String(id)), formData),
     ),
+
+  markWon: (id: number | string) =>
+    unwrap(api.post<Envelope<{ opportunityDocEntry: number; outcome: string }>>(endpoints.leadMarkWon(String(id)), {})),
+  leadSapOrder: (id: number | string) =>
+    unwrap(api.get<Envelope<LeadSapOrder | null>>(endpoints.leadSapOrderLookup(String(id)))),
 
   getClosureRecord: (id: number | string) =>
     unwrap(api.get<Envelope<ClosureRecordRow | null>>(endpoints.closureRecord(String(id)))),

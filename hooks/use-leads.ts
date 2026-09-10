@@ -270,6 +270,15 @@ export function useClosureRecord(leadId: string | number | undefined) {
   })
 }
 
+export function useLeadSapOrder(leadId: string | number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: [...leadKeys.detail(String(leadId ?? "__noop__")), "sap-order"],
+    queryFn: () => leadsApi.leadSapOrder(leadId!),
+    enabled: Boolean(leadId) && enabled,
+    staleTime: 60_000,
+  })
+}
+
 export function useClosureOrderContext(leadId: string | number | undefined, enabled = true) {
   return useQuery({
     queryKey: leadKeys.closureOrderContext(String(leadId ?? "__noop__")),
