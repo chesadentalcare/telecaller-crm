@@ -227,6 +227,7 @@ const toWon = (r: WonRow): WonLead => ({
   phone: r.phone || placeholderPhone,
   equipment: r.equipment ?? "—",
   wonDaysAgo: r.won_days,
+  wonAt: r.won_at ?? null,
   installationDate: r.installation_date ?? null,
   wonBy: r.won_by ?? null,
   replied: toReplied(r),

@@ -698,6 +698,7 @@ export interface WonRow extends ReplyRowFields {
   phone: string | null
   equipment: string | null
   won_days: number
+  won_at: string | null
   installation_date: string | null
   won_by: string | null
 }
