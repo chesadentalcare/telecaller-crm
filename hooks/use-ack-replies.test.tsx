@@ -31,7 +31,7 @@ function seed() {
 describe("useAckReplies optimistic badge clear", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("clears the awaiting-reply badge on the acked lead's row, leaving others", async () => {
+  it("clears the unread badge on the acked lead's row, leaving others", async () => {
     ackReplies.mockReturnValue(new Promise(() => {})) // stays pending
     const qc = seed()
     const { result } = renderHook(() => useAckReplies(7), { wrapper: makeWrapper(qc) })
@@ -40,11 +40,11 @@ describe("useAckReplies optimistic badge clear", () => {
 
     await waitFor(() => {
       const list = qc.getQueryData(leadKeys.pipeline()) as Row[]
-      expect(list.find((l) => l.id === 7)?.replied?.awaitingReply).toBe(false)
+      expect(list.find((l) => l.id === 7)?.replied?.hasUnread).toBe(false)
     })
     const list = qc.getQueryData(leadKeys.pipeline()) as Row[]
-    expect(list.find((l) => l.id === 7)?.replied?.hasUnread).toBe(false)
-    expect(list.find((l) => l.id === 8)?.replied?.awaitingReply).toBe(true) // untouched
+    expect(list.find((l) => l.id === 7)?.replied?.awaitingReply).toBe(true) // hook only clears hasUnread
+    expect(list.find((l) => l.id === 8)?.replied?.hasUnread).toBe(true) // untouched
   })
 
   it("rolls back the badge on error", async () => {
@@ -56,6 +56,6 @@ describe("useAckReplies optimistic badge clear", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     const list = qc.getQueryData(leadKeys.pipeline()) as Row[]
-    expect(list.find((l) => l.id === 7)?.replied?.awaitingReply).toBe(true)
+    expect(list.find((l) => l.id === 7)?.replied?.hasUnread).toBe(true)
   })
 })
