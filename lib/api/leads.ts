@@ -711,6 +711,22 @@ export interface WonOrderDetail {
   customerName: string | null
 }
 
+export interface OrderLine {
+  itemCode: string
+  description: string | null
+  quantity: number | null
+  unitPrice: number | null
+  lineTotal: number | null
+}
+
+export interface OrderLinesData {
+  docNum: number
+  docTotal: number | null
+  docDate: string | null
+  cardName: string | null
+  lines: OrderLine[]
+}
+
 export interface RepliesDueRow extends ReplyRowFields {
   id: number
   customer_name: string | null
@@ -1440,6 +1456,7 @@ export const leadsApi = {
     lost:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, f))),
     won:          (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, f))),
     wonOrders:    (r?: DateRange) => unwrap(api.get<Envelope<WonOrderDetail[]>>(endpoints.wonOrders + qs(r))),
+    orderLines:   (docNum: string | number) => unwrap(api.get<Envelope<OrderLinesData>>(`${endpoints.orderLines}?docNum=${Number(docNum)}`)),
     repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
     reactivation: (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r, f))),
     sixMonth:     (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r, f))),

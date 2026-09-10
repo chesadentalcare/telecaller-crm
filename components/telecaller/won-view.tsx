@@ -1,15 +1,86 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Trophy, FileText, IndianRupee, CalendarDays, UserRound } from "lucide-react"
+import { Trophy, FileText, IndianRupee, CalendarDays, UserRound, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
-import { useWonLeads, useWonOrders } from "@/hooks/use-leads"
+import { useWonLeads, useWonOrders, useOrderLines } from "@/hooks/use-leads"
 import type { DateRange } from "@/lib/types/lead"
+
+const money = (n: number | null | undefined) =>
+  n == null ? "—" : `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
+
+function OrderProductsDialog({ docNum, onClose }: { docNum: string | null; onClose: () => void }) {
+  const { data, isLoading, error } = useOrderLines(docNum)
+  return (
+    <Dialog open={!!docNum} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="sm:max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle className="text-base flex items-center gap-2">
+            <FileText className="size-4" />Sales Order {docNum}
+          </DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />Loading products from SAP…
+          </p>
+        ) : error ? (
+          <p className="py-8 text-center text-sm text-destructive">Couldn&apos;t load this order from SAP.</p>
+        ) : data ? (
+          <div className="space-y-3">
+            {(data.cardName || data.docDate) && (
+              <p className="text-xs text-muted-foreground">
+                {data.cardName}{data.cardName && data.docDate ? " · " : ""}{data.docDate}
+              </p>
+            )}
+            <div className="overflow-hidden rounded-md border">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="px-2 py-1.5 text-left font-medium">Item</th>
+                    <th className="px-2 py-1.5 text-right font-medium">Qty</th>
+                    <th className="px-2 py-1.5 text-right font-medium">Unit</th>
+                    <th className="px-2 py-1.5 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.lines.length === 0 ? (
+                    <tr><td colSpan={4} className="px-2 py-4 text-center text-muted-foreground">No line items.</td></tr>
+                  ) : (
+                    data.lines.map((l, i) => (
+                      <tr key={`${l.itemCode}-${i}`} className="border-t">
+                        <td className="px-2 py-1.5">
+                          <span className="font-mono">{l.itemCode}</span>
+                          {l.description ? <span className="text-muted-foreground"> · {l.description}</span> : null}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">{l.quantity ?? "—"}</td>
+                        <td className="px-2 py-1.5 text-right">{money(l.unitPrice)}</td>
+                        <td className="px-2 py-1.5 text-right">{money(l.lineTotal)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {data.docTotal != null && (
+                  <tfoot>
+                    <tr className="border-t bg-muted/30 font-medium">
+                      <td className="px-2 py-1.5" colSpan={3}>Order total</td>
+                      <td className="px-2 py-1.5 text-right">{money(data.docTotal)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 type Preset = "all" | "today" | "7d" | "30d" | "custom"
 
@@ -42,6 +113,7 @@ const CHIPS: { key: Preset; label: string }[] = [
 export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const [preset, setPreset] = useState<Preset>("all")
   const [custom, setCustom] = useState({ from: "", to: "" })
+  const [openOrder, setOpenOrder] = useState<string | null>(null)
   const range = presetRange(preset, custom)
   const filtering = preset !== "all"
 
@@ -58,7 +130,8 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   if (isLoading) return <ViewSkeleton />
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader className="pb-3 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -123,9 +196,14 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
                       )}
                       {o?.orderNumber ? (
                         <>
-                          <span className="inline-flex items-center gap-1 font-medium">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setOpenOrder(o.orderNumber) }}
+                            className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+                            title="View products in this order"
+                          >
                             <FileText className="size-3" />SO {o.orderNumber}
-                          </span>
+                          </button>
                           {amount(o.amount) && (
                             <span className="inline-flex items-center gap-0.5 font-medium text-emerald-700">
                               <IndianRupee className="size-3" />{amount(o.amount)}
@@ -162,5 +240,7 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
         )}
       </CardContent>
     </Card>
+      <OrderProductsDialog docNum={openOrder} onClose={() => setOpenOrder(null)} />
+    </>
   )
 }

@@ -113,6 +113,14 @@ export function useWonOrders(range?: DateRange) {
     placeholderData: keepPreviousData,
   })
 }
+export function useOrderLines(docNum: string | null) {
+  return useQuery({
+    queryKey: [...leadKeys.won(), "order-lines", docNum],
+    queryFn: () => leadsApi.queues.orderLines(docNum as string),
+    enabled: !!docNum,
+    staleTime: 300_000,
+  })
+}
 export function useRepliesDueLeads() {
   return useQuery({ queryKey: leadKeys.repliesDue(),  queryFn: fetchRepliesDueLeads, ...keepList })
 }
