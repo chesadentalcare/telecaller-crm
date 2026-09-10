@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Trophy, FileText, IndianRupee, CalendarDays, UserRound, Loader2 } from "lucide-react"
+import { Trophy, FileText, IndianRupee, CalendarDays, UserRound, Loader2, Download } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ViewSkeleton } from "./view-skeleton"
 import { LeadQueueRow } from "./lead-queue-row"
 import { useWonLeads, useWonOrders, useOrderLines } from "@/hooks/use-leads"
+import { downloadWonExport } from "@/lib/api/won-export"
 import type { DateRange } from "@/lib/types/lead"
 
 const money = (n: number | null | undefined) =>
@@ -82,7 +84,7 @@ function OrderProductsDialog({ docNum, onClose }: { docNum: string | null; onClo
   )
 }
 
-type Preset = "all" | "today" | "7d" | "30d" | "custom"
+type Preset = "all" | "today" | "7d" | "30d" | "month" | "custom"
 
 const fmt = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
@@ -91,6 +93,10 @@ const daysAgo = (n: number) => {
   d.setDate(d.getDate() - n)
   return fmt(d)
 }
+const monthStart = () => {
+  const d = new Date()
+  return fmt(new Date(d.getFullYear(), d.getMonth(), 1))
+}
 const amount = (n: number | null) => (n == null ? null : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 }))
 
 function presetRange(p: Preset, custom: { from: string; to: string }): DateRange | undefined {
@@ -98,6 +104,7 @@ function presetRange(p: Preset, custom: { from: string; to: string }): DateRange
   if (p === "today") return { from: today, to: today }
   if (p === "7d") return { from: daysAgo(6), to: today }
   if (p === "30d") return { from: daysAgo(29), to: today }
+  if (p === "month") return { from: monthStart(), to: today }
   if (p === "custom") return custom.from || custom.to ? { from: custom.from || undefined, to: custom.to || undefined } : undefined
   return undefined
 }
@@ -107,6 +114,7 @@ const CHIPS: { key: Preset; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "7d", label: "Last 7 days" },
   { key: "30d", label: "Last 30 days" },
+  { key: "month", label: "This month" },
   { key: "custom", label: "Custom" },
 ]
 
@@ -114,8 +122,21 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   const [preset, setPreset] = useState<Preset>("all")
   const [custom, setCustom] = useState({ from: "", to: "" })
   const [openOrder, setOpenOrder] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   const range = presetRange(preset, custom)
   const filtering = preset !== "all"
+
+  const onExport = async () => {
+    setExporting(true)
+    try {
+      await downloadWonExport(range)
+      toast.success("Won export downloaded")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed")
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const { data: leads = [], isLoading } = useWonLeads()
   const { data: orders = [], isFetching: ordersFetching } = useWonOrders(range)
@@ -143,7 +164,20 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
               amount, posting date and sales employee.
             </CardDescription>
           </div>
-          <Badge variant="outline" className="text-[10px]">{rows.length} won</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px]">{rows.length} won</Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1.5 px-2.5 text-xs"
+              onClick={onExport}
+              disabled={exporting}
+              title="Download won leads with SAP order value and line items for the selected date range"
+            >
+              {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+              Export data
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {CHIPS.map((c) => (
