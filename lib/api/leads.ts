@@ -702,6 +702,15 @@ export interface WonRow extends ReplyRowFields {
   won_by: string | null
 }
 
+export interface WonOrderDetail {
+  id: string
+  orderNumber: string | null
+  amount: number | null
+  postingDate: string | null
+  salesEmployee: string | null
+  customerName: string | null
+}
+
 export interface RepliesDueRow extends ReplyRowFields {
   id: number
   customer_name: string | null
@@ -1430,6 +1439,7 @@ export const leadsApi = {
     dripCompleted:(r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DripCompletedRow[]>>(endpoints.queueDripCompleted + qs(r, f))),
     lost:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, f))),
     won:          (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, f))),
+    wonOrders:    (r?: DateRange) => unwrap(api.get<Envelope<WonOrderDetail[]>>(endpoints.wonOrders + qs(r))),
     repliesDue:   () => unwrap(api.get<Envelope<RepliesDueRow[]>>(endpoints.queueRepliesDue)),
     reactivation: (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<ReactivationRow[]>>(endpoints.queueReactivation + qs(r, f))),
     sixMonth:     (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<SixMonthRow[]>>(endpoints.queueSixMonth + qs(r, f))),

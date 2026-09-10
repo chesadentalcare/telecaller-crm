@@ -178,6 +178,7 @@ export const endpoints = {
   queueDripCompletedReject: "/queue/drip-completed/reject",
   queueLost: "/queue/lost",
   queueWon: "/queue/won",
+  wonOrders: "/reports/won-orders",
   queueRepliesDue: "/queue/replies-due",
   queueReactivation: "/queue/reactivation",
   queueSixMonth: "/queue/six-month",
