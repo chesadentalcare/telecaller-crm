@@ -181,6 +181,7 @@ export const endpoints = {
   queueLost: "/queue/lost",
   queueWon: "/queue/won",
   wonOrders: "/reports/won-orders",
+  wonOrdersExport: "/reports/won-orders/export",
   orderLines: "/reports/order-lines",
   queueRepliesDue: "/queue/replies-due",
   queueReactivation: "/queue/reactivation",
