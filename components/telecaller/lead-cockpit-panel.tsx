@@ -16,6 +16,7 @@ import { useLeadFullDetail } from "@/hooks/use-leads"
 import { mapDetail, OverviewTab, CallsTab, MeetingsTab, DripTab, InboundRepliesTab, QuotesTab } from "./lead-detail-view"
 import { LeadJourney } from "./lead-journey"
 import { EditLeadForm } from "./edit-lead-form"
+import { SalesLogTab, type SalesUpdateEntry } from "./sales-log-tab"
 
 export function LeadCockpitPanel({
   leadId,
@@ -76,10 +77,22 @@ export function LeadCockpitPanel({
         <TabsContent value="journey" className="mt-3">
           <LeadJourney detail={data} />
         </TabsContent>
-        {/* The Next-Action CTA inside CallsTab navigates to meetings/drip — wire it to
-            the cockpit's own tabs so it stays on the same screen. */}
         <TabsContent value="log" className="mt-3">
-          <CallsTab lead={lead} onNavigate={setTab} />
+          <Tabs defaultValue="doctor">
+            <TabsList className="grid w-full max-w-[240px] grid-cols-2">
+              <TabsTrigger value="doctor" className="text-xs">Doctor</TabsTrigger>
+              <TabsTrigger value="sales" className="text-xs">Sales</TabsTrigger>
+            </TabsList>
+            <TabsContent value="doctor" className="mt-3">
+              <CallsTab lead={lead} onNavigate={setTab} />
+            </TabsContent>
+            <TabsContent value="sales" className="mt-3">
+              <SalesLogTab
+                leadId={leadId}
+                updates={((data as unknown as { sales_updates?: SalesUpdateEntry[] }).sales_updates) ?? []}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
         <TabsContent value="meetings" className="mt-3">
           <MeetingsTab lead={lead} />
