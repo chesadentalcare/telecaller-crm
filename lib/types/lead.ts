@@ -176,6 +176,7 @@ export interface SuggestionLead extends LeadBase {
 export interface WonLead extends LeadBase {
   equipment: string
   wonDaysAgo?: number
+  wonAt?: string | null
   installationDate?: string | null
   wonBy?: string | null
 }

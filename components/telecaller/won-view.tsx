@@ -139,14 +139,21 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
   }
 
   const { data: leads = [], isLoading } = useWonLeads()
-  const { data: orders = [], isFetching: ordersFetching } = useWonOrders(range)
+  const { data: orders = [], isFetching: ordersFetching } = useWonOrders()
 
   const orderById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const rows = useMemo(() => {
-    if (!filtering) return leads
-    const inRange = new Set(orders.map((o) => o.id))
-    return leads.filter((l) => inRange.has(l.id))
-  }, [leads, orders, filtering])
+    if (!filtering || !range) return leads
+    const from = range.from ?? null
+    const to = range.to ?? null
+    return leads.filter((l) => {
+      const d = l.wonAt ? l.wonAt.slice(0, 10) : null
+      if (!d) return false
+      if (from && d < from) return false
+      if (to && d > to) return false
+      return true
+    })
+  }, [leads, range, filtering])
 
   if (isLoading) return <ViewSkeleton />
 
@@ -199,14 +206,14 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
             </span>
           )}
           {filtering && (
-            <span className="text-[11px] text-muted-foreground">by order posting date{ordersFetching ? " · loading…" : ""}</span>
+            <span className="text-[11px] text-muted-foreground">by won date</span>
           )}
         </div>
       </CardHeader>
       <CardContent className="p-0">
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">
-            {filtering ? "No won orders in this date range" : "No won leads yet"}
+            {filtering ? "No leads won in this date range" : "No won leads yet"}
           </p>
         ) : (
           <div className="divide-y">
