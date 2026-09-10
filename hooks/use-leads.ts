@@ -22,6 +22,7 @@ import {
   fetchLeadById,
 } from "@/lib/repositories/leads"
 import { leadsApi } from "@/lib/api/leads"
+import type { DateRange } from "@/lib/types/lead"
 import { usePipelineDateRange, usePipelineQueueFilters } from "@/lib/pipeline-date-filter"
 
 // Single source of truth for query keys. Group prefix `leads` lets us
@@ -103,6 +104,14 @@ export function useWonLeads() {
   const r = usePipelineDateRange()
   const f = usePipelineQueueFilters()
   return useQuery({ queryKey: [...leadKeys.won(), r, f],         queryFn: () => fetchWonLeads(r, f), ...keepList })
+}
+export function useWonOrders(range?: DateRange) {
+  return useQuery({
+    queryKey: [...leadKeys.won(), "orders", range ?? {}],
+    queryFn: () => leadsApi.queues.wonOrders(range),
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+  })
 }
 export function useRepliesDueLeads() {
   return useQuery({ queryKey: leadKeys.repliesDue(),  queryFn: fetchRepliesDueLeads, ...keepList })
