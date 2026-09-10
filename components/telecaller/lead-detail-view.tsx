@@ -72,6 +72,7 @@ import { SendCatalogueButton } from "./send-catalogue-button"
 import { SendRecoveryButton } from "./send-recovery-button"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
+import { SalesLogTab, type SalesUpdateEntry } from "./sales-log-tab"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { repColor } from "@/lib/rep-color"
@@ -692,7 +693,21 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
         </TabsContent>
 
         <TabsContent value="calls" className="mt-4">
-          <CallsTab lead={lead} onNavigate={setActiveTab} />
+          <Tabs defaultValue="doctor">
+            <TabsList className="grid w-full max-w-[240px] grid-cols-2">
+              <TabsTrigger value="doctor" className="text-xs">Doctor</TabsTrigger>
+              <TabsTrigger value="sales" className="text-xs">Sales</TabsTrigger>
+            </TabsList>
+            <TabsContent value="doctor" className="mt-3">
+              <CallsTab lead={lead} onNavigate={setActiveTab} />
+            </TabsContent>
+            <TabsContent value="sales" className="mt-3">
+              <SalesLogTab
+                leadId={lead.id}
+                updates={((detail as unknown as { sales_updates?: SalesUpdateEntry[] }).sales_updates) ?? []}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="drip" className="mt-4">
