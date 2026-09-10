@@ -2056,6 +2056,8 @@ export function CallsTab({
         </CardContent>
       </Card>
 
+      <ClosureCard opportunityDocEntry={Number(lead.id)} />
+
       {/* "What happens" explainer for a historical attempt (Call History → Learn). */}
       <OutcomeExplainerDialog
         open={!!historyDetail}
