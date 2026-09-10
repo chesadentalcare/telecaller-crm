@@ -12,9 +12,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./vitest.setup.ts"],
-    include: ["**/*.test.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "out", "e2e/**"],
+    setupFiles: ["./tests/setup/vitest.setup.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
+    exclude: ["node_modules", ".next", "out", "tests/e2e/**"],
     environmentOptions: {
       jsdom: { url: "https://telecaller.chesadentalcare.com/" },
     },
@@ -32,7 +32,7 @@ export default defineConfig({
         "**/*.test.*",
         "**/*.d.ts",
         "lib/mocks/**",
-        "test-utils/**",
+        "tests/**",
         ".next/**",
         "node_modules/**",
         "**/*.config.*",
