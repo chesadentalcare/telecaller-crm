@@ -8,10 +8,12 @@ const useClosureRecord = vi.hoisted(() => vi.fn())
 vi.mock("@/hooks/use-leads", () => ({
   useClosureRecord: (...args: unknown[]) => useClosureRecord(...args),
   useClosureOrderContext: () => ({ data: undefined, isLoading: false }),
+  useLeadSapOrder: () => ({ data: undefined, isLoading: false }),
 }))
 vi.mock("@/hooks/use-lead-mutations", () => ({
   useCloseLead: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useLookupSapOrder: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMarkWon: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 vi.mock("@/lib/api-config", () => ({ API_BASE_URL: "https://api.example.com/api/telecaller" }))
 

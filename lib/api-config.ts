@@ -85,6 +85,8 @@ export const endpoints = {
   leadUpdate: (id: string) => `/leads/${id}`,
   leadVerifyPhone: (id: string) => `/leads/${id}/verify-phone`,
   leadAttempt: (id: string) => `/leads/${id}/attempt`,
+  leadMarkWon: (id: string) => `/leads/${id}/mark-won`,
+  leadSapOrderLookup: (id: string) => `/leads/${id}/sap-order-lookup`,
   leadAttemptEdit: (id: string, attemptId: string) => `/leads/${id}/attempts/${attemptId}`,
   // Amendment 2 — single qualification bar (rapid+full collapsed).
   leadQualify: (id: string) => `/leads/${id}/qualify`,

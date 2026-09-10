@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  Trophy, XCircle, Upload, Calendar, Shield, AlertTriangle, RotateCcw,
-  Search, Link2, Loader2, PackageCheck, CheckCircle2,
+  Trophy, XCircle, Shield, AlertTriangle, RotateCcw,
+  Search, Loader2, PackageCheck, CheckCircle2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,12 +23,13 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
 import { API_BASE_URL } from "@/lib/api-config"
-import { useClosureRecord, useClosureOrderContext } from "@/hooks/use-leads"
-import { useCloseLead, useLookupSapOrder } from "@/hooks/use-lead-mutations"
+import { useClosureRecord, useLeadSapOrder } from "@/hooks/use-leads"
+import { useCloseLead, useLookupSapOrder, useMarkWon } from "@/hooks/use-lead-mutations"
+import { DialogFooter } from "@/components/ui/dialog"
 import {
-  closureWonSchema, closureLostSchema,
+  closureLostSchema,
   LOST_REASONS, PRICE_GAP_RANGES,
-  type ClosureWonValues, type ClosureLostValues,
+  type ClosureLostValues,
 } from "@/lib/schemas/closure"
 import type { ClosureRecordRow, SapOrderLine, SapOrderLookup } from "@/lib/api/leads"
 
@@ -36,6 +37,7 @@ import type { ClosureRecordRow, SapOrderLine, SapOrderLookup } from "@/lib/api/l
 export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: number }) {
   const { data: closure, isLoading } = useClosureRecord(opportunityDocEntry)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [markWonOpen, setMarkWonOpen] = useState(false)
 
   if (isLoading) return null
 
@@ -54,19 +56,98 @@ export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: numb
       </CardHeader>
       <CardContent>
         <p className="text-xs text-muted-foreground mb-3">
-          Close this deal as WON or LOST. This action cannot be undone.
+          Close as WON or LOST (linking the SAP order), or mark WON now without an order —
+          the sales order links automatically once posted. This action cannot be undone.
         </p>
-        <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1.5">
-          <Shield className="size-3.5" />
-          Close Lead
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1.5">
+            <Shield className="size-3.5" />
+            Close Lead
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setMarkWonOpen(true)} className="gap-1.5">
+            <Trophy className="size-3.5 text-green-600" />
+            Mark Won (no order)
+          </Button>
+        </div>
         <ClosureDialog
           opportunityDocEntry={opportunityDocEntry}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />
+        <MarkWonDialog
+          opportunityDocEntry={opportunityDocEntry}
+          open={markWonOpen}
+          onOpenChange={setMarkWonOpen}
+        />
       </CardContent>
     </Card>
+  )
+}
+
+function MarkWonDialog({
+  opportunityDocEntry,
+  open,
+  onOpenChange,
+}: {
+  opportunityDocEntry: number
+  open: boolean
+  onOpenChange: (o: boolean) => void
+}) {
+  const { data: order, isLoading } = useLeadSapOrder(opportunityDocEntry, open)
+  const { mutateAsync: markWon, isPending } = useMarkWon(opportunityDocEntry)
+
+  const submit = async () => {
+    try {
+      await markWon()
+      toast.success("Marked WON — calls and drip stopped")
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to mark won")
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle className="text-base flex items-center gap-2">
+            <Trophy className="size-4 text-green-600" />Mark Won #{opportunityDocEntry}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Mark this lead Won from your conversation — no sales order needed. Calls and drip stop immediately.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-1 text-xs">
+          {isLoading ? (
+            <p className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />Checking SAP for a sales order…
+            </p>
+          ) : order ? (
+            <div className="space-y-0.5 rounded-md border border-green-300 bg-green-50 p-2.5 dark:bg-green-950">
+              <p className="flex items-center gap-1.5 font-medium text-green-800 dark:text-green-200">
+                <PackageCheck className="size-3.5" />A sales order already exists — it will be linked.
+              </p>
+              <p className="text-green-700 dark:text-green-300">
+                SO {order.orderNumber}
+                {order.amount != null ? ` · ₹${Number(order.amount).toLocaleString("en-IN")}` : ""}
+                {order.postingDate ? ` · ${order.postingDate}` : ""}
+                {order.salesEmployee ? ` · ${order.salesEmployee}` : ""}
+              </p>
+            </div>
+          ) : (
+            <p className="flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />No sales order found in SAP yet — it will link automatically once posted.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button size="sm" onClick={submit} disabled={isPending} className="gap-1.5 bg-green-600 hover:bg-green-700">
+            <Trophy className="size-3.5" />{isPending ? "Marking…" : "Mark Won"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -236,24 +317,11 @@ function LineItemsTable({ lines }: { lines: SapOrderLine[] }) {
 
 function WonForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: number; onClose: () => void }) {
   const { mutateAsync: close, isPending } = useCloseLead(opportunityDocEntry)
-  const { data: context, isLoading: ctxLoading } = useClosureOrderContext(opportunityDocEntry)
   const { mutateAsync: lookup, isPending: looking } = useLookupSapOrder(opportunityDocEntry)
 
-  const signedQuoteRef = useRef<HTMLInputElement>(null)
-  const paymentProofRef = useRef<HTMLInputElement>(null)
-
-  const [orderPlaced, setOrderPlaced] = useState<"yes" | "no" | null>(null)
   const [docNumInput, setDocNumInput] = useState("")
   const [linkedOrder, setLinkedOrder] = useState<SapOrderLookup | null>(null)
   const [linkAnyway, setLinkAnyway] = useState(false)
-
-  const {
-    control, handleSubmit,
-    formState: { errors },
-  } = useForm<ClosureWonValues>({
-    resolver: zodResolver(closureWonSchema),
-    defaultValues: { outcome: "won", dispatchDate: "", installationDate: "" },
-  })
 
   const runLookup = async (docNum: string) => {
     const n = docNum.trim()
@@ -267,43 +335,18 @@ function WonForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: number
     }
   }
 
-  const linkExisting = (docNum: number) => {
-    setOrderPlaced("yes")
-    setDocNumInput(String(docNum))
-    runLookup(String(docNum))
-  }
-
   const mismatch = Boolean(linkedOrder && !linkedOrder.cardCodeMatches && linkedOrder.leadCardCode)
   const alreadyLinked = linkedOrder?.alreadyLinked ?? null
 
-  const onSubmit = async (values: ClosureWonValues) => {
-    const sqFile = signedQuoteRef.current?.files?.[0]
-    const ppFile = paymentProofRef.current?.files?.[0]
-    if (!sqFile) return toast.error("Upload the signed quotation")
-    if (!ppFile) return toast.error("Upload the advance payment proof")
-
-    if (orderPlaced === null) return toast.error("Tell us whether the SAP order is already placed")
-
-    if (orderPlaced === "yes") {
-      if (!linkedOrder) return toast.error("Fetch the SAP order to link first")
-      if (alreadyLinked) return toast.error(`That SAP order is already linked to lead #${alreadyLinked.leadId}`)
-      if (mismatch && !linkAnyway) return toast.error("That order is for a different customer — tick “Link anyway” to proceed")
-    }
-
-    if (orderPlaced === "no" && !context?.quotation) {
-      return toast.error("No quotation to build an order from — link an existing order instead")
-    }
+  const onSubmit = async () => {
+    if (!linkedOrder) return toast.error("Fetch the SAP order first")
+    if (alreadyLinked) return toast.error(`That SAP order is already linked to lead #${alreadyLinked.leadId}`)
+    if (mismatch && !linkAnyway) return toast.error("That order is for a different customer — tick “Link anyway” to proceed")
 
     const fd = new FormData()
     fd.append("outcome", "won")
-    fd.append("dispatchDate", values.dispatchDate)
-    fd.append("installationDate", values.installationDate)
-    fd.append("signedQuote", sqFile)
-    fd.append("advancePaymentProof", ppFile)
-    fd.append("orderMode", orderPlaced === "yes" ? "link" : "create")
-    if (orderPlaced === "yes" && linkedOrder) {
-      fd.append("sapOrderDocEntry", String(linkedOrder.order.docEntry))
-    }
+    fd.append("orderMode", "link")
+    fd.append("sapOrderDocEntry", String(linkedOrder.order.docEntry))
 
     try {
       const r = await close(fd)
@@ -316,156 +359,56 @@ function WonForm({ opportunityDocEntry, onClose }: { opportunityDocEntry: number
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {context && context.existingOrders.length > 0 && orderPlaced !== "yes" && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950 p-2.5 space-y-1.5">
-          <p className="text-[11px] font-medium text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
-            <AlertTriangle className="size-3.5 shrink-0" />
-            This customer already has {context.existingOrders.length} open SAP order
-            {context.existingOrders.length > 1 ? "s" : ""} — link one instead of creating a duplicate?
-          </p>
-          {context.existingOrders.map((o) => (
-            <div key={o.docEntry} className="flex items-center justify-between gap-2 text-[11px]">
-              <span>
-                #{o.docNum} · {inr(o.docTotal)} · due{" "}
-                {o.docDueDate ? new Date(o.docDueDate).toLocaleDateString("en-IN") : "—"}
-              </span>
-              <Button type="button" size="sm" variant="outline" className="h-6 gap-1 text-[11px]" onClick={() => linkExisting(o.docNum)}>
-                <Link2 className="size-3" /> Link
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label className="text-xs font-medium">Has the Sales team already placed this order in SAP?</Label>
-        <div className="flex gap-2">
-          <Button
-            type="button" size="sm"
-            variant={orderPlaced === "yes" ? "default" : "outline"}
-            className="flex-1 gap-1.5"
-            onClick={() => setOrderPlaced("yes")}
-          >
-            <Link2 className="size-3.5" /> Yes — I have the order #
-          </Button>
-          <Button
-            type="button" size="sm"
-            variant={orderPlaced === "no" ? "default" : "outline"}
-            className="flex-1 gap-1.5"
-            onClick={() => setOrderPlaced("no")}
-          >
-            <PackageCheck className="size-3.5" /> No — create it now
-          </Button>
-        </div>
-      </div>
-
-      {orderPlaced === "yes" && (
-        <div className="space-y-2 rounded-md border p-3">
-          <Label className="text-xs flex items-center gap-1.5"><Search className="size-3" /> SAP Order Number (DocNum)</Label>
-          <div className="flex gap-2">
-            <Input
-              value={docNumInput}
-              onChange={(e) => setDocNumInput(e.target.value)}
-              placeholder="e.g. 10234"
-              inputMode="numeric"
-              className="text-xs h-9"
-            />
-            <Button type="button" size="sm" variant="secondary" disabled={looking} className="gap-1.5" onClick={() => runLookup(docNumInput)}>
-              {looking ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />} Fetch
-            </Button>
-          </div>
-
-          {linkedOrder && (
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-medium flex items-center gap-1.5">
-                  <CheckCircle2 className="size-3.5 text-green-600" /> Order #{linkedOrder.order.docNum} — {linkedOrder.order.cardName || "—"}
-                </span>
-                <span className="text-muted-foreground">{inr(linkedOrder.order.docTotal)}</span>
-              </div>
-              <LineItemsTable lines={linkedOrder.order.lines} />
-              {alreadyLinked && (
-                <p className="text-[11px] text-destructive flex items-center gap-1.5">
-                  <AlertTriangle className="size-3 shrink-0" /> Already linked to lead #{alreadyLinked.leadId} — pick a different order.
-                </p>
-              )}
-              {mismatch && !alreadyLinked && (
-                <label className="flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300">
-                  <input type="checkbox" checked={linkAnyway} onChange={(e) => setLinkAnyway(e.target.checked)} className="mt-0.5" />
-                  <span>
-                    This order's customer ({linkedOrder.order.cardCode}) differs from the lead's ({linkedOrder.leadCardCode}). Link anyway.
-                  </span>
-                </label>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {orderPlaced === "no" && (
-        <div className="space-y-2 rounded-md border p-3">
-          {ctxLoading ? (
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-              <Loader2 className="size-3.5 animate-spin" /> Loading quotation…
-            </p>
-          ) : context?.quotation ? (
-            <>
-              <p className="text-[11px] text-muted-foreground">
-                A new SAP Sales Order will be created for{" "}
-                <span className="font-medium">{context.customer.cardName || context.customer.cardCode}</span> from quote{" "}
-                <span className="font-mono">{context.quotation.quoteNumber}</span>:
-              </p>
-              <LineItemsTable lines={context.quotation.lines} />
-              <p className="text-[11px] text-right font-medium">Total: {inr(context.quotation.grandTotal)}</p>
-            </>
-          ) : (
-            <p className="text-[11px] text-destructive flex items-center gap-1.5">
-              <AlertTriangle className="size-3 shrink-0" /> No quotation found for this lead — create a quotation first, or choose “Yes” and link an existing order.
-            </p>
-          )}
-        </div>
-      )}
-
-      <Separator />
-
-      <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1.5"><Upload className="size-3" /> Signed Quotation *</Label>
-        <Input type="file" accept=".pdf,.jpg,.png" ref={signedQuoteRef} className="text-xs h-9" />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs flex items-center gap-1.5"><Upload className="size-3" /> Advance Payment Proof *</Label>
-        <Input type="file" accept=".pdf,.jpg,.png" ref={paymentProofRef} className="text-xs h-9" />
-      </div>
-      <Controller
-        control={control}
-        name="dispatchDate"
-        render={({ field }) => (
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><Calendar className="size-3" /> Dispatch Date *</Label>
-            <Input type="date" {...field} className="text-xs" />
-            {errors.dispatchDate && <p className="text-[11px] text-destructive">{errors.dispatchDate.message}</p>}
-          </div>
-        )}
-      />
-      <Controller
-        control={control}
-        name="installationDate"
-        render={({ field }) => (
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1.5"><Calendar className="size-3" /> Installation Date *</Label>
-            <Input type="date" {...field} className="text-xs" />
-            {errors.installationDate && <p className="text-[11px] text-destructive">{errors.installationDate.message}</p>}
-          </div>
-        )}
-      />
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-        <Button type="submit" size="sm" disabled={isPending} className="gap-1.5 bg-green-600 hover:bg-green-700">
-          <Trophy className="size-3.5" /> {isPending ? "Closing..." : "Close as WON"}
+    <div className="space-y-3">
+      <Label className="text-xs font-medium flex items-center gap-1.5">
+        <Search className="size-3.5" /> Enter the SAP sales order number, fetch it, then confirm to close Won.
+      </Label>
+      <div className="flex gap-2">
+        <Input
+          value={docNumInput}
+          onChange={(e) => setDocNumInput(e.target.value)}
+          placeholder="e.g. 26200207"
+          inputMode="numeric"
+          className="text-xs h-9"
+          onKeyDown={(e) => { if (e.key === "Enter") runLookup(docNumInput) }}
+        />
+        <Button type="button" size="sm" variant="secondary" disabled={looking} className="gap-1.5" onClick={() => runLookup(docNumInput)}>
+          {looking ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />} Fetch
         </Button>
       </div>
-    </form>
+
+      {linkedOrder && (
+        <div className="space-y-2 rounded-md border p-3">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-medium flex items-center gap-1.5">
+              <CheckCircle2 className="size-3.5 text-green-600" /> Order #{linkedOrder.order.docNum} — {linkedOrder.order.cardName || "—"}
+            </span>
+            <span className="text-muted-foreground">{inr(linkedOrder.order.docTotal)}</span>
+          </div>
+          <LineItemsTable lines={linkedOrder.order.lines} />
+          {alreadyLinked && (
+            <p className="text-[11px] text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="size-3 shrink-0" /> Already linked to lead #{alreadyLinked.leadId} — pick a different order.
+            </p>
+          )}
+          {mismatch && !alreadyLinked && (
+            <label className="flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300">
+              <input type="checkbox" checked={linkAnyway} onChange={(e) => setLinkAnyway(e.target.checked)} className="mt-0.5" />
+              <span>
+                This order's customer ({linkedOrder.order.cardCode}) differs from the lead's ({linkedOrder.leadCardCode}). Link anyway.
+              </span>
+            </label>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+        <Button type="button" size="sm" disabled={isPending || !linkedOrder} onClick={onSubmit} className="gap-1.5 bg-green-600 hover:bg-green-700">
+          <Trophy className="size-3.5" /> {isPending ? "Closing..." : "Confirm & Close WON"}
+        </Button>
+      </div>
+    </div>
   )
 }
 
