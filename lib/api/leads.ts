@@ -1249,7 +1249,7 @@ export const leadsApi = {
   // call them (the rep's side is otherwise reported via the sales app / their WhatsApp).
   addSalesUpdate: (
     id: number | string,
-    body: { notes: string; event?: string; amount?: number; follow_up_at?: string; follow_up_note?: string },
+    body: { notes: string; event?: string; amount?: number; follow_up_at?: string; follow_up_note?: string; sap_stage_key?: number },
   ) =>
     unwrap(
       api.post<Envelope<{ success: true }>>(endpoints.leadSalesUpdate(String(id)), body),

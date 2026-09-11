@@ -501,7 +501,7 @@ export function useRejectArchive() {
 export function useAddSalesUpdate(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (body: { notes: string; event?: string; amount?: number; follow_up_at?: string; follow_up_note?: string }) =>
+    mutationFn: (body: { notes: string; event?: string; amount?: number; follow_up_at?: string; follow_up_note?: string; sap_stage_key?: number }) =>
       leadsApi.addSalesUpdate(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: leadKeys.callsDue() })

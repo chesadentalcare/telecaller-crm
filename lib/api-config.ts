@@ -170,6 +170,7 @@ export const endpoints = {
   sapItems: "/sap/items",
   sapSources: "/sap/sources",
   sapStates: "/sap/states",
+  sapStageKeys: "/sap/stage-keys",
   queuePipeline: "/queue/pipeline",
   queueNoResponse: "/queue/no-response",
   queueDrip: "/queue/drip",
