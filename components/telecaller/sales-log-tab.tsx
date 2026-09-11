@@ -224,8 +224,9 @@ export function SalesLogTab({
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <span className="font-medium">Update #{n}</span>
+                      <span className="text-muted-foreground">·</span>
                       <span className={cn("text-xs font-medium", color)}>
-                        · {cfg?.label ?? u.event ?? "Update"}
+                        {cfg?.label ?? u.event ?? "Update"}
                       </span>
                       {typeof u.amount === "number" && u.amount > 0 && (
                         <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
@@ -236,7 +237,7 @@ export function SalesLogTab({
                         {SOURCE_LABEL[u.source] ?? u.source}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3" />
                         {u.logged_at
@@ -245,7 +246,7 @@ export function SalesLogTab({
                             })
                           : "—"}
                       </span>
-                      {u.logged_by && <span> · by {u.logged_by}</span>}
+                      {u.logged_by && <span>by {u.logged_by}</span>}
                     </p>
                     {u.notes && <p className="mt-1 whitespace-pre-wrap text-foreground">{u.notes}</p>}
                     {u.follow_up_at && (
