@@ -72,7 +72,7 @@ import { SendCatalogueButton } from "./send-catalogue-button"
 import { SendRecoveryButton } from "./send-recovery-button"
 import { FollowUpListCard } from "./follow-up-list"
 import { ClosureCard } from "./closure-form"
-import { SalesLogTab, type SalesUpdateEntry } from "./sales-log-tab"
+import { SalesLogTab } from "./sales-log-tab"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { repColor } from "@/lib/rep-color"
@@ -603,6 +603,8 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
 
   // Count failed call attempts (no_response only) — drives the recovery banner.
   const noResponseCount = lead.attempts.filter((a) => a.outcome === "no_response").length
+  // Newest sales update that carries a "next follow-up" reminder (display-only).
+  const nextFollowUp = detail?.sales_updates?.find((u) => u.follow_up_at) ?? null
   // P6.6 — only mount the Replies tab when the lead has inbound WhatsApp replies.
   const hasInbound = (lead.inbound?.length ?? 0) > 0
   const lastAttemptTime = lead.attempts.length > 0
@@ -612,7 +614,13 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <LeadDetailHeader lead={lead} onBack={onBack} onCall={() => setActiveTab("calls")} />
+      <LeadDetailHeader
+        lead={lead}
+        onBack={onBack}
+        onCall={() => setActiveTab("calls")}
+        followUpAt={nextFollowUp?.follow_up_at ?? null}
+        followUpNote={nextFollowUp?.follow_up_note ?? null}
+      />
 
       {/* CRM Lock banner — SOP §4B: quote SLA breach locks all actions */}
       {lead.crmLocked && (
@@ -704,7 +712,7 @@ export function LeadDetailView({ leadId, onBack, action }: LeadDetailViewProps) 
             <TabsContent value="sales" className="mt-3">
               <SalesLogTab
                 leadId={lead.id}
-                updates={((detail as unknown as { sales_updates?: SalesUpdateEntry[] }).sales_updates) ?? []}
+                updates={detail?.sales_updates ?? []}
               />
             </TabsContent>
           </Tabs>
@@ -735,11 +743,16 @@ function LeadDetailHeader({
   lead,
   onBack,
   onCall,
+  followUpAt,
+  followUpNote,
 }: {
   lead: LeadDetail
   onBack: () => void
   /** Called after the dialer opens so the parent can switch to the Calls tab. */
   onCall?: () => void
+  /** Newest "next follow-up" reminder from the Sales tab (display-only). */
+  followUpAt?: string | null
+  followUpNote?: string | null
 }) {
   const verifyPhone = useVerifyPhone(lead.id)
   const { mutate: flagLead } = useFlagLead()
@@ -804,6 +817,16 @@ function LeadDetailHeader({
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-[10px] bg-primary/5">Source: {lead.source}</Badge>
+                {followUpAt && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 border-amber-500/40 text-amber-700 bg-amber-500/10"
+                    title={followUpNote || undefined}
+                  >
+                    <CalendarClock className="size-3" />
+                    Follow up: {new Date(followUpAt).toLocaleDateString(undefined, { day: "2-digit", month: "short" })}
+                  </Badge>
+                )}
                 {lead.phoneVerified && (
                   <Badge className="text-[10px] gap-1 bg-success/10 text-success border-success/30">
                     <ShieldCheck className="size-3" />
