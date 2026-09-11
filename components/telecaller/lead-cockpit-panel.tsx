@@ -16,7 +16,7 @@ import { useLeadFullDetail } from "@/hooks/use-leads"
 import { mapDetail, OverviewTab, CallsTab, MeetingsTab, DripTab, InboundRepliesTab, QuotesTab } from "./lead-detail-view"
 import { LeadJourney } from "./lead-journey"
 import { EditLeadForm } from "./edit-lead-form"
-import { SalesLogTab, type SalesUpdateEntry } from "./sales-log-tab"
+import { SalesLogTab } from "./sales-log-tab"
 
 export function LeadCockpitPanel({
   leadId,
@@ -89,7 +89,7 @@ export function LeadCockpitPanel({
             <TabsContent value="sales" className="mt-3">
               <SalesLogTab
                 leadId={leadId}
-                updates={((data as unknown as { sales_updates?: SalesUpdateEntry[] }).sales_updates) ?? []}
+                updates={data.sales_updates ?? []}
               />
             </TabsContent>
           </Tabs>

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Briefcase, MessageSquarePlus, Clock } from "lucide-react"
+import { Briefcase, MessageSquarePlus, Clock, CalendarClock, CheckCircle2, XCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import { useAddSalesUpdate } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
 
@@ -22,6 +23,8 @@ export interface SalesUpdateEntry {
   source: string
   logged_at?: string | null
   amount?: number | null
+  follow_up_at?: string | null
+  follow_up_note?: string | null
 }
 
 const SALES_EVENTS: {
@@ -53,6 +56,17 @@ const SOURCE_LABEL: Record<string, string> = {
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`
 
+const toneText = (tone?: string) => tone?.match(/text-[\w-]+/)?.[0] ?? "text-muted-foreground"
+
+const eventIcon = (value?: string | null) => {
+  if (value === "won") return CheckCircle2
+  if (value === "lost") return XCircle
+  return Briefcase
+}
+
+const fmtDate = (v: string) =>
+  new Date(v).toLocaleDateString(undefined, { day: "2-digit", month: "short" })
+
 export function SalesLogTab({
   leadId,
   salesName,
@@ -65,6 +79,8 @@ export function SalesLogTab({
   const [event, setEvent] = useState("")
   const [notes, setNotes] = useState("")
   const [amount, setAmount] = useState("")
+  const [followUpAt, setFollowUpAt] = useState("")
+  const [followUpNote, setFollowUpNote] = useState("")
   const { mutateAsync: addSalesUpdate, isPending } = useAddSalesUpdate(leadId)
 
   const selected = event ? EVENT_BY_VALUE[event] : undefined
@@ -80,10 +96,14 @@ export function SalesLogTab({
         notes: notes.trim(),
         event: event || undefined,
         amount: showAmount && amount ? Number(amount) : undefined,
+        follow_up_at: followUpAt || undefined,
+        follow_up_note: followUpAt && followUpNote.trim() ? followUpNote.trim() : undefined,
       })
       setEvent("")
       setNotes("")
       setAmount("")
+      setFollowUpAt("")
+      setFollowUpNote("")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to log the sales update")
     }
@@ -146,6 +166,33 @@ export function SalesLogTab({
           />
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="sales-followup" className="text-xs">
+              Follow up on <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="sales-followup"
+              type="date"
+              value={followUpAt}
+              onChange={(e) => setFollowUpAt(e.target.value)}
+            />
+          </div>
+          {followUpAt && (
+            <div className="space-y-1.5">
+              <Label htmlFor="sales-followup-note" className="text-xs">
+                Follow-up note <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="sales-followup-note"
+                value={followUpNote}
+                onChange={(e) => setFollowUpNote(e.target.value)}
+                placeholder="e.g. confirm the PO number"
+              />
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end">
           <Button size="sm" className="gap-1.5" disabled={isPending} onClick={submit}>
             <MessageSquarePlus className="size-3.5" />
@@ -161,38 +208,58 @@ export function SalesLogTab({
             No sales updates yet. Reps&apos; updates (Sales app / WhatsApp) and coordinator calls will appear here.
           </div>
         ) : (
-          <ul className="space-y-2">
-            {sorted.map((u) => {
+          <ol className="space-y-3">
+            {sorted.map((u, index) => {
               const cfg = u.event ? EVENT_BY_VALUE[u.event] : undefined
+              const Icon = eventIcon(u.event)
+              const color = toneText(cfg?.tone)
+              const n = sorted.length - index
               return (
-                <li key={u.id} className="rounded-lg border bg-background p-2.5 text-xs">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${cfg?.tone ?? "bg-muted text-muted-foreground"}`}>
-                      {cfg?.label ?? u.event ?? "Update"}
-                    </span>
-                    {typeof u.amount === "number" && u.amount > 0 && (
-                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                        {inr(u.amount)}
+                <li key={u.id} className="flex gap-3 text-sm">
+                  <div className="flex flex-col items-center shrink-0">
+                    <div className="flex size-7 items-center justify-center rounded-full bg-muted">
+                      <Icon className={cn("size-3.5", color)} />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium">Update #{n}</span>
+                      <span className={cn("text-xs font-medium", color)}>
+                        · {cfg?.label ?? u.event ?? "Update"}
+                      </span>
+                      {typeof u.amount === "number" && u.amount > 0 && (
+                        <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                          {inr(u.amount)}
+                        </span>
+                      )}
+                      <Badge variant="outline" className="h-4 px-1 text-[9px]">
+                        {SOURCE_LABEL[u.source] ?? u.source}
+                      </Badge>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {u.logged_at
+                          ? new Date(u.logged_at).toLocaleString(undefined, {
+                              day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                            })
+                          : "—"}
+                      </span>
+                      {u.logged_by && <span> · by {u.logged_by}</span>}
+                    </p>
+                    {u.notes && <p className="mt-1 whitespace-pre-wrap text-foreground">{u.notes}</p>}
+                    {u.follow_up_at && (
+                      <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                        <CalendarClock className="size-3" />
+                        Follow up: {fmtDate(u.follow_up_at)}
+                        {u.follow_up_note ? ` — ${u.follow_up_note}` : ""}
                       </span>
                     )}
-                    <Badge variant="outline" className="h-4 px-1 text-[9px]">
-                      {SOURCE_LABEL[u.source] ?? u.source}
-                    </Badge>
-                    <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Clock className="size-3" />
-                      {u.logged_at
-                        ? new Date(u.logged_at).toLocaleString(undefined, {
-                            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-                          })
-                        : "—"}
-                    </span>
                   </div>
-                  {u.notes && <p className="mt-1.5 whitespace-pre-wrap text-foreground">{u.notes}</p>}
-                  {u.logged_by && <p className="mt-1 text-[10px] text-muted-foreground">by {u.logged_by}</p>}
                 </li>
               )
             })}
-          </ul>
+          </ol>
         )}
       </div>
     </div>

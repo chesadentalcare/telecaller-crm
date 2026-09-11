@@ -534,6 +534,19 @@ export interface LeadDetail {
   // P6.6 — classified inbound WhatsApp replies (newest first). P6.7 — first-contact state.
   inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string; from_sales?: 0 | 1 | boolean }>
   firstContact?: { current_touch_index: number; call_attempts_used: number; status: string } | null
+  // Coordinator/sales-rep updates shown in the call log's Sales tab (newest first).
+  // follow_up_at/follow_up_note = a display-only "next follow-up" reminder (no scheduled task).
+  sales_updates?: Array<{
+    id: number
+    event: string | null
+    notes: string | null
+    amount?: number | null
+    logged_by: string | null
+    source: string
+    logged_at?: string | null
+    follow_up_at?: string | null
+    follow_up_note?: string | null
+  }>
   // Amendment 2 (decision #1): stage + predicted_closing_date on `extension` are read
   // LIVE from SAP. `sapLive` is false when that read failed and the values shown are the
   // MySQL last-known cache (decision #6) — the UI surfaces a "cached" indicator.
@@ -1234,7 +1247,10 @@ export const leadsApi = {
 
   // Post-meeting follow-up — record the sales rep's response when the telecaller had to
   // call them (the rep's side is otherwise reported via the sales app / their WhatsApp).
-  addSalesUpdate: (id: number | string, body: { notes: string; event?: string; amount?: number }) =>
+  addSalesUpdate: (
+    id: number | string,
+    body: { notes: string; event?: string; amount?: number; follow_up_at?: string; follow_up_note?: string },
+  ) =>
     unwrap(
       api.post<Envelope<{ success: true }>>(endpoints.leadSalesUpdate(String(id)), body),
     ),
