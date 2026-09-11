@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useAddSalesUpdate } from "@/hooks/use-lead-mutations"
+import { useSapStages } from "@/hooks/use-sap-stages"
 import { ApiError } from "@/lib/api/client"
 
 export interface SalesUpdateEntry {
@@ -81,7 +82,9 @@ export function SalesLogTab({
   const [amount, setAmount] = useState("")
   const [followUpAt, setFollowUpAt] = useState("")
   const [followUpNote, setFollowUpNote] = useState("")
+  const [sapStageKey, setSapStageKey] = useState("")
   const { mutateAsync: addSalesUpdate, isPending } = useAddSalesUpdate(leadId)
+  const { data: sapStages = [] } = useSapStages()
 
   const selected = event ? EVENT_BY_VALUE[event] : undefined
   const showAmount = !!selected?.amount
@@ -98,12 +101,14 @@ export function SalesLogTab({
         amount: showAmount && amount ? Number(amount) : undefined,
         follow_up_at: followUpAt || undefined,
         follow_up_note: followUpAt && followUpNote.trim() ? followUpNote.trim() : undefined,
+        sap_stage_key: sapStageKey ? Number(sapStageKey) : undefined,
       })
       setEvent("")
       setNotes("")
       setAmount("")
       setFollowUpAt("")
       setFollowUpNote("")
+      setSapStageKey("")
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Failed to log the sales update")
     }
@@ -135,6 +140,26 @@ export function SalesLogTab({
                     {e.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">
+              SAP stage <span className="text-muted-foreground">(posts to the opportunity)</span>
+            </Label>
+            <Select value={sapStageKey} onValueChange={setSapStageKey}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Optional — pick a stage" />
+              </SelectTrigger>
+              <SelectContent>
+                {sapStages
+                  .map((s) => ({ no: s.SequenceNo ?? s.Stageno, name: s.Name }))
+                  .filter((s) => s.no != null && ![1, 2, 3, 4, 15].includes(s.no))
+                  .map((s) => (
+                    <SelectItem key={s.no} value={String(s.no)} className="text-xs">
+                      {s.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
