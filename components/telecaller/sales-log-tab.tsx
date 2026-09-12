@@ -77,7 +77,6 @@ export function SalesLogTab({
   salesName?: string | null
   updates?: SalesUpdateEntry[]
 }) {
-  const [event, setEvent] = useState("")
   const [notes, setNotes] = useState("")
   const [amount, setAmount] = useState("")
   const [followUpAt, setFollowUpAt] = useState("")
@@ -86,24 +85,23 @@ export function SalesLogTab({
   const { mutateAsync: addSalesUpdate, isPending } = useAddSalesUpdate(leadId)
   const { data: sapStages = [] } = useSapStages()
 
-  const selected = event ? EVENT_BY_VALUE[event] : undefined
-  const showAmount = !!selected?.amount
-
   const submit = async () => {
     if (!notes.trim()) {
       toast.error("Add a note on what the rep reported")
       return
     }
     try {
+      const stage = sapStages.find(
+        (s) => String(s.SequenceNo ?? s.Stageno) === sapStageKey,
+      )
       await addSalesUpdate({
         notes: notes.trim(),
-        event: event || undefined,
-        amount: showAmount && amount ? Number(amount) : undefined,
+        event: stage?.Name || undefined,
+        amount: amount ? Number(amount) : undefined,
         follow_up_at: followUpAt || undefined,
         follow_up_note: followUpAt && followUpNote.trim() ? followUpNote.trim() : undefined,
         sap_stage_key: sapStageKey ? Number(sapStageKey) : undefined,
       })
-      setEvent("")
       setNotes("")
       setAmount("")
       setFollowUpAt("")
@@ -129,27 +127,10 @@ export function SalesLogTab({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">What&apos;s happening</Label>
-            <Select value={event} onValueChange={setEvent}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Pick a status" />
-              </SelectTrigger>
-              <SelectContent>
-                {SALES_EVENTS.map((e) => (
-                  <SelectItem key={e.value} value={e.value} className="text-xs">
-                    {e.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              SAP stage <span className="text-muted-foreground">(posts to the opportunity)</span>
-            </Label>
+            <Label className="text-xs">Stage</Label>
             <Select value={sapStageKey} onValueChange={setSapStageKey}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Optional — pick a stage" />
+                <SelectValue placeholder="Pick a stage" />
               </SelectTrigger>
               <SelectContent>
                 {sapStages
@@ -163,21 +144,19 @@ export function SalesLogTab({
               </SelectContent>
             </Select>
           </div>
-          {showAmount && (
-            <div className="space-y-1.5">
-              <Label htmlFor="sales-amount" className="text-xs">
-                Amount <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id="sales-amount"
-                type="number"
-                inputMode="numeric"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 450000"
-              />
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="sales-amount" className="text-xs">
+              Amount <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="sales-amount"
+              type="number"
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 450000"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
