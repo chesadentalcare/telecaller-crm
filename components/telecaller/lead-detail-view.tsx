@@ -283,7 +283,7 @@ type SentMessage = {
 }
 type WhatsappOutbound = {
   id: number
-  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge" | "marketing"
+  kind: "recovery" | "drip" | "manual" | "quotation" | "meeting" | "sales_nudge" | "marketing" | "dispatch" | "service"
   text: string | null
   message: SentMessage | null
   templateName: string
@@ -2441,6 +2441,8 @@ const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
   meeting: "Meeting confirmation",
   sales_nudge: "Sales reminder",
   marketing: "Offer campaign",
+  dispatch: "Dispatch update",
+  service: "Service update",
 }
 
 // Customer reply bubble (left): the message, its auto-classified intent chip, and a
@@ -2500,7 +2502,7 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
           <div className="space-y-1.5 text-xs">
             <p>
               <span className="font-medium">{OUTBOUND_KIND_LABEL[m.kind]}</span>
-              <span className="text-muted-foreground"> · {m.templateName}</span>
+              {m.templateName && <span className="text-muted-foreground"> · {m.templateName}</span>}
             </p>
             {m.kind === "quotation" && (
               <span className={cn(
