@@ -32,6 +32,7 @@ import {
   MessageSquare,
   CalendarClock,
   BookOpen,
+  Upload,
   type LucideIcon,
 } from "lucide-react"
 import {
@@ -88,6 +89,7 @@ export function SidebarNav({ activeView, onViewChange, queueCounts }: SidebarNav
   const allStages = useMemo<NavItem[]>(
     () => [
       { id: "due",            title: "Due",            icon: CalendarClock,  count: queueCounts.callsDueAwaitingReply, isReplyCount: true,  roles: ["telecaller"] },
+      { id: "upload-queue",   title: "Upload Queue",   icon: Upload,         count: null,                              isReplyCount: false, roles: ["telecaller", "manager", "admin"] },
       { id: "pipeline",       title: "Pipeline",       icon: Inbox,          count: queueCounts.pipelineAwaitingReply, isReplyCount: true,  roles: null },
       { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       count: null,                              isReplyCount: false, roles: ["manager", "admin"] },
       { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, count: null,                              isReplyCount: false, roles: ["manager", "admin"] },

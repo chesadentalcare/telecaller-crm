@@ -123,7 +123,22 @@ function Pills({ options, value, onChange, cols = 3 }: {
   )
 }
 
-export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, action?: string) => void }) {
+export function QuickLeadEntry({
+  onOpenLead,
+  defaultValues,
+  intakeId,
+  onDone,
+}: {
+  onOpenLead?: (leadId: string, action?: string) => void
+  // Prefill the lead-detail fields (e.g. from an upload-queue row). The "what happened on the
+  // call?" section is untouched — she still logs the call, which is what creates the lead.
+  defaultValues?: {
+    leadName?: string; phoneNumber?: string; whatsappNumber?: string
+    email?: string; state?: string; city?: string; source?: string
+  }
+  intakeId?: string | number
+  onDone?: () => void
+}) {
   const { data: states, isLoading: statesLoading } = useSapStates()
   const { data: sapSources } = useSapSources()
   const sourceOptions: { value: string; label: string; hint?: string }[] =
@@ -132,14 +147,15 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
       : [...LEAD_SOURCES]
   const { mutateAsync: quickCreate, isPending } = useQuickCreateLead()
 
-  const [leadName, setLeadName] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [waSame, setWaSame] = useState(true)
-  const [whatsappNumber, setWhatsappNumber] = useState("")
-  const [email, setEmail] = useState("")
-  const [state, setState] = useState("")
-  const [city, setCity] = useState("")
-  const [source, setSource] = useState("")
+  const dvWa = defaultValues?.whatsappNumber
+  const [leadName, setLeadName] = useState(defaultValues?.leadName ?? "")
+  const [phoneNumber, setPhoneNumber] = useState(defaultValues?.phoneNumber ?? "")
+  const [waSame, setWaSame] = useState(!dvWa || dvWa === defaultValues?.phoneNumber)
+  const [whatsappNumber, setWhatsappNumber] = useState(dvWa ?? "")
+  const [email, setEmail] = useState(defaultValues?.email ?? "")
+  const [state, setState] = useState(defaultValues?.state ?? "")
+  const [city, setCity] = useState(defaultValues?.city ?? "")
+  const [source, setSource] = useState(defaultValues?.source ?? "")
   const [equipmentInterest, setEquipmentInterest] = useState("")
   const [interestLevel, setInterestLevel] = useState("")
   const [budget, setBudget] = useState("")
@@ -209,7 +225,7 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "That email doesn't look right"
     if (!state) return "Pick a state"
     if (!city.trim()) return "Enter a city"
-    if (!source) return "Pick the lead source"
+    if (!sourceOptions.some((o) => o.value === source)) return "Pick the lead source"
     if (!outcome) return "Pick what happened on the call"
     // Interest / budget / buy-timing only matter when she actually spoke to the
     // doctor. A no-response / wrong-number lead saves with just the basics.
@@ -279,13 +295,17 @@ export function QuickLeadEntry({ onOpenLead }: { onOpenLead?: (leadId: string, a
       ...(isEngaged ? { ...qualificationPayload(), qualifyRoute: engagedMeeting === "physical" ? "physical_meeting" : engagedMeeting === "zoom" ? "online_meeting" : "drip_info" } : {}),
       firstResponse,
       flagged: important,
+      ...(intakeId != null ? { intakeId } : {}),
     }
 
     try {
       const res = await quickCreate(payload)
       const created = { name: leadName.trim(), route: res.route ?? null, leadId: res.opportunityDocEntry, meetingType: engagedMeeting }
-      setDone(created)
       toast.success("Lead added" + (res.route ? ` — ${ROUTE_LABEL[res.route] ?? res.route}` : ""))
+      // Queue mode: the row is now a real lead (backend marked it processed) — close and let the
+      // queue refresh. Any meeting booking happens later from the pipeline "Meeting pending" entry.
+      if (onDone) { onDone(); return }
+      setDone(created)
       // Engaged + ready routes to a meeting — hold the success card up with a
       // "book the meeting" CTA instead of auto-resetting for the next lead.
       if (created.route !== "meeting_pending") {

@@ -130,6 +130,30 @@ export interface QuickLeadInput {
   fundingMethod?: string
   competitors?: string
   qualifyRoute?: "physical_meeting" | "online_meeting" | "drip_info"
+  // Set when this lead is being created from an upload-queue row — the backend marks that
+  // staging row processed so it leaves the to-call queue.
+  intakeId?: string | number
+}
+
+// Bulk-upload "to-call" queue (staging rows; not real leads yet).
+export interface IntakeRow {
+  id: number
+  batch_id: string
+  customer_name: string
+  phone: string
+  whatsapp_number: string | null
+  email: string | null
+  state: string | null
+  city: string | null
+  source: string | null
+  uploaded_by: string | null
+  created_at: string
+}
+
+export interface IntakeUploadResult {
+  batchId: string
+  inserted: number
+  skipped: { row: number; reason: string }[]
 }
 
 export interface LeadExtensionRow {
@@ -931,6 +955,17 @@ export const leadsApi = {
   // call — the backend routes it (drip / meeting / callback / archive) atomically.
   quickCreate: (input: QuickLeadInput) =>
     unwrap(api.post<Envelope<CreateLeadResponse>>(endpoints.leads, input)),
+
+  // Bulk Excel upload → staging queue (no lead/attempt created here).
+  uploadIntake: (file: File) => {
+    const fd = new FormData()
+    fd.append("file", file)
+    return unwrap(api.post<Envelope<IntakeUploadResult>>(endpoints.intakeUpload, fd))
+  },
+  getIntakeQueue: () =>
+    unwrap(api.get<Envelope<{ count: number; rows: IntakeRow[] }>>(endpoints.intakeList)),
+  discardIntake: (id: number | string) =>
+    unwrap(api.post<Envelope<{ discarded: number }>>(endpoints.intakeDiscard(String(id)), {})),
 
   detail: (id: number | string) =>
     unwrap(api.get<Envelope<LeadDetail>>(endpoints.leadDetail(String(id)))),

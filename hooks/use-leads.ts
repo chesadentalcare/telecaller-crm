@@ -66,6 +66,7 @@ export const leadKeys = {
   reconciliation: () => [...leadKeys.all, "reconciliation"] as const,
   notifications: () => [...leadKeys.all, "notifications"] as const,
   notificationCount: () => [...leadKeys.all, "notification-count"] as const,
+  intakeQueue: () => [...leadKeys.all, "intake-queue"] as const,
 }
 
 const keepList = { placeholderData: keepPreviousData } as const
@@ -361,6 +362,15 @@ export function useUnreadNotificationCount() {
     queryFn: () => leadsApi.getUnreadNotificationCount(),
     staleTime: 30_000,
     refetchInterval: 60_000, // poll every minute for live badge
+  })
+}
+
+/** Bulk-upload "to-call" queue — pending staging rows awaiting a first call. */
+export function useIntakeQueue() {
+  return useQuery({
+    queryKey: leadKeys.intakeQueue(),
+    queryFn: () => leadsApi.getIntakeQueue(),
+    staleTime: 15_000,
   })
 }
 

@@ -44,6 +44,10 @@ const QuickLeadEntry = dynamic(
   () => import("@/components/telecaller/quick-lead-entry").then((m) => ({ default: m.QuickLeadEntry })),
   { loading: () => <ViewSkeleton /> },
 )
+const UploadQueueView = dynamic(
+  () => import("@/components/telecaller/upload-queue-view").then((m) => ({ default: m.UploadQueueView })),
+  { loading: () => <ViewSkeleton /> },
+)
 const DocsView = dynamic(
   () => import("@/components/telecaller/docs-view").then((m) => ({ default: m.DocsView })),
   { loading: () => <ViewSkeleton /> },
@@ -153,6 +157,14 @@ const VIEW_REGISTRY: Record<string, ViewDefinition> = {
     subtitle: "Capture lead information",
     render: ({ openLead }) => (
       <div className="max-w-4xl mx-auto"><QuickLeadEntry onOpenLead={openLead} /></div>
+    ),
+  },
+  "upload-queue": {
+    title: "Upload Queue",
+    subtitle: "Bulk-uploaded leads waiting for a first call",
+    roles: ["telecaller", "manager", "admin"],
+    render: ({ openLead }) => (
+      <div className="max-w-4xl mx-auto"><UploadQueueView onOpenLead={openLead} /></div>
     ),
   },
   docs: {
