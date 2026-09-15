@@ -11,6 +11,7 @@ import { ViewErrorBoundary } from "@/components/telecaller/error-boundary"
 import { useQueueCounts } from "@/hooks/use-queue-counts"
 import { useRole } from "@/hooks/use-role"
 import { useConversationStream } from "@/hooks/use-conversation-stream"
+import { useWebPush } from "@/hooks/use-web-push"
 import { useLeadFullDetail } from "@/hooks/use-leads"
 import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
@@ -264,6 +265,9 @@ function TelecallerDashboardInner() {
   // One session-long SSE connection: live-refresh the WhatsApp chat + awaiting-reply
   // badges the moment a customer replies or a rep sends a reply.
   useConversationStream()
+
+  // Web Push: browser notification even when the CRM is fully closed (no-op until VAPID keys set).
+  useWebPush()
 
   // Worklist-first: a pure telecaller lands on Calls Due (where fresh leads now
   // appear), not the analytics dashboard. Everyone else defaults to Home.

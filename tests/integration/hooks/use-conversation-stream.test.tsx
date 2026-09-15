@@ -28,8 +28,9 @@ class FakeEventSource {
   removeEventListener(type: string, fn: EventListener) {
     this.handlers[type] = (this.handlers[type] ?? []).filter((h) => h !== fn)
   }
-  emit(type: string) {
-    ;(this.handlers[type] ?? []).forEach((h) => h(new Event(type)))
+  emit(type: string, data?: unknown) {
+    const event = data === undefined ? new Event(type) : new MessageEvent(type, { data: JSON.stringify(data) })
+    ;(this.handlers[type] ?? []).forEach((h) => h(event))
   }
 }
 
@@ -83,6 +84,33 @@ describe("useConversationStream", () => {
       vi.advanceTimersByTime(600)
     })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: leadKeys.all })
+  })
+
+  it("eagerly refreshes the notification queries when an inbound reply arrives", () => {
+    const { wrapper, qc } = makeWrapper()
+    const invalidate = vi.spyOn(qc, "invalidateQueries")
+    renderHook(() => useConversationStream(), { wrapper })
+
+    const es = FakeEventSource.instances[0]
+    act(() => {
+      es.emit("conversation", { direction: "inbound", oppId: 42, customerName: "Dr X", preview: "hello" })
+    })
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: leadKeys.notifications() })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: leadKeys.notificationCount() })
+  })
+
+  it("does not raise the notification refresh for outbound events", () => {
+    const { wrapper, qc } = makeWrapper()
+    const invalidate = vi.spyOn(qc, "invalidateQueries")
+    renderHook(() => useConversationStream(), { wrapper })
+
+    const es = FakeEventSource.instances[0]
+    act(() => {
+      es.emit("conversation", { direction: "outbound", oppId: 42 })
+    })
+
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: leadKeys.notificationCount() })
   })
 
   it("closes the EventSource on unmount", () => {
