@@ -16,7 +16,7 @@ import { useLeadFullDetail } from "@/hooks/use-leads"
 import type { UserRole } from "@/lib/auth/token"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
-import { Phone, UserPlus } from "lucide-react"
+import { Phone, UserPlus, Upload } from "lucide-react"
 import { NotificationBell } from "@/components/telecaller/notification-bell"
 import { AuthGate } from "@/components/auth/auth-gate"
 import { UserMenu } from "@/components/auth/user-menu"
@@ -375,15 +375,26 @@ function TelecallerDashboardInner() {
             <GlobalLeadSearch onOpenLead={openLead} className="hidden md:block" />
 
             {(isManagerOrAbove || (role !== null && hasRole("telecaller"))) && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-2"
-                onClick={() => setActiveView("new-lead")}
-              >
-                <UserPlus className="size-4" />
-                <span className="hidden sm:inline">New Lead</span>
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setActiveView("new-lead")}
+                >
+                  <UserPlus className="size-4" />
+                  <span className="hidden sm:inline">New Lead</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setActiveView("upload-queue")}
+                >
+                  <Upload className="size-4" />
+                  <span className="hidden sm:inline">Upload Queue</span>
+                </Button>
+              </>
             )}
 
             <Button
