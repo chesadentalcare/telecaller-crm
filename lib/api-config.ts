@@ -164,6 +164,8 @@ export const endpoints = {
   notificationCount: `/notifications/count`,
   markNotificationRead: (id: string) => `/notifications/${id}/read`,
   markAllNotificationsRead: `/notifications/read-all`,
+  pushSubscribe: `/push/subscribe`,
+  pushUnsubscribe: `/push/unsubscribe`,
   dripEnter: (id: string) => `/drip/enter/${id}`,
   dripExit: (id: string) => `/drip/exit/${id}`,
   sapEmployees: "/sap/employees",
