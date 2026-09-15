@@ -56,6 +56,26 @@ export function useQuickCreateLead() {
   })
 }
 
+// Bulk Excel upload → staging queue (no lead/attempt created here).
+export function useUploadIntake() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => leadsApi.uploadIntake(file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.intakeQueue() }),
+    onError: toastError("Upload failed"),
+  })
+}
+
+// Drop a queued row without creating a lead.
+export function useDiscardIntake() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => leadsApi.discardIntake(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.intakeQueue() }),
+    onError: toastError("Could not discard"),
+  })
+}
+
 export function useLeadDetail(id: string | number | undefined) {
   // Detail uses useQuery, not useMutation — wrapper for symmetry; consumers
   // import everything from one file.

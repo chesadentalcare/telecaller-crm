@@ -10,6 +10,7 @@ import {
   Briefcase,
   Activity,
   ClipboardCheck,
+  Upload,
 } from "lucide-react"
 import { useRole } from "@/hooks/use-role"
 import {
@@ -59,6 +60,7 @@ export function BottomTabNav({
             { id: "due", title: "Due", icon: PhoneCall, count: queueCounts.callsDueAwaitingReply },
             { id: "pipeline",  title: "Pipeline",  icon: Inbox,     count: queueCounts.pipelineAwaitingReply },
             { id: "new-lead",  title: "Add Lead",  icon: UserPlus },
+            { id: "upload-queue", title: "Upload", icon: Upload },
             { id: "home",      title: "Home",      icon: LayoutDashboard },
           ]
         : [
@@ -76,6 +78,7 @@ export function BottomTabNav({
     () =>
       isFullAccess
         ? [
+            { id: "upload-queue",   title: "Upload Queue",   icon: Upload,         subtitle: "Bulk lead upload → to-call" },
             { id: "sales-pipeline", title: "Sales Pipeline", icon: Briefcase,      subtitle: "Handed-over leads" },
             { id: "flow-oversight", title: "Flow Oversight", icon: Activity,       subtitle: "Team analytics & health" },
             { id: "approvals",      title: "Approvals",      icon: ClipboardCheck, subtitle: "Discount requests" },
