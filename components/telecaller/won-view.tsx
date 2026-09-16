@@ -155,6 +155,11 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
     })
   }, [leads, range, filtering])
 
+  const totalSold = useMemo(
+    () => rows.reduce((sum, l) => sum + (orderById.get(l.id)?.amount ?? 0), 0),
+    [rows, orderById],
+  )
+
   if (isLoading) return <ViewSkeleton />
 
   return (
@@ -173,6 +178,10 @@ export function WonView({ onOpenLead }: { onOpenLead?: (id: string) => void }) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[10px]">{rows.length} won</Badge>
+            <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+              <IndianRupee className="size-3.5" />Total sold: {money(totalSold)}
+              {ordersFetching && <Loader2 className="size-3 animate-spin" />}
+            </span>
             <Button
               size="sm"
               variant="outline"
