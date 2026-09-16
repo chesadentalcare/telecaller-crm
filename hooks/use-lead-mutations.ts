@@ -56,12 +56,14 @@ export function useQuickCreateLead() {
   })
 }
 
+const intakeQueuePrefix = [...leadKeys.all, "intake-queue"] as const
+
 // Bulk Excel upload → staging queue (no lead/attempt created here).
 export function useUploadIntake() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => leadsApi.uploadIntake(file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.intakeQueue() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: intakeQueuePrefix }),
     onError: toastError("Upload failed"),
   })
 }
@@ -71,8 +73,21 @@ export function useDiscardIntake() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number | string) => leadsApi.discardIntake(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: leadKeys.intakeQueue() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: intakeQueuePrefix }),
     onError: toastError("Could not discard"),
+  })
+}
+
+// Pull the live ads Google Sheet into the to-call queue on demand.
+export function useSyncSheet() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => leadsApi.syncSheet(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: intakeQueuePrefix })
+      qc.invalidateQueries({ queryKey: leadKeys.sheetStatus() })
+    },
+    onError: toastError("Sheet sync failed"),
   })
 }
 
