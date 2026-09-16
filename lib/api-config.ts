@@ -169,6 +169,7 @@ export const endpoints = {
   intakeUpload: `/leads/intake/upload`,
   intakeList: `/leads/intake`,
   intakeDiscard: (id: string) => `/leads/intake/${id}/discard`,
+  intakeRestore: (id: string) => `/leads/intake/${id}/restore`,
   intakeTemplate: `/leads/intake/template`,
   intakeSheetStatus: `/leads/intake/sheet/status`,
   intakeSheetSync: `/leads/intake/sheet/sync`,
