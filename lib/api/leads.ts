@@ -146,6 +146,16 @@ export interface IntakeRow {
   state: string | null
   city: string | null
   source: string | null
+  source_type: "excel" | "google_sheet"
+  sheet_row: number | null
+  lead_date: string | null
+  raw_date: string | null
+  budget: string | null
+  timeline: string | null
+  best_time: string | null
+  job_title: string | null
+  is_callable: number
+  invalid_reason: string | null
   uploaded_by: string | null
   created_at: string
 }
@@ -154,6 +164,28 @@ export interface IntakeUploadResult {
   batchId: string
   inserted: number
   skipped: { row: number; reason: string }[]
+}
+
+export interface SheetSyncStatus {
+  enabled: boolean
+  sheetId: string
+  baselineSet: boolean
+  baselineRow: number | null
+  lastRow: number
+  lastRunAt: string | null
+  lastOk: boolean
+  lastError: string | null
+  lastNewCount: number
+  lastSkippedCount: number
+}
+
+export interface SheetSyncResult {
+  ok: boolean
+  baseline?: boolean
+  seeded?: number
+  totalRows?: number
+  newCount?: number
+  flagged?: number
 }
 
 export interface LeadExtensionRow {
@@ -962,10 +994,21 @@ export const leadsApi = {
     fd.append("file", file)
     return unwrap(api.post<Envelope<IntakeUploadResult>>(endpoints.intakeUpload, fd))
   },
-  getIntakeQueue: () =>
-    unwrap(api.get<Envelope<{ count: number; rows: IntakeRow[] }>>(endpoints.intakeList)),
+  getIntakeQueue: (params?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams()
+    if (params?.from) qs.set("from", params.from)
+    if (params?.to) qs.set("to", params.to)
+    const q = qs.toString()
+    return unwrap(
+      api.get<Envelope<{ count: number; rows: IntakeRow[] }>>(`${endpoints.intakeList}${q ? `?${q}` : ""}`),
+    )
+  },
   discardIntake: (id: number | string) =>
     unwrap(api.post<Envelope<{ discarded: number }>>(endpoints.intakeDiscard(String(id)), {})),
+  getSheetSyncStatus: () =>
+    unwrap(api.get<Envelope<SheetSyncStatus>>(endpoints.intakeSheetStatus)),
+  syncSheet: () =>
+    unwrap(api.post<Envelope<SheetSyncResult>>(endpoints.intakeSheetSync, {})),
 
   detail: (id: number | string) =>
     unwrap(api.get<Envelope<LeadDetail>>(endpoints.leadDetail(String(id)))),

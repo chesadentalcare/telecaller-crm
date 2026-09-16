@@ -170,6 +170,8 @@ export const endpoints = {
   intakeList: `/leads/intake`,
   intakeDiscard: (id: string) => `/leads/intake/${id}/discard`,
   intakeTemplate: `/leads/intake/template`,
+  intakeSheetStatus: `/leads/intake/sheet/status`,
+  intakeSheetSync: `/leads/intake/sheet/sync`,
   dripEnter: (id: string) => `/drip/enter/${id}`,
   dripExit: (id: string) => `/drip/exit/${id}`,
   sapEmployees: "/sap/employees",
