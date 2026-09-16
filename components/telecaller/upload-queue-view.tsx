@@ -179,8 +179,8 @@ export function UploadQueueView({ onOpenLead }: { onOpenLead?: (leadId: string, 
           <div className="min-w-0">
             <CardTitle>Live ads leads (Google Sheet)</CardTitle>
             <CardDescription>
-              New leads from your ads sheet flow into the queue automatically. The first sync pulls the last
-              few days (skipping anyone already in the CRM by phone); after that only newer leads appear.
+              Leads from your ads sheet come into the queue when you press “Sync now” — auto-pull is off.
+              Each sync pulls anything newer than the last one (the last few days on the first run).
             </CardDescription>
           </div>
           <Button size="sm" variant="outline" className="shrink-0" onClick={onSync} disabled={syncing}>
