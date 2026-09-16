@@ -7,6 +7,7 @@ const useIntakeQueue = vi.hoisted(() => vi.fn())
 const useSheetSyncStatus = vi.hoisted(() => vi.fn())
 const uploadIntake = vi.hoisted(() => vi.fn())
 const discardIntake = vi.hoisted(() => vi.fn())
+const restoreIntake = vi.hoisted(() => vi.fn())
 const syncSheet = vi.hoisted(() => vi.fn())
 
 vi.mock("@/hooks/use-leads", () => ({
@@ -16,6 +17,7 @@ vi.mock("@/hooks/use-leads", () => ({
 vi.mock("@/hooks/use-lead-mutations", () => ({
   useUploadIntake: () => ({ mutateAsync: uploadIntake, isPending: false }),
   useDiscardIntake: () => ({ mutateAsync: discardIntake }),
+  useRestoreIntake: () => ({ mutateAsync: restoreIntake }),
   useSyncSheet: () => ({ mutateAsync: syncSheet, isPending: false }),
 }))
 vi.mock("@/lib/api-config", () => ({
@@ -63,8 +65,17 @@ describe("<UploadQueueView>", () => {
     useIntakeQueue.mockReturnValue({ data: { rows }, isLoading: false })
     discardIntake.mockResolvedValue({ discarded: 1 })
     const { user } = renderWithProviders(<UploadQueueView />)
-    await user.click(screen.getByRole("button", { name: /discard/i }))
+    await user.click(screen.getByRole("button", { name: "Discard" }))
     expect(discardIntake).toHaveBeenCalledWith(7)
+  })
+
+  it("Discarded tab lists removed leads and Restore calls the mutation", async () => {
+    useIntakeQueue.mockReturnValue({ data: { rows }, isLoading: false })
+    restoreIntake.mockResolvedValue({ restored: 1 })
+    const { user } = renderWithProviders(<UploadQueueView />)
+    await user.click(screen.getByRole("button", { name: /^Discarded/i }))
+    await user.click(screen.getByRole("button", { name: /restore/i }))
+    expect(restoreIntake).toHaveBeenCalledWith(7)
   })
 
   it("uploading a file calls the mutation and shows the result summary", async () => {

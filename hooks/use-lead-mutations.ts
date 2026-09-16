@@ -78,6 +78,16 @@ export function useDiscardIntake() {
   })
 }
 
+// Bring a discarded row back into the to-call queue.
+export function useRestoreIntake() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => leadsApi.restoreIntake(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: intakeQueuePrefix }),
+    onError: toastError("Could not restore"),
+  })
+}
+
 // Pull the live ads Google Sheet into the to-call queue on demand.
 export function useSyncSheet() {
   const qc = useQueryClient()

@@ -177,6 +177,7 @@ export interface SheetSyncStatus {
   lastError: string | null
   lastNewCount: number
   lastSkippedCount: number
+  syncedUpTo: { id: number; name: string; phone: string; sheetRow: number | null; leadDate: string | null; rawDate: string | null } | null
 }
 
 export interface SheetSyncResult {
@@ -994,10 +995,11 @@ export const leadsApi = {
     fd.append("file", file)
     return unwrap(api.post<Envelope<IntakeUploadResult>>(endpoints.intakeUpload, fd))
   },
-  getIntakeQueue: (params?: { from?: string; to?: string }) => {
+  getIntakeQueue: (params?: { from?: string; to?: string; status?: "pending" | "discarded" }) => {
     const qs = new URLSearchParams()
     if (params?.from) qs.set("from", params.from)
     if (params?.to) qs.set("to", params.to)
+    if (params?.status) qs.set("status", params.status)
     const q = qs.toString()
     return unwrap(
       api.get<Envelope<{ count: number; rows: IntakeRow[] }>>(`${endpoints.intakeList}${q ? `?${q}` : ""}`),
@@ -1005,6 +1007,8 @@ export const leadsApi = {
   },
   discardIntake: (id: number | string) =>
     unwrap(api.post<Envelope<{ discarded: number }>>(endpoints.intakeDiscard(String(id)), {})),
+  restoreIntake: (id: number | string) =>
+    unwrap(api.post<Envelope<{ restored: number }>>(endpoints.intakeRestore(String(id)), {})),
   getSheetSyncStatus: () =>
     unwrap(api.get<Envelope<SheetSyncStatus>>(endpoints.intakeSheetStatus)),
   syncSheet: () =>

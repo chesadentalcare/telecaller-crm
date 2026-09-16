@@ -66,7 +66,7 @@ export const leadKeys = {
   reconciliation: () => [...leadKeys.all, "reconciliation"] as const,
   notifications: () => [...leadKeys.all, "notifications"] as const,
   notificationCount: () => [...leadKeys.all, "notification-count"] as const,
-  intakeQueue: (f?: { from?: string; to?: string }) => [...leadKeys.all, "intake-queue", f ?? {}] as const,
+  intakeQueue: (f?: { from?: string; to?: string; status?: string }) => [...leadKeys.all, "intake-queue", f ?? {}] as const,
   sheetStatus: () => [...leadKeys.all, "sheet-status"] as const,
 }
 
@@ -367,7 +367,7 @@ export function useUnreadNotificationCount() {
 }
 
 /** Bulk-upload "to-call" queue — pending staging rows awaiting a first call. */
-export function useIntakeQueue(filters?: { from?: string; to?: string }) {
+export function useIntakeQueue(filters?: { from?: string; to?: string; status?: "pending" | "discarded" }) {
   return useQuery({
     queryKey: leadKeys.intakeQueue(filters),
     queryFn: () => leadsApi.getIntakeQueue(filters),
