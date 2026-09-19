@@ -20,6 +20,7 @@ const EMPTY_QUEUE_COUNTS: QueueCounts = {
   callsDue: 0,
   callsDueAwaitingReply: 0,
   pipelineAwaitingReply: 0,
+  repliesDue: 0,
   reTouch: 0,
   neglected: 0,
 }

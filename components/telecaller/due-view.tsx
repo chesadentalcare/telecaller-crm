@@ -48,7 +48,7 @@ export function DueView({ onOpenLead, initialTab = "close" }: DueViewProps) {
       : []),
     { key: "calls" as const, label: "Calls", icon: PhoneCall, count: counts.callsDue },
     { key: "meetings" as const, label: "Meetings", icon: CalendarClock, count: meetings.length },
-    { key: "replies" as const, label: "WhatsApp Replies", icon: MessageSquare, count: counts.pipelineAwaitingReply },
+    { key: "replies" as const, label: "WhatsApp Replies", icon: MessageSquare, count: counts.repliesDue },
   ]
 
   return (

@@ -61,6 +61,11 @@ export function RepliesDueView({ onOpenLead }: { onOpenLead: (id: string, action
                     onOpen={() => toggle(lead.id)}
                     meta={
                       <span className="flex flex-wrap items-center gap-1.5">
+                        {(lead.stage === "archived" || lead.stage === "dormant") && (
+                          <span className="inline-flex items-center gap-1 rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-600">
+                            {lead.stage === "archived" ? "Archived — replied!" : "Dormant — replied!"}
+                          </span>
+                        )}
                         {lead.replied?.body && (
                           <span className="max-w-[32ch] truncate italic text-foreground/80">&ldquo;{lead.replied.body}&rdquo;</span>
                         )}

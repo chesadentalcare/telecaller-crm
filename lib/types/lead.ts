@@ -188,6 +188,7 @@ export interface RepliesDueLead extends LeadBase {
   equipment: string
   city?: string | null
   state?: string | null
+  stage?: string | null
   lastOutcome?: CallOutcome | null
   lastOutcomeAt?: string | null
   lastOutcomeBy?: string | null
@@ -316,6 +317,8 @@ export interface QueueCounts {
   // WhatsApp awaiting-reply badges (replace the raw queue-size counts on the nav).
   callsDueAwaitingReply: number
   pipelineAwaitingReply: number
+  // Due → WhatsApp Replies tab: awaiting replies incl. archived/dormant leads.
+  repliesDue: number
   reTouch: number
   // Amendment 2 (Theme 6) — brand-new leads with zero activity past 24h.
   neglected: number

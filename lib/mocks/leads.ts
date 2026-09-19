@@ -89,6 +89,7 @@ export const MOCK_QUEUE_COUNTS: QueueCounts = {
   callsDue: 7,
   callsDueAwaitingReply: 1,
   pipelineAwaitingReply: 2,
+  repliesDue: 2,
   reTouch: 2,
   neglected: 1,
 }
