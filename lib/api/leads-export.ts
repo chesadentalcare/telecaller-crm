@@ -18,6 +18,14 @@ export const fetchLeadSalesAssignees = () =>
 export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
 export type LeadsExportOutcome = "all" | "exclude" | "won" | "lost"
 export type LeadsExportNotInterested = "exclude" | "include" | "only"
+export type LeadsExportHiddenGroup = "no_response" | "new" | "opted_out" | "wrong_number"
+
+export const LEAD_EXPORT_HIDDEN_GROUPS: { key: LeadsExportHiddenGroup; label: string; hint: string }[] = [
+  { key: "no_response", label: "No response", hint: "Called but never picked up, then archived" },
+  { key: "new", label: "New (not yet called)", hint: "Freshly added, no disposition yet" },
+  { key: "opted_out", label: "Opted out (STOP)", hint: "Asked to stop WhatsApp" },
+  { key: "wrong_number", label: "Wrong number", hint: "Bad number, not recovered" },
+]
 
 export const LEAD_EXPORT_COLUMNS: { key: string; label: string }[] = [
   { key: "id", label: "Lead ID" },
@@ -67,6 +75,7 @@ export interface LeadsExportFilters {
   flagged?: boolean
   outcome?: LeadsExportOutcome
   notInterested?: LeadsExportNotInterested
+  includeHidden?: LeadsExportHiddenGroup[]
   sections?: LeadsExportSection[]
   columns?: string[]
 }
@@ -83,6 +92,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.flagged) p.set("flagged", "1")
   if (f.outcome && f.outcome !== "all") p.set("outcome", f.outcome)
   if (f.notInterested && f.notInterested !== "exclude") p.set("notInterested", f.notInterested)
+  if (f.includeHidden && f.includeHidden.length) p.set("includeHidden", f.includeHidden.join(","))
   if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
   if (f.columns && f.columns.length) p.set("columns", f.columns.join(","))
   const s = p.toString()

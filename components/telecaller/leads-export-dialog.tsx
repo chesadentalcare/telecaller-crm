@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates, fetchLeadSalesAssignees, LEAD_EXPORT_COLUMNS, type LeadsExportNotInterested, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, fetchLeadSalesAssignees, LEAD_EXPORT_COLUMNS, LEAD_EXPORT_HIDDEN_GROUPS, type LeadsExportHiddenGroup, type LeadsExportNotInterested, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
 
 const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
   { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
@@ -50,12 +50,16 @@ export function LeadsExportDialog({
   const [flagged, setFlagged] = useState("__all__")
   const [outcome, setOutcome] = useState<LeadsExportOutcome>("exclude")
   const [notInterested, setNotInterested] = useState<LeadsExportNotInterested>("exclude")
+  const [includeHidden, setIncludeHidden] = useState<Record<LeadsExportHiddenGroup, boolean>>({
+    no_response: false, new: false, opted_out: false, wrong_number: false,
+  })
   const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
   const [customizeColumns, setCustomizeColumns] = useState(false)
   const [columns, setColumns] = useState<Record<string, boolean>>({ ...ALL_COLUMNS })
   const [busy, setBusy] = useState(false)
 
   const toggleSheet = (k: LeadsExportSection) => setSheets((s) => ({ ...s, [k]: !s[k] }))
+  const toggleHidden = (k: LeadsExportHiddenGroup) => setIncludeHidden((s) => ({ ...s, [k]: !s[k] }))
   const toggleColumn = (k: string) => {
     if (k === "id") return
     setColumns((c) => ({ ...c, [k]: !c[k] }))
@@ -97,6 +101,7 @@ export function LeadsExportDialog({
     setFlagged("__all__")
     setOutcome("exclude")
     setNotInterested("exclude")
+    setIncludeHidden({ no_response: false, new: false, opted_out: false, wrong_number: false })
     setSheets({ ...ALL_SHEETS })
     setCustomizeColumns(false)
     setColumns({ ...ALL_COLUMNS })
@@ -128,6 +133,7 @@ export function LeadsExportDialog({
         flagged: flagged === "flagged" ? true : undefined,
         outcome,
         notInterested,
+        includeHidden: LEAD_EXPORT_HIDDEN_GROUPS.map((g) => g.key).filter((k) => includeHidden[k]),
         sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
         columns: columnsArg,
       })
@@ -303,6 +309,22 @@ export function LeadsExportDialog({
                 </Select>
               </div>
             )}
+          </div>
+
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-xs font-medium">Include hidden leads</Label>
+              <span className="text-[11px] text-muted-foreground">Excluded by default</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              {LEAD_EXPORT_HIDDEN_GROUPS.map((g) => (
+                <label key={g.key} htmlFor={`lx-hidden-${g.key}`} className="flex cursor-pointer items-start gap-2">
+                  <Checkbox id={`lx-hidden-${g.key}`} checked={includeHidden[g.key]} onCheckedChange={() => toggleHidden(g.key)} className="mt-0.5" />
+                  <span className="text-sm leading-tight">{g.label}<span className="block text-[11px] text-muted-foreground">{g.hint}</span></span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">By default the export hides no-response, new/uncalled, opted-out (STOP) and wrong-number leads. Tick any to add them back.</p>
           </div>
         </div>
 
