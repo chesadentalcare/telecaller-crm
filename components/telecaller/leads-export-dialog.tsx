@@ -24,11 +24,19 @@ const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] 
   { key: "meetings", label: "Meetings", hint: "Scheduled visits and demos" },
   { key: "quotes", label: "Quotations", hint: "Quotes sent" },
 ]
-const ALL_SHEETS: Record<LeadsExportSection, boolean> = {
-  attempts: true, messages: true, meetings: true, quotes: true,
+const NO_SHEETS: Record<LeadsExportSection, boolean> = {
+  attempts: false, messages: false, meetings: false, quotes: false,
 }
 const ALL_COLUMNS = LEAD_EXPORT_COLUMNS.reduce<Record<string, boolean>>((acc, c) => {
   acc[c.key] = true
+  return acc
+}, {})
+const DEFAULT_COLUMN_KEYS = [
+  "id", "customer_name", "phone", "city", "state", "flagged",
+  "sales_assignee", "equipment", "interest_level", "budget", "predicted_closing_date",
+]
+const DEFAULT_COLUMNS = LEAD_EXPORT_COLUMNS.reduce<Record<string, boolean>>((acc, c) => {
+  acc[c.key] = DEFAULT_COLUMN_KEYS.includes(c.key)
   return acc
 }, {})
 
@@ -53,9 +61,9 @@ export function LeadsExportDialog({
   const [includeHidden, setIncludeHidden] = useState<Record<LeadsExportHiddenGroup, boolean>>({
     no_response: false, new: false, opted_out: false, wrong_number: false,
   })
-  const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
+  const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...NO_SHEETS })
   const [customizeColumns, setCustomizeColumns] = useState(false)
-  const [columns, setColumns] = useState<Record<string, boolean>>({ ...ALL_COLUMNS })
+  const [columns, setColumns] = useState<Record<string, boolean>>({ ...DEFAULT_COLUMNS })
   const [busy, setBusy] = useState(false)
 
   const toggleSheet = (k: LeadsExportSection) => setSheets((s) => ({ ...s, [k]: !s[k] }))
@@ -102,9 +110,9 @@ export function LeadsExportDialog({
     setOutcome("exclude")
     setNotInterested("exclude")
     setIncludeHidden({ no_response: false, new: false, opted_out: false, wrong_number: false })
-    setSheets({ ...ALL_SHEETS })
+    setSheets({ ...NO_SHEETS })
     setCustomizeColumns(false)
-    setColumns({ ...ALL_COLUMNS })
+    setColumns({ ...DEFAULT_COLUMNS })
   }
 
   const submit = async () => {
@@ -115,12 +123,12 @@ export function LeadsExportDialog({
     setBusy(true)
     try {
       const selectedColumns = LEAD_EXPORT_COLUMNS.map((c) => c.key).filter((k) => columns[k])
-      if (customizeColumns && selectedColumns.filter((k) => k !== "id").length === 0) {
+      if (selectedColumns.filter((k) => k !== "id").length === 0) {
         toast.error("Pick at least one column for the Leads sheet")
         return
       }
       const columnsArg =
-        !customizeColumns || selectedColumns.length === LEAD_EXPORT_COLUMNS.length
+        selectedColumns.length === LEAD_EXPORT_COLUMNS.length
           ? undefined
           : Array.from(new Set(["id", ...selectedColumns]))
       await downloadLeadsExport({
@@ -186,7 +194,7 @@ export function LeadsExportDialog({
                 <p className="text-[11px] text-muted-foreground">Lead ID is always included — it joins the Leads sheet to the others.</p>
               </>
             ) : (
-              <p className="text-[11px] text-muted-foreground">All {LEAD_EXPORT_COLUMNS.length} columns. Lead ID always included.</p>
+              <p className="text-[11px] text-muted-foreground">{LEAD_EXPORT_COLUMNS.filter((c) => columns[c.key]).length} of {LEAD_EXPORT_COLUMNS.length} columns selected. Customize to change; Lead ID always included.</p>
             )}
           </div>
 
