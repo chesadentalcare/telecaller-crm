@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates, fetchLeadSalesAssignees, LEAD_EXPORT_COLUMNS, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, fetchLeadSalesAssignees, LEAD_EXPORT_COLUMNS, type LeadsExportNotInterested, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
 
 const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
   { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
@@ -49,6 +49,7 @@ export function LeadsExportDialog({
   const [salesAssignee, setSalesAssignee] = useState("__all__")
   const [flagged, setFlagged] = useState("__all__")
   const [outcome, setOutcome] = useState<LeadsExportOutcome>("exclude")
+  const [notInterested, setNotInterested] = useState<LeadsExportNotInterested>("exclude")
   const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
   const [customizeColumns, setCustomizeColumns] = useState(false)
   const [columns, setColumns] = useState<Record<string, boolean>>({ ...ALL_COLUMNS })
@@ -95,6 +96,7 @@ export function LeadsExportDialog({
     setSalesAssignee("__all__")
     setFlagged("__all__")
     setOutcome("exclude")
+    setNotInterested("exclude")
     setSheets({ ...ALL_SHEETS })
     setCustomizeColumns(false)
     setColumns({ ...ALL_COLUMNS })
@@ -125,6 +127,7 @@ export function LeadsExportDialog({
         salesAssignee: salesAssignee !== "__all__" ? salesAssignee : undefined,
         flagged: flagged === "flagged" ? true : undefined,
         outcome,
+        notInterested,
         sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
         columns: columnsArg,
       })
@@ -218,6 +221,18 @@ export function LeadsExportDialog({
                   <SelectItem value="all">Include won &amp; lost</SelectItem>
                   <SelectItem value="won">Won only</SelectItem>
                   <SelectItem value="lost">Lost only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Not interested</Label>
+              <Select value={notInterested} onValueChange={(v) => setNotInterested(v as LeadsExportNotInterested)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="exclude">Exclude not interested</SelectItem>
+                  <SelectItem value="include">Include not interested</SelectItem>
+                  <SelectItem value="only">Not interested only</SelectItem>
                 </SelectContent>
               </Select>
             </div>

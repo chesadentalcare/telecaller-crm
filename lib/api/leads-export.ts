@@ -17,6 +17,7 @@ export const fetchLeadSalesAssignees = () =>
 
 export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
 export type LeadsExportOutcome = "all" | "exclude" | "won" | "lost"
+export type LeadsExportNotInterested = "exclude" | "include" | "only"
 
 export const LEAD_EXPORT_COLUMNS: { key: string; label: string }[] = [
   { key: "id", label: "Lead ID" },
@@ -65,6 +66,7 @@ export interface LeadsExportFilters {
   salesAssignee?: string
   flagged?: boolean
   outcome?: LeadsExportOutcome
+  notInterested?: LeadsExportNotInterested
   sections?: LeadsExportSection[]
   columns?: string[]
 }
@@ -80,6 +82,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.salesAssignee) p.set("salesAssignee", f.salesAssignee)
   if (f.flagged) p.set("flagged", "1")
   if (f.outcome && f.outcome !== "all") p.set("outcome", f.outcome)
+  if (f.notInterested && f.notInterested !== "exclude") p.set("notInterested", f.notInterested)
   if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
   if (f.columns && f.columns.length) p.set("columns", f.columns.join(","))
   const s = p.toString()
