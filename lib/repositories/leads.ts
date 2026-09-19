@@ -241,6 +241,7 @@ const toRepliesDue = (r: RepliesDueRow): RepliesDueLead => ({
   equipment: r.equipment ?? "—",
   city: r.city ?? null,
   state: r.state ?? null,
+  stage: r.stage ?? null,
   lastOutcome: (r.last_outcome as RepliesDueLead["lastOutcome"]) ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
@@ -508,6 +509,7 @@ export const fetchQueueCounts = async (range?: DateRange, f?: QueueFilters): Pro
     callsDue: c.callsDue,
     callsDueAwaitingReply: c.callsDueAwaitingReply ?? 0,
     pipelineAwaitingReply: c.pipelineAwaitingReply ?? 0,
+    repliesDue: c.repliesDue ?? c.pipelineAwaitingReply ?? 0,
     reTouch: c.reTouch,
     neglected: c.neglected ?? 0,
   }

@@ -822,6 +822,7 @@ export interface RepliesDueRow extends ReplyRowFields {
   equipment: string | null
   city: string | null
   state: string | null
+  stage: string | null
   last_outcome: string | null
   last_outcome_at: string | null
   last_outcome_by: string | null
@@ -965,6 +966,7 @@ export interface QueueCountsResponse {
   // and the rep hasn't replied back yet. Replace the raw queue-size badges on the nav.
   callsDueAwaitingReply: number
   pipelineAwaitingReply: number
+  repliesDue: number
   reTouch: number
   // Amendment 2 (Theme 6) — brand-new leads with zero activity past 24h.
   neglected: number
