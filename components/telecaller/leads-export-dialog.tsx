@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates, LEAD_EXPORT_COLUMNS, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, fetchLeadSalesAssignees, LEAD_EXPORT_COLUMNS, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
 
 const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
   { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
@@ -46,6 +46,7 @@ export function LeadsExportDialog({
   const [source, setSource] = useState("__all__")
   const [state, setState] = useState("__all__")
   const [agent, setAgent] = useState("__all__")
+  const [salesAssignee, setSalesAssignee] = useState("__all__")
   const [flagged, setFlagged] = useState("__all__")
   const [outcome, setOutcome] = useState<LeadsExportOutcome>("exclude")
   const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
@@ -78,6 +79,12 @@ export function LeadsExportDialog({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   })
+  const { data: salesAssignees = [] } = useQuery({
+    queryKey: ["lead-sales-assignees"],
+    queryFn: fetchLeadSalesAssignees,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const reset = () => {
     setFrom("")
@@ -85,6 +92,7 @@ export function LeadsExportDialog({
     setSource("__all__")
     setState("__all__")
     setAgent("__all__")
+    setSalesAssignee("__all__")
     setFlagged("__all__")
     setOutcome("exclude")
     setSheets({ ...ALL_SHEETS })
@@ -114,6 +122,7 @@ export function LeadsExportDialog({
         source: source !== "__all__" ? source : undefined,
         state: state !== "__all__" ? state : undefined,
         agent: agent !== "__all__" ? agent : undefined,
+        salesAssignee: salesAssignee !== "__all__" ? salesAssignee : undefined,
         flagged: flagged === "flagged" ? true : undefined,
         outcome,
         sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
@@ -246,6 +255,19 @@ export function LeadsExportDialog({
                 <SelectContent>
                   <SelectItem value="__all__">All leads</SelectItem>
                   <SelectItem value="flagged">Flagged only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="col-span-2 space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Sales Assignee</Label>
+              <Select value={salesAssignee} onValueChange={setSalesAssignee}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All sales assignees</SelectItem>
+                  {salesAssignees.map((s) => (
+                    <SelectItem key={s.name} value={s.name}>{s.name} ({s.count})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

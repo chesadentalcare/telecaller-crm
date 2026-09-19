@@ -12,6 +12,9 @@ interface Envelope<T> { success: boolean; data: T }
 export const fetchLeadStates = () =>
   api.get<Envelope<LeadStateOption[]>>(endpoints.leadStates).then((res) => res.data)
 
+export const fetchLeadSalesAssignees = () =>
+  api.get<Envelope<LeadStateOption[]>>(endpoints.leadSalesAssignees).then((res) => res.data)
+
 export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
 export type LeadsExportOutcome = "all" | "exclude" | "won" | "lost"
 
@@ -27,7 +30,8 @@ export const LEAD_EXPORT_COLUMNS: { key: string; label: string }[] = [
   { key: "source", label: "Source" },
   { key: "stage", label: "Stage" },
   { key: "flagged", label: "Flagged?" },
-  { key: "assigned_to", label: "Assigned To" },
+  { key: "assigned_to", label: "Telecaller" },
+  { key: "sales_assignee", label: "Sales Assignee" },
   { key: "equipment", label: "Equipment" },
   { key: "interest_level", label: "Interest" },
   { key: "budget", label: "Budget" },
@@ -58,6 +62,7 @@ export interface LeadsExportFilters {
   stage?: string
   state?: string
   agent?: string
+  salesAssignee?: string
   flagged?: boolean
   outcome?: LeadsExportOutcome
   sections?: LeadsExportSection[]
@@ -72,6 +77,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.stage) p.set("stage", f.stage)
   if (f.state) p.set("state", f.state)
   if (f.agent) p.set("agent", f.agent)
+  if (f.salesAssignee) p.set("salesAssignee", f.salesAssignee)
   if (f.flagged) p.set("flagged", "1")
   if (f.outcome && f.outcome !== "all") p.set("outcome", f.outcome)
   if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
