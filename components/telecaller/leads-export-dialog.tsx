@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRole } from "@/hooks/use-role"
 import { useSapSources } from "@/hooks/use-sap-sources"
 import { fetchDueExportAgents } from "@/lib/api/due-export"
-import { downloadLeadsExport, fetchLeadStates, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
+import { downloadLeadsExport, fetchLeadStates, LEAD_EXPORT_COLUMNS, type LeadsExportOutcome, type LeadsExportSection } from "@/lib/api/leads-export"
 
 const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] = [
   { key: "attempts", label: "Call attempts", hint: "Every call and its outcome" },
@@ -27,6 +27,10 @@ const SHEET_OPTIONS: { key: LeadsExportSection; label: string; hint: string }[] 
 const ALL_SHEETS: Record<LeadsExportSection, boolean> = {
   attempts: true, messages: true, meetings: true, quotes: true,
 }
+const ALL_COLUMNS = LEAD_EXPORT_COLUMNS.reduce<Record<string, boolean>>((acc, c) => {
+  acc[c.key] = true
+  return acc
+}, {})
 
 export function LeadsExportDialog({
   open,
@@ -45,9 +49,21 @@ export function LeadsExportDialog({
   const [flagged, setFlagged] = useState("__all__")
   const [outcome, setOutcome] = useState<LeadsExportOutcome>("exclude")
   const [sheets, setSheets] = useState<Record<LeadsExportSection, boolean>>({ ...ALL_SHEETS })
+  const [customizeColumns, setCustomizeColumns] = useState(false)
+  const [columns, setColumns] = useState<Record<string, boolean>>({ ...ALL_COLUMNS })
   const [busy, setBusy] = useState(false)
 
   const toggleSheet = (k: LeadsExportSection) => setSheets((s) => ({ ...s, [k]: !s[k] }))
+  const toggleColumn = (k: string) => {
+    if (k === "id") return
+    setColumns((c) => ({ ...c, [k]: !c[k] }))
+  }
+  const selectAllColumns = () => setColumns({ ...ALL_COLUMNS })
+  const clearColumns = () =>
+    setColumns(LEAD_EXPORT_COLUMNS.reduce<Record<string, boolean>>((acc, c) => {
+      acc[c.key] = c.key === "id"
+      return acc
+    }, {}))
 
   const { data: agents = [] } = useQuery({
     queryKey: ["due-export-agents"],
@@ -72,6 +88,8 @@ export function LeadsExportDialog({
     setFlagged("__all__")
     setOutcome("exclude")
     setSheets({ ...ALL_SHEETS })
+    setCustomizeColumns(false)
+    setColumns({ ...ALL_COLUMNS })
   }
 
   const submit = async () => {
@@ -81,6 +99,15 @@ export function LeadsExportDialog({
     }
     setBusy(true)
     try {
+      const selectedColumns = LEAD_EXPORT_COLUMNS.map((c) => c.key).filter((k) => columns[k])
+      if (customizeColumns && selectedColumns.filter((k) => k !== "id").length === 0) {
+        toast.error("Pick at least one column for the Leads sheet")
+        return
+      }
+      const columnsArg =
+        !customizeColumns || selectedColumns.length === LEAD_EXPORT_COLUMNS.length
+          ? undefined
+          : Array.from(new Set(["id", ...selectedColumns]))
       await downloadLeadsExport({
         from: from || undefined,
         to: to || undefined,
@@ -90,6 +117,7 @@ export function LeadsExportDialog({
         flagged: flagged === "flagged" ? true : undefined,
         outcome,
         sections: SHEET_OPTIONS.map((o) => o.key).filter((k) => sheets[k]),
+        columns: columnsArg,
       })
       toast.success("Export downloaded")
       onOpenChange(false)
@@ -108,12 +136,42 @@ export function LeadsExportDialog({
             <FileSpreadsheet className="size-5 text-primary" />Export all lead data
           </DialogTitle>
           <DialogDescription>
-            One Excel workbook, each data type on its own sheet, joined by Lead ID. Pick which sheets to
-            include and leave filters blank to export everything.
+            One Excel workbook, each data type on its own sheet, joined by Lead ID. Pick which sheets and
+            columns to include, and leave filters blank to export everything.
           </DialogDescription>
         </DialogHeader>
 
         <div className="-mr-2 min-h-0 flex-1 space-y-3 overflow-y-auto py-1 pr-2">
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-baseline justify-between">
+              <Label className="text-xs font-medium">Columns (Leads sheet)</Label>
+              {customizeColumns ? (
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={selectAllColumns} className="text-[11px] font-medium text-primary hover:underline">Select all</button>
+                  <button type="button" onClick={clearColumns} className="text-[11px] font-medium text-primary hover:underline">Clear</button>
+                  <button type="button" onClick={() => setCustomizeColumns(false)} className="text-[11px] font-medium text-muted-foreground hover:underline">Done</button>
+                </div>
+              ) : (
+                <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setCustomizeColumns(true)}>Customize</Button>
+              )}
+            </div>
+            {customizeColumns ? (
+              <>
+                <div className="grid max-h-48 grid-cols-2 gap-x-3 gap-y-2 overflow-y-auto pr-1">
+                  {LEAD_EXPORT_COLUMNS.map((c) => (
+                    <label key={c.key} htmlFor={`lx-col-${c.key}`} className="flex cursor-pointer items-center gap-2">
+                      <Checkbox id={`lx-col-${c.key}`} checked={columns[c.key]} disabled={c.key === "id"} onCheckedChange={() => toggleColumn(c.key)} />
+                      <span className="text-sm">{c.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Lead ID is always included — it joins the Leads sheet to the others.</p>
+              </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">All {LEAD_EXPORT_COLUMNS.length} columns. Lead ID always included.</p>
+            )}
+          </div>
+
           <div className="space-y-2 rounded-md border p-3">
             <div className="flex items-baseline justify-between">
               <Label className="text-xs font-medium">Include sheets</Label>

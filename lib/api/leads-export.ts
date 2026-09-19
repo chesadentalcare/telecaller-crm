@@ -15,6 +15,42 @@ export const fetchLeadStates = () =>
 export type LeadsExportSection = "attempts" | "messages" | "meetings" | "quotes"
 export type LeadsExportOutcome = "all" | "exclude" | "won" | "lost"
 
+export const LEAD_EXPORT_COLUMNS: { key: string; label: string }[] = [
+  { key: "id", label: "Lead ID" },
+  { key: "customer_name", label: "Customer" },
+  { key: "phone", label: "Phone" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "email", label: "Email" },
+  { key: "address", label: "Address" },
+  { key: "city", label: "City" },
+  { key: "state", label: "State" },
+  { key: "source", label: "Source" },
+  { key: "stage", label: "Stage" },
+  { key: "flagged", label: "Flagged?" },
+  { key: "assigned_to", label: "Assigned To" },
+  { key: "equipment", label: "Equipment" },
+  { key: "interest_level", label: "Interest" },
+  { key: "budget", label: "Budget" },
+  { key: "timeline", label: "Timeline" },
+  { key: "drip_track", label: "Drip Track" },
+  { key: "drip_status", label: "Drip Status" },
+  { key: "total_calls", label: "# Calls" },
+  { key: "engaged_calls", label: "# Engaged" },
+  { key: "no_response_calls", label: "# No-Resp" },
+  { key: "last_call_outcome", label: "Last Call Outcome" },
+  { key: "last_call_at", label: "Last Call (IST)" },
+  { key: "msgs_sent", label: "# Msgs Sent" },
+  { key: "msgs_received", label: "# Msgs Recvd" },
+  { key: "replied", label: "Replied?" },
+  { key: "handed_to_sales", label: "To Sales?" },
+  { key: "meetings_count", label: "# Meetings" },
+  { key: "quotes_sent", label: "# Quotes" },
+  { key: "created_at", label: "Created (IST)" },
+  { key: "last_inbound_at", label: "Last Inbound (IST)" },
+  { key: "predicted_closing_date", label: "Predicted Close" },
+  { key: "archive_reason", label: "Archive Reason" },
+]
+
 export interface LeadsExportFilters {
   from?: string
   to?: string
@@ -25,6 +61,7 @@ export interface LeadsExportFilters {
   flagged?: boolean
   outcome?: LeadsExportOutcome
   sections?: LeadsExportSection[]
+  columns?: string[]
 }
 
 const buildQuery = (f: LeadsExportFilters): string => {
@@ -38,6 +75,7 @@ const buildQuery = (f: LeadsExportFilters): string => {
   if (f.flagged) p.set("flagged", "1")
   if (f.outcome && f.outcome !== "all") p.set("outcome", f.outcome)
   if (f.sections) p.set("sections", f.sections.length ? f.sections.join(",") : "none")
+  if (f.columns && f.columns.length) p.set("columns", f.columns.join(","))
   const s = p.toString()
   return s ? `?${s}` : ""
 }
