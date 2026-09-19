@@ -731,6 +731,15 @@ export interface LostRow extends ReplyRowFields {
   last_meeting_at: string | null
 }
 
+// Live SAP status for a lost lead — does SAP agree the opportunity is Lost?
+export type LostSapStatus = "lost" | "won" | "open" | "not_found"
+export interface LostSapCheckEntry {
+  sapStatus: LostSapStatus
+  sapStatusRaw: string | null
+  sapSalesPerson: number | null
+}
+export type LostSapCheckMap = Record<string, LostSapCheckEntry>
+
 // Close Today — an agent-generated pick from the latest run of the Close Today analysis.
 export interface SuggestionRow extends ReplyRowFields {
   suggestion_id: number
@@ -1566,6 +1575,7 @@ export const leadsApi = {
     dormant:      (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DormantRow[]>>(endpoints.queueDormant + qs(r, f))),
     dripCompleted:(r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<DripCompletedRow[]>>(endpoints.queueDripCompleted + qs(r, f))),
     lost:         (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<LostRow[]>>(endpoints.queueLost + qs(r, f))),
+    lostSapCheck: () => unwrap(api.get<Envelope<LostSapCheckMap>>(endpoints.queueLostSapCheck)),
     won:          (r?: DateRange, f?: QueueFilters) => unwrap(api.get<Envelope<WonRow[]>>(endpoints.queueWon + qs(r, f))),
     wonOrders:    (r?: DateRange) => unwrap(api.get<Envelope<WonOrderDetail[]>>(endpoints.wonOrders + qs(r))),
     orderLines:   (docNum: string | number) => unwrap(api.get<Envelope<OrderLinesData>>(`${endpoints.orderLines}?docNum=${Number(docNum)}`)),

@@ -216,6 +216,7 @@ const toLost = (r: LostRow): LostLead => ({
   lostDaysAgo: r.lost_days,
   handedOffAt: r.handed_off_at ?? null,
   salesPerson: r.sales_person ?? null,
+  salesEmployee: r.sales_assigned_name ?? null,
   meetingCount: r.meeting_count ?? 0,
   lastMeetingAt: r.last_meeting_at ?? null,
   replied: toReplied(r),

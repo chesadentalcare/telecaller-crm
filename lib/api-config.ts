@@ -189,6 +189,7 @@ export const endpoints = {
   queueDripCompletedApprove: "/queue/drip-completed/approve",
   queueDripCompletedReject: "/queue/drip-completed/reject",
   queueLost: "/queue/lost",
+  queueLostSapCheck: "/queue/lost/sap-check",
   queueWon: "/queue/won",
   wonOrders: "/reports/won-orders",
   wonOrdersExport: "/reports/won-orders/export",
