@@ -143,6 +143,7 @@ export interface LostLead extends LeadBase {
   lostDaysAgo?: number
   handedOffAt?: string | null
   salesPerson?: string | null
+  salesEmployee?: string | null
   meetingCount?: number
   lastMeetingAt?: string | null
 }

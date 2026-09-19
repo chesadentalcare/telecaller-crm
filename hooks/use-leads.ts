@@ -131,6 +131,15 @@ export function useLostLeads() {
   const f = usePipelineQueueFilters()
   return useQuery({ queryKey: [...leadKeys.lost(), r, f],        queryFn: () => fetchLostLeads(r, f), ...keepList })
 }
+export function useLostSapCheck(enabled = true) {
+  return useQuery({
+    queryKey: [...leadKeys.lost(), "sap-check"],
+    queryFn: () => leadsApi.queues.lostSapCheck(),
+    enabled,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
+  })
+}
 export function useSuggestions() {
   return useQuery({ queryKey: leadKeys.suggestions(), queryFn: fetchSuggestions, ...keepList })
 }
