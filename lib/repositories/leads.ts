@@ -132,6 +132,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   dripLastChannel: r.drip_last_channel ?? null,
   dripLastLabel: r.drip_last_label ?? null,
   projection: toProjection(r.projection),
+  cri: typeof r.cri === "number" ? r.cri : null,
 })
 
 const toDrip = (r: DripQueueRow): DripLead => {

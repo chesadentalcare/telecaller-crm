@@ -79,6 +79,8 @@ export interface PipelineLead extends LeadBase {
   dripLastChannel?: "call" | "whatsapp" | null
   dripLastLabel?: string | null
   projection?: DripProjection
+  // Close-Readiness Index — latest daily score (0..100), null until the lead has been scored.
+  cri?: number | null
   // (flagged now lives on LeadBase — floats to top of Active, shown with amber highlight)
 }
 

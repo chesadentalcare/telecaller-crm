@@ -229,6 +229,10 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
         return a.status.localeCompare(b.status)
       }
 
+      if (sortBy === "score") {
+        return (b.cri ?? -1) - (a.cri ?? -1)
+      }
+
       return b.createdAt.getTime() - a.createdAt.getTime()
     })
 
@@ -559,6 +563,13 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                     >
                       Status
                     </DropdownMenuRadioItem>
+
+                    <DropdownMenuRadioItem
+                      value="score"
+                      className="text-xs"
+                    >
+                      Score (High–Low)
+                    </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -832,6 +843,22 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                             >
                               {statusConfig.label}
                             </Badge>
+                            {typeof lead.cri === "number" && (
+                              <Badge
+                                variant="outline"
+                                title="Close-Readiness score (0–100)"
+                                className={[
+                                  "text-[10px] font-semibold tabular-nums",
+                                  lead.cri >= 70
+                                    ? "border-primary/30 bg-primary/10 text-primary"
+                                    : lead.cri >= 45
+                                      ? "border-warning/40 text-warning"
+                                      : "border-muted-foreground/30 text-muted-foreground",
+                                ].join(" ")}
+                              >
+                                Score {lead.cri}
+                              </Badge>
+                            )}
                             {isIdle && (
                               <Badge
                                 variant="outline"

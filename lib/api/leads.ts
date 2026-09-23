@@ -648,6 +648,8 @@ export interface PipelineRow extends ReplyRowFields {
   drip_last_channel?: "call" | "whatsapp" | null
   drip_last_label?: string | null
   projection?: DripProjectionPayload | null
+  // Close-Readiness Index — latest persisted daily score (0..100), null until first scored.
+  cri?: number | null
 }
 
 export interface NoResponseRow extends ReplyRowFields {
