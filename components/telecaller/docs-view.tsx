@@ -7,6 +7,7 @@ import {
   BookOpen, PhoneCall, CalendarClock, Repeat, XCircle, PhoneOff, PhoneMissed,
   Droplets, Clock, Send, Route, LogOut,
   CheckCircle2, Search, PhoneForwarded, Bell,
+  Gauge, TrendingUp, TrendingDown, Flag, Target,
 } from "lucide-react"
 
 // In-app training guide. Two tabs:
@@ -861,11 +862,199 @@ function SalesHandoverGuide() {
   )
 }
 
-type DocTab = "flow" | "drip" | "sales_handover" | "no_response" | "wrong_number" | "callback"
+// ── Lead Score (CRI) tab ─────────────────────────────────────────────
+const GEARS = [
+  ["Gear 1 · Closing", "70–100 + recent activity", "Act today — the doctor is deciding now. Change the offer, book the visit, close it."],
+  ["Gear 2 · Warming", "45–69", "Keep working it — genuine interest, not quite at the finish line yet."],
+  ["Gear 3 · Nurture", "20–44", "Let the drip do the work — light touches, no heavy chasing."],
+  ["Gear 4 · Dormant", "0–19", "Very cold — minimal effort until something changes."],
+]
+
+const INGREDIENTS = [
+  ["Quotation", "up to 30", "Has a price quotation gone out — and did the doctor react to it (reply, ask, or ask for a revision)? The strongest “they’re serious” signal, so it carries the most weight."],
+  ["Two-way talk", "up to 25", "Is the doctor talking back, or is it all us? A lead that replies and calls back scores high; one we only push messages at scores low."],
+  ["Recency & speed", "up to 25", "How recently did they last reply, and are they replying faster than they used to? A doctor who messaged today is hotter than one who went quiet weeks ago."],
+  ["Meetings", "up to 12", "Has a meeting or demo been booked or attended? A completed demo or site visit counts the most."],
+  ["Real conversations", "up to 8", "How many times we have actually reached and spoken to them. A small helper so a well-worked lead edges ahead of an untouched one."],
+]
+
+const PENALTIES = [
+  ["Quote gone cold", "−15", "A quotation was sent 30+ days ago and the doctor has said nothing since."],
+  ["No-show", "−10", "Booked a meeting and did not turn up. (Not switched on yet — we do not record no-shows.)"],
+  ["All one-way", "−10", "The last few touches are all from us — we keep messaging, they have gone silent."],
+]
+
+function LeadScoreGuide() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 text-base font-semibold">
+          <Gauge className="size-5 text-primary" /> Lead Score (CRI) — how close is this lead to buying?
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <b>CRI</b> stands for <b>Close Readiness Index</b>. It is a single number from <b>0 to 100</b> on every open lead
+          that answers one question: <b>how close is this doctor to actually buying a chair right now?</b> The system works it
+          out automatically every night — you never calculate it. Higher = hotter. It lets you spend your day on the handful of
+          leads that are actually deciding, instead of treating everyone the same.
+        </p>
+      </div>
+
+      <Section n="1" title="What the number means — the 4 gears" icon={Target}>
+        <p>The score sorts every lead into one of <b>four gears</b>, from &ldquo;close it today&rdquo; down to &ldquo;leave it to the robot&rdquo;:</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Gear</th>
+                <th className="p-2 text-left font-medium">Score</th>
+                <th className="p-2 text-left font-medium">What it means for you</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {GEARS.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 align-top font-medium text-foreground">{row[0]}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row[1]}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row[2]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Chart>{`  Score
+  100 ┐
+      │  Gear 1 · CLOSING     ── act today (needs a recent quote/meeting too)
+   70 ┤
+      │  Gear 2 · WARMING     ── keep working it
+   45 ┤
+      │  Gear 3 · NURTURE     ── let the drip run
+   20 ┤
+      │  Gear 4 · DORMANT     ── very cold
+    0 ┘`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">💡 Gear 1 needs <b>both</b> a high score <b>and</b> a live event (a quote or meeting in the last ~3 weeks). A high score built only from <b>old</b> activity stays in Gear 2 — so a stale lead can never masquerade as a live deal.</p>
+      </Section>
+
+      <Section n="2" title="What lifts the score — the 5 ingredients" icon={TrendingUp}>
+        <p>The score is built from <b>five things the doctor does</b>. Each is worth a different number of points — the ones that best predict a real sale are worth the most:</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Ingredient</th>
+                <th className="p-2 text-left font-medium">Worth</th>
+                <th className="p-2 text-left font-medium">What it measures</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {INGREDIENTS.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 align-top font-medium text-foreground">{row[0]}</td>
+                  <td className="p-2 align-top font-semibold text-emerald-600 dark:text-emerald-400">{row[1]}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row[2]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">Notice the theme: the score rewards <b>what the doctor does back</b> (replies, quotes reacted to, meetings attended) — not how many messages <b>we</b> send. Blasting an unresponsive lead does not raise its score.</p>
+      </Section>
+
+      <Section n="3" title="What pulls the score down — penalties" icon={TrendingDown}>
+        <p>A few warning signs <b>subtract</b> points, so a lead that looks busy but is actually going cold does not sit near the top:</p>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left font-medium">Warning sign</th>
+                <th className="p-2 text-left font-medium">Points</th>
+                <th className="p-2 text-left font-medium">When it applies</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {PENALTIES.map((row) => (
+                <tr key={row[0]}>
+                  <td className="p-2 align-top font-medium text-foreground">{row[0]}</td>
+                  <td className="p-2 align-top font-semibold text-rose-600 dark:text-rose-400">{row[1]}</td>
+                  <td className="p-2 align-top text-muted-foreground">{row[2]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="rounded-md bg-amber-500/10 p-2 text-foreground/80">All penalties together are <b>capped at −35</b>, so a lead is never buried by warnings alone.</p>
+      </Section>
+
+      <Section n="4" title="The rep flag — the human override" icon={Flag}>
+        <p>
+          The score reads the doctor&rsquo;s <b>behaviour</b>, but sometimes <b>you</b> know something the numbers cannot see —
+          you spoke to the doctor and could tell the sale is <b>near closing</b>. That is what the <b>Flag</b> is for.
+        </p>
+        <div className="rounded-lg border border-amber-400/50 bg-amber-500/10 p-3 text-foreground/80">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Flag className="size-4 text-amber-600" /> When you flag a lead, two things happen:
+          </div>
+          <ul className="ml-4 mt-1.5 list-disc space-y-1">
+            <li>Its score gets a <b>+15 boost</b>.</li>
+            <li>It is <b>guaranteed to sit at least in Gear 2 (Warming)</b> — a flag can never fall into the ignore pile, no matter what the behaviour numbers say.</li>
+          </ul>
+        </div>
+        <p>
+          A flagged lead shows a bright <b>amber &ldquo;Flagged&rdquo; badge</b> and is <b>pinned to the top</b> of the pipeline
+          list, so it follows the doctor everywhere and never gets lost.
+        </p>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">
+          <b>Why it deserves points:</b> a human who actually heard the doctor&rsquo;s tone of voice is a stronger signal than any
+          automatic guess. The flag says <b>&ldquo;trust me, this one is hot&rdquo;</b> — and the score listens.
+        </p>
+      </Section>
+
+      <Section n="5" title="A real example — why counting calls is not enough" icon={Target}>
+        <Chart>{`Two leads, same intake week, both were sent a quotation:
+
+  Dr. A  ──  replied to the quote, asked for a revision, demo done,
+             now messaging faster than before, flagged by the rep
+             ►  Score 85  ·  Gear 1  ·  ACT TODAY
+
+  Dr. B  ──  never replied to the quote, ignored 6 drip messages,
+             silent for weeks
+             ►  Score 0   ·  Gear 4  ·  leave it to the drip
+
+  We sent BOTH the same number of messages.
+  Counting calls would make them look similar — the score is what
+  tells them apart, so your time goes to Dr. A.`}</Chart>
+      </Section>
+
+      <Section n="6" title="Where you see it & when it updates" icon={Clock}>
+        <ul className="ml-4 list-disc space-y-1.5">
+          <li>In <b>Pipeline</b>, each lead shows a colour-coded <b>Score</b> badge, and the list is sorted with the <b>hottest (and flagged) leads on top</b>.</li>
+          <li>The score is recalculated <b>automatically every night (~2:30 AM)</b>. So the calls, replies and meetings you log <b>today</b> show up in the score <b>tomorrow morning</b>.</li>
+          <li>You never edit the score by hand — the only lever you control directly is the <b>Flag</b>.</li>
+        </ul>
+      </Section>
+
+      <Section n="7" title="The formula (for the curious)" icon={Gauge}>
+        <p>Put together, the whole thing is just this — you never need to do the maths, the system does:</p>
+        <Chart>{`  CRI  =   30 × Quotation
+        +  25 × Two-way talk
+        +  25 × Recency & speed
+        +  12 × Meetings
+        +   8 × Real conversations
+        −   Penalties            (at most −35)
+        ( +15  if a rep FLAGGED the lead )
+      ─────────────────────────────────────
+        =  a number from 0 to 100  →  a gear`}</Chart>
+        <p className="rounded-md bg-primary/5 p-2 text-foreground/80">Each ingredient is scored from 0 to 1 first (e.g. &ldquo;quote sent and replied to&rdquo; = high, &ldquo;no quote&rdquo; = 0), then multiplied by its points above. That is why the numbers shown are the <b>maximum</b> each part can contribute.</p>
+      </Section>
+    </div>
+  )
+}
+
+type DocTab = "flow" | "drip" | "lead_score" | "sales_handover" | "no_response" | "wrong_number" | "callback"
 
 const TABS: { key: DocTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "flow", label: "Telecaller Flow", icon: BookOpen },
   { key: "drip", label: "Drip Engine", icon: Droplets },
+  { key: "lead_score", label: "Lead Score (CRI)", icon: Gauge },
   { key: "sales_handover", label: "Sales Handover", icon: Bell },
   { key: "no_response", label: "No Response", icon: PhoneOff },
   { key: "wrong_number", label: "Wrong Number", icon: PhoneMissed },
@@ -877,7 +1066,7 @@ export function DocsView() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 pb-8">
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border bg-muted/30 p-1 sm:grid-cols-3 lg:grid-cols-7">
         {TABS.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -900,6 +1089,7 @@ export function DocsView() {
 
       {tab === "flow" ? <TelecallerFlowGuide />
         : tab === "drip" ? <DripEngineGuide />
+        : tab === "lead_score" ? <LeadScoreGuide />
         : tab === "sales_handover" ? <SalesHandoverGuide />
         : tab === "no_response" ? <NoResponseGuide />
         : tab === "wrong_number" ? <WrongNumberGuide />
