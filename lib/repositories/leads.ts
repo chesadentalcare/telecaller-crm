@@ -248,6 +248,7 @@ const toRepliesDue = (r: RepliesDueRow): RepliesDueLead => ({
   lastOutcomeBy: r.last_outcome_by ?? null,
   replied: toReplied(r),
   flagged: !!r.flagged,
+  cri: r.cri ?? null,
 })
 
 const toReactivation = (r: ReactivationRow): ReactivationLead => ({
@@ -318,6 +319,7 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
         at: r.sales_update.at,
       }
     : null,
+  cri: r.cri ?? null,
 })
 
 const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
@@ -334,6 +336,7 @@ const toMeetingsDue = (r: MeetingDueRow): MeetingsDueLead => ({
   summaryUploaded: !!r.meeting_summary_url,
   flagged: !!r.flagged,
   stage: r.stage,
+  cri: r.cri ?? null,
 })
 
 const toDripCall = (r: DripCallRow): UpcomingDripCall => ({

@@ -828,6 +828,7 @@ export interface RepliesDueRow extends ReplyRowFields {
   last_outcome: string | null
   last_outcome_at: string | null
   last_outcome_by: string | null
+  cri?: number | null
 }
 
 // Segment queues now carry the same identity as the Active pipeline so every
@@ -892,6 +893,7 @@ export interface CallNudgeRow extends ReplyRowFields {
     source: string
     at: string
   } | null
+  cri?: number | null
 }
 
 // Meetings-Due worklist row (over meeting_records, enriched identity).
@@ -910,6 +912,7 @@ export interface MeetingDueRow {
   customer_name: string | null
   phone: string | null
   flagged?: 0 | 1 | boolean
+  cri?: number | null
 }
 
 // Upcoming calls (future-dated, beyond today). Two parts: real scheduled call_nudges

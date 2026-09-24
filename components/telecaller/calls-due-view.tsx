@@ -166,6 +166,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
           location={[lead.city, lead.state].filter((v) => v && v !== "—").join(", ") || undefined}
           replied={lead.replied}
           flagged={lead.flagged}
+          cri={lead.cri}
           className={rowClass}
           onOpen={() => toggle(lead.id)}
           meta={
