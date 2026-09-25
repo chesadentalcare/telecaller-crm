@@ -47,6 +47,7 @@ export const leadKeys = {
   meetingsDue: () => [...leadKeys.all, "meetings-due"] as const,
   dripCalls: () => [...leadKeys.all, "drip-calls"] as const,
   detail: (id: string) => [...leadKeys.all, "detail", id] as const,
+  scoreHistory: (id: string) => [...leadKeys.all, "score-history", id] as const,
   fullDetail: (id: string) => [...leadKeys.all, "full-detail", id] as const,
   queueCounts: () => [...leadKeys.all, "queue-counts"] as const,
   quotation: (id: string) => [...leadKeys.all, "quotation", id] as const,
@@ -181,6 +182,15 @@ export function useLeadFullDetail(id: string | number | undefined) {
     queryFn: () => leadsApi.detail(id!),
     enabled: Boolean(id),
     staleTime: 30_000,
+  })
+}
+
+export function useScoreHistory(id: string | number | undefined, enabled = true) {
+  return useQuery({
+    queryKey: leadKeys.scoreHistory(String(id ?? "__noop__")),
+    queryFn: () => leadsApi.scoreHistory(id!),
+    enabled: Boolean(id) && enabled,
+    staleTime: 5 * 60_000,
   })
 }
 

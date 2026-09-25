@@ -570,6 +570,29 @@ export interface NotificationRow {
   created_at: string
 }
 
+export interface ScoreBreakdownRow {
+  score_date: string
+  cri: number
+  cri_base: number
+  flag_bonus: number
+  q: number; r: number; v: number; m: number; n: number
+  penalty: number
+  penalty_reasons: string[]
+  gear: number
+  competitive_risk: boolean
+  capacity_held: boolean
+  flagged: boolean
+  reasons: string[]
+  model_version: string
+  computed_at: string
+}
+
+export interface ScoreHistory {
+  weights: { Q: number; R: number; V: number; M: number; N: number }
+  flagBonus: number
+  history: ScoreBreakdownRow[]
+}
+
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
@@ -1032,6 +1055,9 @@ export const leadsApi = {
 
   detail: (id: number | string) =>
     unwrap(api.get<Envelope<LeadDetail>>(endpoints.leadDetail(String(id)))),
+
+  scoreHistory: (id: number | string) =>
+    unwrap(api.get<Envelope<ScoreHistory>>(endpoints.leadScoreHistory(String(id)))),
 
   logAttempt: (
     id: number | string,

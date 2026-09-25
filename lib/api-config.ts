@@ -81,6 +81,7 @@ export const endpoints = {
   leads: "/leads",
   leadsSearch: "/leads/search",           // GET ?q= — global lead search (name / phone / id, all stages)
   leadDetail: (id: string) => `/leads/${id}`,
+  leadScoreHistory: (id: string) => `/leads/${id}/score-history`,
   // Amendment 2 — full-field lead edit (PATCH).
   leadUpdate: (id: string) => `/leads/${id}`,
   leadVerifyPhone: (id: string) => `/leads/${id}/verify-phone`,
