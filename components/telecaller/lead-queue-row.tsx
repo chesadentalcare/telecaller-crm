@@ -16,6 +16,7 @@ import { MessageSquare, AlertTriangle, CalendarClock, MapPin, Flag } from "lucid
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { ReplyIndicator } from "@/lib/types/lead"
+import { CriScoreBadge } from "./cri-score-badge"
 
 const INTENT_LABEL: Record<string, string> = {
   meeting: "wants a meeting",
@@ -83,22 +84,7 @@ export function LeadQueueRow({
                 <Flag className="size-3" />Flagged
               </Badge>
             )}
-            {typeof cri === "number" && (
-              <Badge
-                variant="outline"
-                title="Close-Readiness score (0–100)"
-                className={cn(
-                  "text-[10px] font-semibold tabular-nums",
-                  cri >= 70
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : cri >= 45
-                      ? "border-warning/40 text-warning"
-                      : "border-muted-foreground/30 text-muted-foreground",
-                )}
-              >
-                Score {cri}
-              </Badge>
-            )}
+            {typeof cri === "number" && <CriScoreBadge id={id} cri={cri} />}
             {/* URGENT flag (e.g. wrong number — calling is locked, needs recovery). Shown
                 first so it's the thing the eye lands on when scanning the pipeline. */}
             {urgent && (

@@ -16,6 +16,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { LeadQueueRow } from "./lead-queue-row"
+import { CriScoreBadge } from "./cri-score-badge"
 import { LeadCockpitPanel } from "./lead-cockpit-panel"
 import { SendCatalogueButton } from "./send-catalogue-button"
 import { DripMeta, RemoveFromDripButton } from "./drip-detail"
@@ -843,22 +844,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                             >
                               {statusConfig.label}
                             </Badge>
-                            {typeof lead.cri === "number" && (
-                              <Badge
-                                variant="outline"
-                                title="Close-Readiness score (0–100)"
-                                className={[
-                                  "text-[10px] font-semibold tabular-nums",
-                                  lead.cri >= 70
-                                    ? "border-primary/30 bg-primary/10 text-primary"
-                                    : lead.cri >= 45
-                                      ? "border-warning/40 text-warning"
-                                      : "border-muted-foreground/30 text-muted-foreground",
-                                ].join(" ")}
-                              >
-                                Score {lead.cri}
-                              </Badge>
-                            )}
+                            {typeof lead.cri === "number" && <CriScoreBadge id={lead.id} cri={lead.cri} />}
                             {isIdle && (
                               <Badge
                                 variant="outline"
