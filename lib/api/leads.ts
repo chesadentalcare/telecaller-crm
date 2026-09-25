@@ -589,7 +589,7 @@ export interface LeadDetail {
   }>
   quotations: QuotationRow[]
   // P6.6 — classified inbound WhatsApp replies (newest first). P6.7 — first-contact state.
-  inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string; from_sales?: 0 | 1 | boolean }>
+  inbound?: Array<{ id: number; intent: "stop" | "meeting" | "zoom" | "vague"; body: string; received_at: string; from_sales?: 0 | 1 | boolean; msg_type?: string | null; media_id?: string | null; media_mime?: string | null }>
   firstContact?: { current_touch_index: number; call_attempts_used: number; status: string } | null
   // Coordinator/sales-rep updates shown in the call log's Sales tab (newest first).
   // follow_up_at/follow_up_note = a display-only "next follow-up" reminder (no scheduled task).
