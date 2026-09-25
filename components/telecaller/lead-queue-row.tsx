@@ -46,6 +46,9 @@ export interface LeadQueueRowProps {
   /** Telecaller high-priority flag — renders a persistent amber "Flagged" badge so the flag
       follows the lead into every tab (Archived / Lost / Won / …), not just the Active pipeline. */
   flagged?: boolean
+  /** Close-Readiness score (0–100). Renders the same colour-coded "Score" chip as the Active
+      pipeline so a coordinator sees it right where they act (Calls / Meetings / Replies due). */
+  cri?: number | null
   /** Row actions (call, WhatsApp, menu). */
   actions?: ReactNode
   onOpen?: (id: string) => void
@@ -54,7 +57,7 @@ export interface LeadQueueRowProps {
 }
 
 export function LeadQueueRow({
-  id, name, phone, equipment, location, meta, badge, replied, urgent, flag, flagged, actions, onOpen, className,
+  id, name, phone, equipment, location, meta, badge, replied, urgent, flag, flagged, cri, actions, onOpen, className,
 }: LeadQueueRowProps) {
   const initials =
     name.split(" ").filter(Boolean).slice(-2).map((n) => n[0]).join("").toUpperCase() || "#"
@@ -78,6 +81,22 @@ export function LeadQueueRow({
             {flagged && (
               <Badge className="gap-1 bg-amber-500/20 text-amber-700 border-amber-500/40 text-[10px] font-semibold">
                 <Flag className="size-3" />Flagged
+              </Badge>
+            )}
+            {typeof cri === "number" && (
+              <Badge
+                variant="outline"
+                title="Close-Readiness score (0–100)"
+                className={cn(
+                  "text-[10px] font-semibold tabular-nums",
+                  cri >= 70
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : cri >= 45
+                      ? "border-warning/40 text-warning"
+                      : "border-muted-foreground/30 text-muted-foreground",
+                )}
+              >
+                Score {cri}
               </Badge>
             )}
             {/* URGENT flag (e.g. wrong number — calling is locked, needs recovery). Shown

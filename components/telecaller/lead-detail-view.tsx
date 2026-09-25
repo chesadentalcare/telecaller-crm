@@ -41,6 +41,7 @@ import {
   CheckCheck,
   ExternalLink,
   Flag,
+  Paperclip,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -133,6 +134,7 @@ import {
   useSendSalesReply,
 } from "@/hooks/use-lead-mutations"
 import { ApiError } from "@/lib/api/client"
+import { apiUrl } from "@/lib/api-config"
 import { useRole } from "@/hooks/use-role"
 import { useProducts } from "@/hooks/use-products"
 import type { LeadDetail as ApiLeadDetail } from "@/lib/api/leads"
@@ -266,6 +268,9 @@ type InboundReply = {
   body: string
   receivedAt: Date
   fromSales?: boolean
+  mediaId?: string | null
+  mediaMime?: string | null
+  msgType?: string | null
 }
 
 // Outbound WhatsApp for the conversation thread: free-text replies the rep sent
@@ -483,6 +488,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     lastInboundAt: ext.last_inbound_at ?? undefined,
     inbound: (d.inbound ?? []).map((m) => ({
       id: m.id, intent: m.intent, body: m.body, receivedAt: new Date(m.received_at), fromSales: !!m.from_sales,
+      mediaId: m.media_id ?? null, mediaMime: m.media_mime ?? null, msgType: m.msg_type ?? null,
     })),
     whatsappOutbound,
     firstContact: d.firstContact
@@ -2445,6 +2451,38 @@ const OUTBOUND_KIND_LABEL: Record<WhatsappOutbound["kind"], string> = {
   service: "Service update",
 }
 
+function inboundEmptyLabel(msgType?: string | null): string {
+  if (msgType === "unsupported") return "(attachment couldn't be received — ask them to resend)"
+  const mediaish = ["image", "video", "audio", "voice", "document", "sticker"]
+  if (msgType && mediaish.includes(msgType)) return `(${msgType} — attachment unavailable)`
+  return "(no text content)"
+}
+
+function WaMedia({ id, mime, msgType, caption }: { id: string; mime?: string | null; msgType?: string | null; caption?: string }) {
+  const url = apiUrl(`/whatsapp/media/${id}`)
+  const isImg = msgType === "image" || msgType === "sticker" || (!!mime && mime.startsWith("image/"))
+  const isVid = msgType === "video" || (!!mime && mime.startsWith("video/"))
+  const isAud = msgType === "audio" || msgType === "voice" || (!!mime && mime.startsWith("audio/"))
+  return (
+    <div className="space-y-1">
+      {isImg ? (
+        <a href={url} target="_blank" rel="noreferrer">
+          <img src={url} alt="attachment" className="block max-h-60 max-w-full rounded-lg" />
+        </a>
+      ) : isVid ? (
+        <video src={url} controls className="max-h-64 max-w-full rounded-lg" />
+      ) : isAud ? (
+        <audio src={url} controls className="w-56" />
+      ) : (
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+          <Paperclip className="size-3.5" /> Download {msgType || "file"}
+        </a>
+      )}
+      {caption ? <p className="text-sm whitespace-pre-wrap break-words">{caption}</p> : null}
+    </div>
+  )
+}
+
 // Customer reply bubble (left): the message, its auto-classified intent chip, and a
 // one-tap manual classifier override (P6.14) — correcting the intent re-routes the
 // lead server-side (and STOP archives + opts out).
@@ -2456,9 +2494,13 @@ function InboundBubble({
   return (
     <div className="space-y-1">
       <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-muted px-3 py-2">
-        <p className="text-sm whitespace-pre-wrap break-words">
-          {m.body || <span className="italic text-muted-foreground">(no text content)</span>}
-        </p>
+        {m.mediaId ? (
+          <WaMedia id={m.mediaId} mime={m.mediaMime} msgType={m.msgType} caption={m.body} />
+        ) : (
+          <p className="text-sm whitespace-pre-wrap break-words">
+            {m.body || <span className="italic text-muted-foreground">{inboundEmptyLabel(m.msgType)}</span>}
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2 pl-1">
         <span className="text-[10px] text-muted-foreground">{m.receivedAt.toLocaleString()}</span>

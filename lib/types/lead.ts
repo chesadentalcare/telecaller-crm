@@ -44,6 +44,8 @@ export interface LeadBase {
   // Telecaller-flagged as high-priority. Surfaced on the lead in EVERY tab it lands in
   // (Archived / Lost / Won / No-Response / …), so a flag never gets lost when a lead moves.
   flagged?: boolean
+  // Close-Readiness Index — latest daily score (0..100), null until the lead has been scored.
+  cri?: number | null
   salesAssignedName?: string | null
 }
 
@@ -79,9 +81,7 @@ export interface PipelineLead extends LeadBase {
   dripLastChannel?: "call" | "whatsapp" | null
   dripLastLabel?: string | null
   projection?: DripProjection
-  // Close-Readiness Index — latest daily score (0..100), null until the lead has been scored.
-  cri?: number | null
-  // (flagged now lives on LeadBase — floats to top of Active, shown with amber highlight)
+  // (flagged + cri now live on LeadBase — floats to top of Active, shown with amber highlight)
 }
 
 // Drip campaign queue
