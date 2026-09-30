@@ -117,13 +117,22 @@ export function UploadQueueView({ onOpenLead }: { onOpenLead?: (leadId: string, 
 
   const renderRow = (row: IntakeRow) => {
     const callable = row.is_callable !== 0
+    const crm = row.dup_crm ?? []
+    const crmCount = row.dup_crm_count ?? 0
+    const queueDup = row.dup_queue_count ?? 0
+    const isDuplicate = callable && (crmCount > 0 || queueDup > 0)
     return (
-      <div key={row.id} className="flex items-center gap-3 rounded-lg border p-3">
+      <div key={row.id} className={`flex items-center gap-3 rounded-lg border p-3${isDuplicate ? " border-red-300 bg-red-50/40" : ""}`}>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium truncate">{row.customer_name}</p>
             {row.source_type === "google_sheet" && (
               <Badge variant="outline" className="border-blue-500/40 text-[10px] text-blue-600">Ads sheet</Badge>
+            )}
+            {isDuplicate && (
+              <Badge variant="outline" className="border-red-500/60 bg-red-100 text-[10px] font-semibold text-red-600">
+                <AlertTriangle className="mr-1 size-2.5" /> Duplicate number
+              </Badge>
             )}
             {!callable && (
               <Badge variant="outline" className="border-amber-500/50 text-[10px] text-amber-600">
@@ -132,7 +141,10 @@ export function UploadQueueView({ onOpenLead }: { onOpenLead?: (leadId: string, 
             )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Phone className="size-3" />{row.phone || "—"}</span>
+            <span className="flex items-center gap-1">
+              <Phone className="size-3" />
+              <span className={isDuplicate ? "font-bold text-red-600" : undefined}>{row.phone || "—"}</span>
+            </span>
             {row.city && (
               <span className="flex items-center gap-1">
                 <MapPin className="size-3" />{row.city}{row.state ? `, ${row.state}` : ""}
@@ -149,6 +161,22 @@ export function UploadQueueView({ onOpenLead }: { onOpenLead?: (leadId: string, 
               {row.budget && <span className="flex items-center gap-1"><Wallet className="size-3" />{row.budget}</span>}
               {row.timeline && <span className="flex items-center gap-1"><Clock className="size-3" />{row.timeline}</span>}
               {row.best_time && <span>Call: {row.best_time}</span>}
+            </div>
+          )}
+          {isDuplicate && (
+            <div className="mt-1 rounded-md border border-red-300 bg-red-100/70 px-2 py-1 text-xs text-red-700">
+              <span className="font-semibold">Already exists with this number.</span>{" "}
+              {crmCount > 0 && (
+                <>
+                  {crmCount} lead{crmCount === 1 ? "" : "s"} in CRM
+                  {crm.length > 0 && (
+                    <>: {crm.map((l) => `${l.name || "—"}${l.stage ? ` (${l.stage})` : ""}`).join(", ")}</>
+                  )}
+                  {crmCount > crm.length ? "…" : ""}
+                </>
+              )}
+              {crmCount > 0 && queueDup > 0 && " · "}
+              {queueDup > 0 && `${queueDup} more in this queue`}
             </div>
           )}
         </div>
