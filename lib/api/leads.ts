@@ -158,6 +158,9 @@ export interface IntakeRow {
   invalid_reason: string | null
   uploaded_by: string | null
   created_at: string
+  dup_crm?: { docEntry: number | null; name: string | null; stage: string | null }[]
+  dup_crm_count?: number
+  dup_queue_count?: number
 }
 
 export interface IntakeUploadResult {
