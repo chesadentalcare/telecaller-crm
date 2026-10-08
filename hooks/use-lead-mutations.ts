@@ -166,6 +166,7 @@ export function useLogAttempt(id: string | number) {
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       bought_from_us?: boolean
       callback_at?: string
+      interest_level?: string
     }) => leadsApi.logAttempt(id, body),
     onMutate: async (body) => {
       const key = leadKeys.fullDetail(String(id))
