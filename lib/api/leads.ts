@@ -1080,6 +1080,7 @@ export const leadsApi = {
       not_interested_reason?: "genuine_no" | "timing_budget" | "already_purchased"
       bought_from_us?: boolean
       callback_at?: string
+      interest_level?: string
     },
   ) => unwrap(api.post<Envelope<AttemptResponse>>(endpoints.leadAttempt(String(id)), body)),
 

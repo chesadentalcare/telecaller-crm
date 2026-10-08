@@ -94,6 +94,7 @@ import {
   type CallOutcome,
 } from "@/lib/schemas/call-attempt"
 import { callLogState, firstEditConflict } from "@/lib/call-log-state"
+import { INTEREST_LEVELS } from "@/lib/schemas/lead-edit"
 import {
   zoomMeetingSchema,
   zoomMeetingDefaults,
@@ -1408,6 +1409,8 @@ export function CallsTab({
   const [niReason, setNiReason] = useState<NotInterestedReason | "">("") // not_interested 3-way
   const [boughtFromUs, setBoughtFromUs] = useState<boolean | null>(null)
   const [callbackAt, setCallbackAt] = useState("")                     // call_back_requested
+  const [interestLevel, setInterestLevel] = useState(lead.interestLevel ?? "")
+  const interestChanged = interestLevel !== "" && interestLevel !== (lead.interestLevel ?? "")
 
   // ── Outcome-driven layer ──────────────────────────────────────────────────
   // resolveFlow is the single source of truth used by BOTH the contextual preview
@@ -1444,7 +1447,7 @@ export function CallsTab({
 
   const resetForm = () => {
     reset({ ...callAttemptDefaults, outcome: "" as CallOutcome, predictedClosingDate: autoPredictedClose })
-    setReadyNow(false); setNiReason(""); setBoughtFromUs(null); setCallbackAt("")
+    setReadyNow(false); setNiReason(""); setBoughtFromUs(null); setCallbackAt(""); setInterestLevel(lead.interestLevel ?? "")
   }
 
   // Provenance of the date the rep is submitting: 'manual' if they changed it from the
@@ -1527,6 +1530,7 @@ export function CallsTab({
         ...(values.outcome === "call_back_requested" && callbackAt
           ? { callback_at: callbackAt.replace("T", " ") + ":00" }
           : {}),
+        ...(interestChanged ? { interest_level: interestLevel } : {}),
       }
       const res = await logAttempt(body)
       const routedServerSide = !!res.route
@@ -1580,6 +1584,7 @@ export function CallsTab({
         ready_now: false,
         ...(engagedCallValues.predictedClosingDate ? { predicted_closing_date: engagedCallValues.predictedClosingDate } : {}),
         ...(engagedCallValues.predictedCloseSource ? { predicted_close_source: engagedCallValues.predictedCloseSource } : {}),
+        ...(interestChanged ? { interest_level: interestLevel } : {}),
         notes: engagedCallValues.notes,
       })
       toast.success(`Attempt #${res.attemptNumber} logged${res.route ? ` → ${res.route.replace(/_/g, " ")}` : ""}`)
@@ -1847,6 +1852,24 @@ export function CallsTab({
                 }}
               />
             )}
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Interest level <span className="text-muted-foreground">(optional)</span></Label>
+                {interestChanged && <span className="text-[11px] text-primary">→ changing</span>}
+              </div>
+              <Select value={interestLevel} onValueChange={setInterestLevel}>
+                <SelectTrigger><SelectValue placeholder="Set interest level" /></SelectTrigger>
+                <SelectContent>
+                  {INTEREST_LEVELS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Pre-set to the saved level — change it if this call shifted how interested they are.
+              </p>
+            </div>
 
             <Controller
               control={control}
