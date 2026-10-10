@@ -222,6 +222,9 @@ export interface LeadExtensionRow {
   funding_method: string | null
   competitor_evaluated: string | null
   assigned_to: string
+  sales_assigned_code: string | null
+  sales_assigned_name: string | null
+  sales_assigned_at: string | null
   stage: string
   handed_off_at: string | null
   handoff_from: string | null
@@ -1527,8 +1530,8 @@ export const leadsApi = {
       }>>(endpoints.closeLead(String(id)), formData),
     ),
 
-  markWon: (id: number | string) =>
-    unwrap(api.post<Envelope<{ opportunityDocEntry: number; outcome: string }>>(endpoints.leadMarkWon(String(id)), {})),
+  markWon: (id: number | string, body?: { salesUsername?: string }) =>
+    unwrap(api.post<Envelope<{ opportunityDocEntry: number; outcome: string }>>(endpoints.leadMarkWon(String(id)), body ?? {})),
   leadSapOrder: (id: number | string) =>
     unwrap(api.get<Envelope<LeadSapOrder | null>>(endpoints.leadSapOrderLookup(String(id)))),
 

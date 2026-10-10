@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Trophy, XCircle, Shield, AlertTriangle, RotateCcw,
-  Search, Loader2, PackageCheck, CheckCircle2,
+  Search, Loader2, PackageCheck, CheckCircle2, Briefcase,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,8 +23,9 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
 import { API_BASE_URL } from "@/lib/api-config"
-import { useClosureRecord, useLeadSapOrder } from "@/hooks/use-leads"
+import { useClosureRecord, useLeadSapOrder, useSalesUsers } from "@/hooks/use-leads"
 import { useCloseLead, useLookupSapOrder, useMarkWon } from "@/hooks/use-lead-mutations"
+import { SalesUserOptions } from "./sales-user-options"
 import { DialogFooter } from "@/components/ui/dialog"
 import {
   closureLostSchema,
@@ -34,7 +35,15 @@ import {
 import type { ClosureRecordRow, SapOrderLine, SapOrderLookup } from "@/lib/api/leads"
 
 // ── Closure Card ─────────────────────────────────────────────────────
-export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: number }) {
+export function ClosureCard({
+  opportunityDocEntry,
+  salesAssignedCode,
+  salesAssignedName,
+}: {
+  opportunityDocEntry: number
+  salesAssignedCode?: string | null
+  salesAssignedName?: string | null
+}) {
   const { data: closure, isLoading } = useClosureRecord(opportunityDocEntry)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [markWonOpen, setMarkWonOpen] = useState(false)
@@ -76,6 +85,8 @@ export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: numb
         />
         <MarkWonDialog
           opportunityDocEntry={opportunityDocEntry}
+          salesAssignedCode={salesAssignedCode}
+          salesAssignedName={salesAssignedName}
           open={markWonOpen}
           onOpenChange={setMarkWonOpen}
         />
@@ -86,19 +97,35 @@ export function ClosureCard({ opportunityDocEntry }: { opportunityDocEntry: numb
 
 function MarkWonDialog({
   opportunityDocEntry,
+  salesAssignedCode,
+  salesAssignedName,
   open,
   onOpenChange,
 }: {
   opportunityDocEntry: number
+  salesAssignedCode?: string | null
+  salesAssignedName?: string | null
   open: boolean
   onOpenChange: (o: boolean) => void
 }) {
   const { data: order, isLoading } = useLeadSapOrder(opportunityDocEntry, open)
   const { mutateAsync: markWon, isPending } = useMarkWon(opportunityDocEntry)
+  const { data: salesUsers = [], isLoading: salesLoading } = useSalesUsers(open, opportunityDocEntry)
+
+  const current = salesAssignedCode ?? ""
+  const [salesTarget, setSalesTarget] = useState(current)
+  // Re-sync the picker to the lead's current rep each time the dialog opens.
+  useEffect(() => {
+    if (open) setSalesTarget(current)
+  }, [open, current])
 
   const submit = async () => {
+    if (!salesTarget) {
+      toast.error("Assign a salesperson before marking this lead Won")
+      return
+    }
     try {
-      await markWon()
+      await markWon(salesTarget !== current ? { salesUsername: salesTarget } : undefined)
       toast.success("Marked WON — calls and drip stopped")
       onOpenChange(false)
     } catch (err) {
@@ -140,9 +167,28 @@ function MarkWonDialog({
             </p>
           )}
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs flex items-center gap-1.5">
+            <Briefcase className="size-3.5" />
+            {salesAssignedName ? "Salesperson — change if needed" : "Assign a salesperson *"}
+          </Label>
+          <Select value={salesTarget} onValueChange={setSalesTarget}>
+            <SelectTrigger className="h-9 text-xs" disabled={salesLoading}>
+              <SelectValue placeholder={salesLoading ? "Loading salespeople…" : "Select a salesperson"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SalesUserOptions salesUsers={salesUsers} loading={salesLoading} />
+            </SelectContent>
+          </Select>
+          {!salesTarget ? (
+            <p className="text-[11px] text-amber-600">A salesperson is required to mark this lead Won.</p>
+          ) : salesTarget !== current ? (
+            <p className="text-[11px] text-muted-foreground">This lead will be (re)allocated to the selected rep in SAP.</p>
+          ) : null}
+        </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button size="sm" onClick={submit} disabled={isPending} className="gap-1.5 bg-green-600 hover:bg-green-700">
+          <Button size="sm" onClick={submit} disabled={isPending || !salesTarget} className="gap-1.5 bg-green-600 hover:bg-green-700">
             <Trophy className="size-3.5" />{isPending ? "Marking…" : "Mark Won"}
           </Button>
         </DialogFooter>

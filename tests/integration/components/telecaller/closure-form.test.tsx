@@ -9,6 +9,7 @@ vi.mock("@/hooks/use-leads", () => ({
   useClosureRecord: (...args: unknown[]) => useClosureRecord(...args),
   useClosureOrderContext: () => ({ data: undefined, isLoading: false }),
   useLeadSapOrder: () => ({ data: undefined, isLoading: false }),
+  useSalesUsers: () => ({ data: [], isLoading: false }),
 }))
 vi.mock("@/hooks/use-lead-mutations", () => ({
   useCloseLead: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -79,6 +80,26 @@ describe("<ClosureCard>", () => {
     expect(screen.getByText("Close Lead #4200")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^WON$/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^LOST$/ })).toBeInTheDocument()
+  })
+
+  it("blocks Mark Won until a salesperson is assigned", async () => {
+    useClosureRecord.mockReturnValue({ data: null, isLoading: false })
+    const { user } = renderWithProviders(<ClosureCard opportunityDocEntry={4200} />)
+    await user.click(screen.getByRole("button", { name: /Mark Won \(no order\)/ }))
+    await waitFor(() => expect(screen.getByText("Mark Won #4200")).toBeInTheDocument())
+    expect(screen.getByText(/A salesperson is required/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Mark Won$/ })).toBeDisabled()
+  })
+
+  it("pre-selects the assigned salesperson and enables Mark Won", async () => {
+    useClosureRecord.mockReturnValue({ data: null, isLoading: false })
+    const { user } = renderWithProviders(
+      <ClosureCard opportunityDocEntry={4200} salesAssignedCode="77" salesAssignedName="Ravi" />,
+    )
+    await user.click(screen.getByRole("button", { name: /Mark Won \(no order\)/ }))
+    await waitFor(() => expect(screen.getByText("Mark Won #4200")).toBeInTheDocument())
+    expect(screen.getByText(/change if needed/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Mark Won$/ })).not.toBeDisabled()
   })
 
   it("renders a WON closure record with order and dispatch details", () => {

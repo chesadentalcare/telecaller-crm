@@ -216,6 +216,10 @@ type LeadDetail = {
   rapidQualified: boolean
   phoneVerified: boolean
   flagged?: boolean
+  // Current territory-assigned salesperson (SAP SalesPersonCode + name) — the Mark Won
+  // dialog requires one and lets the rep (re)assign before closing.
+  salesAssignedCode?: string | null
+  salesAssignedName?: string | null
   dentistType?: string
   practiceType?: string
   timelineBucket?: string
@@ -443,6 +447,8 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     rapidQualified: !!(ext.dentist_type && ext.practice_type),
     phoneVerified: !!ext.phone_verified,
     flagged: !!ext.flagged,
+    salesAssignedCode: ext.sales_assigned_code ?? null,
+    salesAssignedName: ext.sales_assigned_name ?? null,
     dentistType: ext.dentist_type ?? undefined,
     practiceType: ext.practice_type ?? undefined,
     timelineBucket: ext.timeline ?? undefined,
@@ -2123,7 +2129,11 @@ export function CallsTab({
         </CardContent>
       </Card>
 
-      <ClosureCard opportunityDocEntry={Number(lead.id)} />
+      <ClosureCard
+        opportunityDocEntry={Number(lead.id)}
+        salesAssignedCode={lead.salesAssignedCode}
+        salesAssignedName={lead.salesAssignedName}
+      />
 
       {/* "What happens" explainer for a historical attempt (Call History → Learn). */}
       <OutcomeExplainerDialog
@@ -3469,7 +3479,11 @@ export function QuotesTab({ lead }: { lead: LeadDetail }) {
         </CardContent>
       </Card>
       <FollowUpListCard opportunityDocEntry={Number(lead.id)} />
-      <ClosureCard opportunityDocEntry={Number(lead.id)} />
+      <ClosureCard
+        opportunityDocEntry={Number(lead.id)}
+        salesAssignedCode={lead.salesAssignedCode}
+        salesAssignedName={lead.salesAssignedName}
+      />
     </div>
   )
 }
