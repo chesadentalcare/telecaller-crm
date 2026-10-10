@@ -659,7 +659,7 @@ export function useCloseLead(id: string | number) {
 export function useMarkWon(id: string | number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => leadsApi.markWon(id),
+    mutationFn: (body?: { salesUsername?: string }) => leadsApi.markWon(id, body),
     onSuccess: () => invalidateAllLeads(qc),
   })
 }
