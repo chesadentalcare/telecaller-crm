@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, Fragment } from "react"
 import {
   ArrowLeft,
   BookOpen,
@@ -18,6 +18,7 @@ import {
   PhoneCall,
   PhoneOff,
   MessageSquare,
+  Zap,
   Video,
   MapPinned,
   Timer,
@@ -461,7 +462,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTrack: d.drip?.track,
     dripMessageIndex: d.drip?.current_message_index,
     dripTotalMessages:
-      d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 19 : 13,
+      d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 22 : d.drip?.track === "6_plus_month" ? 28 : d.drip?.track === "24_month" ? 16 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
     dripStartedAt: d.drip?.started_at ? new Date(d.drip.started_at) : undefined,
     dripProjection: d.drip?.projection ?? undefined,
@@ -2954,7 +2955,7 @@ const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp";
   ],
   "3_month": [
     { day: 0, channel: "call", label: "Anchor call — confirm 3-month timeline" },
-    { day: 5, channel: "whatsapp", label: "Education — product deep-dive" },
+    { day: 5, channel: "whatsapp", label: "Catalogue — models & specifications" },
     { day: 10, channel: "whatsapp", label: "Education — ROI" },
     { day: 15, channel: "whatsapp", label: "Education — clinic story" },
     { day: 20, channel: "whatsapp", label: "Education — comparison guide" },
@@ -2963,31 +2964,54 @@ const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp";
     { day: 35, channel: "whatsapp", label: "Nurture — demo invite" },
     { day: 40, channel: "whatsapp", label: "Nurture — feature spotlight" },
     { day: 45, channel: "whatsapp", label: "Nurture — financing" },
-    { day: 50, channel: "call", label: "Mid-cycle call — objections / Zoom" },
-    { day: 55, channel: "whatsapp", label: "Nurture — seasonal offer" },
-    { day: 60, channel: "whatsapp", label: "Nurture — case study" },
-    { day: 65, channel: "whatsapp", label: "Nurture — event invite" },
-    { day: 70, channel: "whatsapp", label: "Nurture — reminder" },
-    { day: 75, channel: "whatsapp", label: "Nurture — value recap" },
-    { day: 80, channel: "call", label: "Pre-close call — lock a visit" },
-    { day: 85, channel: "whatsapp", label: "Soft close" },
-    { day: 90, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 50, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
+    { day: 55, channel: "whatsapp", label: "Nurture — event invite" },
+    { day: 60, channel: "whatsapp", label: "Nurture — reminder" },
+    { day: 61, channel: "call", label: "Closing anchor call — lock a visit" },
+    { day: 62, channel: "whatsapp", label: "Soft close — value recap" },
+    { day: 63, channel: "call", label: "Objection-handling call" },
+    { day: 64, channel: "whatsapp", label: "Social proof — case study" },
+    { day: 67, channel: "call", label: "Decision call — offer a meeting" },
+    { day: 70, channel: "whatsapp", label: "Offer — seasonal / financing" },
+    { day: 73, channel: "call", label: "Last-value call — final objection handling" },
+    { day: 76, channel: "whatsapp", label: "Soft close — hold a demo slot this week" },
+    { day: 78, channel: "whatsapp", label: "Breakup — closing your enquiry" },
   ],
   "6_plus_month": [
     { day: 0, channel: "whatsapp", label: "Seeded re-open — low pressure" },
     { day: 14, channel: "whatsapp", label: "Education — long-horizon value" },
     { day: 28, channel: "whatsapp", label: "Education — no ask" },
-    { day: 42, channel: "call", label: "Anchor call — confirm still 6m+" },
+    { day: 42, channel: "call", label: "Anchor call — confirm still ~6 months out" },
     { day: 56, channel: "whatsapp", label: "Nurture — new models" },
     { day: 70, channel: "whatsapp", label: "Nurture — events" },
-    { day: 84, channel: "whatsapp", label: "Nurture — clinic features" },
-    { day: 98, channel: "whatsapp", label: "Nurture — case study" },
-    { day: 112, channel: "call", label: "Anchor call — timeline firming up?" },
-    { day: 126, channel: "whatsapp", label: "Nurture — seasonal offer" },
-    { day: 140, channel: "whatsapp", label: "Nurture — financing" },
-    { day: 154, channel: "whatsapp", label: "Nurture — reminder" },
-    { day: 168, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 84, channel: "whatsapp", label: "Catalogue — models & specifications" },
+    { day: 89, channel: "whatsapp", label: "Education — ROI / value" },
+    { day: 94, channel: "whatsapp", label: "Education — clinic story" },
+    { day: 99, channel: "call", label: "Check-in call — timeline firming up?" },
+    { day: 104, channel: "whatsapp", label: "Education — comparison guide" },
+    { day: 109, channel: "whatsapp", label: "Nurture — demo invite" },
+    { day: 114, channel: "whatsapp", label: "Nurture — feature spotlight" },
+    { day: 119, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
+    { day: 124, channel: "whatsapp", label: "Nurture — help decide" },
+    { day: 129, channel: "whatsapp", label: "Nurture — financing" },
+    { day: 134, channel: "whatsapp", label: "Nurture — event invite" },
+    { day: 139, channel: "call", label: "Decision call — firm up the plan" },
+    { day: 144, channel: "whatsapp", label: "Nurture — reminder" },
+    { day: 150, channel: "call", label: "Closing anchor call — lock a visit" },
+    { day: 151, channel: "whatsapp", label: "Closing — value recap" },
+    { day: 152, channel: "call", label: "Objection-handling call" },
+    { day: 153, channel: "whatsapp", label: "Social proof — case study" },
+    { day: 156, channel: "call", label: "Decision call — offer a meeting" },
+    { day: 159, channel: "whatsapp", label: "Offer — seasonal / financing" },
+    { day: 162, channel: "call", label: "Last-value call — final objection handling" },
+    { day: 165, channel: "whatsapp", label: "Financing — make it easy to proceed" },
+    { day: 167, channel: "whatsapp", label: "Breakup — closing your enquiry" },
   ],
+}
+
+const SPRINT_START: Record<string, number> = {
+  "3_month": 13,
+  "6_plus_month": 19,
 }
 
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
@@ -3102,9 +3126,17 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
               <Timer className="size-4 text-amber-500" />
               {trackLabels[lead.dripTrack!]}
             </CardTitle>
-            <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">
-              Active
-            </Badge>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {SPRINT_START[lead.dripTrack!] != null && (lead.dripMessageIndex ?? 0) >= SPRINT_START[lead.dripTrack!] && (
+                <Badge className="gap-1 bg-amber-500/15 text-amber-700 border-amber-500/40 text-[10px] font-bold">
+                  <Zap className="size-3" />
+                  Final-month sprint · 1-month pace
+                </Badge>
+              )}
+              <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">
+                Active
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -3152,34 +3184,51 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                   const state = i < idx ? "done" : i === idx ? "current" : "upcoming"
                   const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
                   const td = touchDate(t.day)
+                  const sprintStart = SPRINT_START[lead.dripTrack!]
+                  const inSprint = sprintStart != null && i >= sprintStart
+                  const sprintCount = sprintStart != null ? DRIP_SEQUENCE[lead.dripTrack!].length - sprintStart : 0
                   return (
-                    <li
-                      key={i}
-                      className={cn(
-                        "flex items-center gap-2 rounded px-2 py-1 text-xs",
-                        state === "current" && "bg-primary/10 ring-1 ring-primary/30",
-                        state === "upcoming" && "opacity-60",
+                    <Fragment key={i}>
+                      {sprintStart != null && i === sprintStart && (
+                        <li className="mt-2 rounded-md border-2 border-amber-500/60 bg-amber-500/10 px-2 py-1.5">
+                          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                            <Zap className="size-3.5 text-amber-600" />
+                            Final-month sprint — {sprintCount} accelerated touches
+                          </p>
+                          <p className="text-[10px] font-semibold text-amber-700/90">
+                            As the buy date nears (last ~month) the track switches to the 1-Month cadence — {sprintCount} touches over ~17 days.
+                          </p>
+                        </li>
                       )}
-                    >
-                      {state === "done" ? (
-                        <CheckCircle2 className="size-3.5 text-success shrink-0" />
-                      ) : state === "current" ? (
-                        <Clock className="size-3.5 text-primary shrink-0" />
-                      ) : (
-                        <ChannelIcon className="size-3.5 text-muted-foreground shrink-0" />
-                      )}
-                      <span className="font-mono text-[10px] text-muted-foreground w-16 shrink-0 leading-tight">
-                        Day {t.day}
-                        {td && (
-                          <span className="block text-[9px] text-muted-foreground/70">
-                            {td.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                          </span>
+                      <li
+                        className={cn(
+                          "flex items-center gap-2 rounded px-2 py-1 text-xs",
+                          state === "current" && "bg-primary/10 ring-1 ring-primary/30",
+                          state === "upcoming" && "opacity-60",
+                          inSprint && "border-l-2 border-amber-500/70 bg-amber-500/5 pl-1.5",
                         )}
-                      </span>
-                      <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
-                      <span className={cn("truncate", state === "current" && "font-medium text-foreground")}>{t.label}</span>
-                      {state === "current" && <Badge className="ml-auto text-[9px] bg-primary/15 text-primary border-primary/30 shrink-0">Next</Badge>}
-                    </li>
+                      >
+                        {state === "done" ? (
+                          <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                        ) : state === "current" ? (
+                          <Clock className="size-3.5 text-primary shrink-0" />
+                        ) : (
+                          <ChannelIcon className="size-3.5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="font-mono text-[10px] text-muted-foreground w-16 shrink-0 leading-tight">
+                          Day {t.day}
+                          {td && (
+                            <span className="block text-[9px] text-muted-foreground/70">
+                              {td.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                            </span>
+                          )}
+                        </span>
+                        <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
+                        <span className={cn("truncate", state === "current" && "font-medium text-foreground", inSprint && "font-bold text-amber-800")}>{t.label}</span>
+                        {inSprint && state !== "current" && <Badge className="ml-auto text-[9px] bg-amber-500/15 text-amber-700 border-amber-500/40 shrink-0">1-month pace</Badge>}
+                        {state === "current" && <Badge className="ml-auto text-[9px] bg-primary/15 text-primary border-primary/30 shrink-0">Next</Badge>}
+                      </li>
+                    </Fragment>
                   )
                 })}
               </ol>
