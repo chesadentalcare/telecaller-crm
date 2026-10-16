@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 
 interface Props {
   repliedOnly: boolean
@@ -17,21 +18,30 @@ interface Props {
   setMeetingPendingOnly: (v: boolean) => void
   unverifiedOnly: boolean
   setUnverifiedOnly: (v: boolean) => void
+  closeFrom: string
+  setCloseFrom: (v: string) => void
+  closeTo: string
+  setCloseTo: (v: string) => void
 }
 
 export function PipelineFilterModal({
   repliedOnly, setRepliedOnly,
   meetingPendingOnly, setMeetingPendingOnly,
   unverifiedOnly, setUnverifiedOnly,
+  closeFrom, setCloseFrom,
+  closeTo, setCloseTo,
 }: Props) {
   const [open, setOpen] = useState(false)
 
-  const activeCount = (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
+  const activeCount =
+    (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0) + (closeFrom || closeTo ? 1 : 0)
 
   const clearAll = () => {
     setRepliedOnly(false)
     setMeetingPendingOnly(false)
     setUnverifiedOnly(false)
+    setCloseFrom("")
+    setCloseTo("")
   }
 
   return (
@@ -65,6 +75,46 @@ export function PipelineFilterModal({
               <Checkbox checked={unverifiedOnly} onCheckedChange={(v) => setUnverifiedOnly(!!v)} />
               Unverified number
             </label>
+          </div>
+
+          <div className="space-y-2 border-t pt-3">
+            <p className="text-sm font-medium">Projected closing date</p>
+            <p className="text-[11px] text-muted-foreground">
+              Show only Active leads projected to close within this range.
+            </p>
+            <div className="flex items-end gap-2">
+              <div className="flex-1 space-y-1">
+                <label className="text-[11px] text-muted-foreground">From</label>
+                <Input
+                  type="date"
+                  value={closeFrom}
+                  max={closeTo || undefined}
+                  onChange={(e) => setCloseFrom(e.target.value)}
+                  className="h-8"
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <label className="text-[11px] text-muted-foreground">To</label>
+                <Input
+                  type="date"
+                  value={closeTo}
+                  min={closeFrom || undefined}
+                  onChange={(e) => setCloseTo(e.target.value)}
+                  className="h-8"
+                />
+              </div>
+            </div>
+            {(closeFrom || closeTo) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                onClick={() => { setCloseFrom(""); setCloseTo("") }}
+              >
+                Clear dates
+              </Button>
+            )}
           </div>
         </div>
 

@@ -132,6 +132,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   dripLastChannel: r.drip_last_channel ?? null,
   dripLastLabel: r.drip_last_label ?? null,
   projection: toProjection(r.projection),
+  projectedClose: r.predicted_closing_date ? new Date(r.predicted_closing_date) : null,
   cri: typeof r.cri === "number" ? r.cri : null,
 })
 

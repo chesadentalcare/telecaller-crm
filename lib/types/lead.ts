@@ -81,6 +81,7 @@ export interface PipelineLead extends LeadBase {
   dripLastChannel?: "call" | "whatsapp" | null
   dripLastLabel?: string | null
   projection?: DripProjection
+  projectedClose?: Date | null
   // (flagged + cri now live on LeadBase — floats to top of Active, shown with amber highlight)
 }
 

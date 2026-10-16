@@ -120,6 +120,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [repliedOnly, setRepliedOnly] = useState(false)
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
   const [unverifiedOnly, setUnverifiedOnly] = useState(false)
+  const [closeFrom, setCloseFrom] = useState("")
+  const [closeTo, setCloseTo] = useState("")
   const [flaggedOnly, setFlaggedOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
   const [trackFilter, setTrackFilter] = useState<
@@ -204,6 +206,14 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     .filter((l) => !repliedOnly || isReplied(l))
     .filter((l) => !meetingPendingOnly || !!l.meetingPending)
     .filter((l) => !unverifiedOnly || !l.phoneVerified)
+    .filter((l) => {
+      if (!closeFrom && !closeTo) return true
+      if (!l.projectedClose) return false
+      const t = l.projectedClose.getTime()
+      if (closeFrom && t < new Date(`${closeFrom}T00:00:00`).getTime()) return false
+      if (closeTo && t > new Date(`${closeTo}T23:59:59`).getTime()) return false
+      return true
+    })
     .filter((l) => !flaggedOnly || !!l.flagged)
     .filter(
       (l) =>
@@ -249,6 +259,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     repliedOnly ||
     meetingPendingOnly ||
     unverifiedOnly ||
+    !!closeFrom ||
+    !!closeTo ||
     flaggedOnly ||
     mode !== "all" ||
     trackFilter !== "all"
@@ -258,6 +270,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     setRepliedOnly(false)
     setMeetingPendingOnly(false)
     setUnverifiedOnly(false)
+    setCloseFrom("")
+    setCloseTo("")
     setFlaggedOnly(false)
     setMode("all")
     setTrackFilter("all")
@@ -511,6 +525,10 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 setMeetingPendingOnly={setMeetingPendingOnly}
                 unverifiedOnly={unverifiedOnly}
                 setUnverifiedOnly={setUnverifiedOnly}
+                closeFrom={closeFrom}
+                setCloseFrom={setCloseFrom}
+                closeTo={closeTo}
+                setCloseTo={setCloseTo}
               />
 
               <DropdownMenu>
