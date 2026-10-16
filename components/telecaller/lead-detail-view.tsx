@@ -2984,34 +2984,39 @@ const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp";
     { day: 42, channel: "call", label: "Anchor call — confirm still ~6 months out" },
     { day: 56, channel: "whatsapp", label: "Nurture — new models" },
     { day: 70, channel: "whatsapp", label: "Nurture — events" },
-    { day: 84, channel: "whatsapp", label: "Catalogue — models & specifications" },
-    { day: 89, channel: "whatsapp", label: "Education — ROI / value" },
-    { day: 94, channel: "whatsapp", label: "Education — clinic story" },
-    { day: 99, channel: "call", label: "Check-in call — timeline firming up?" },
-    { day: 104, channel: "whatsapp", label: "Education — comparison guide" },
-    { day: 109, channel: "whatsapp", label: "Nurture — demo invite" },
-    { day: 114, channel: "whatsapp", label: "Nurture — feature spotlight" },
-    { day: 119, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
-    { day: 124, channel: "whatsapp", label: "Nurture — help decide" },
-    { day: 129, channel: "whatsapp", label: "Nurture — financing" },
-    { day: 134, channel: "whatsapp", label: "Nurture — event invite" },
-    { day: 139, channel: "call", label: "Decision call — firm up the plan" },
-    { day: 144, channel: "whatsapp", label: "Nurture — reminder" },
-    { day: 150, channel: "call", label: "Closing anchor call — lock a visit" },
-    { day: 151, channel: "whatsapp", label: "Closing — value recap" },
-    { day: 152, channel: "call", label: "Objection-handling call" },
-    { day: 153, channel: "whatsapp", label: "Social proof — case study" },
-    { day: 156, channel: "call", label: "Decision call — offer a meeting" },
-    { day: 159, channel: "whatsapp", label: "Offer — seasonal / financing" },
-    { day: 162, channel: "call", label: "Last-value call — final objection handling" },
-    { day: 165, channel: "whatsapp", label: "Financing — make it easy to proceed" },
-    { day: 167, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 84, channel: "whatsapp", label: "Gentle reminder — here when planning starts" },
+    { day: 90, channel: "call", label: "Enters 3-month pace — check-in, timeline firming up?" },
+    { day: 95, channel: "whatsapp", label: "Catalogue — models & specifications" },
+    { day: 100, channel: "whatsapp", label: "Education — ROI / value" },
+    { day: 105, channel: "whatsapp", label: "Education — clinic story" },
+    { day: 110, channel: "whatsapp", label: "Education — comparison guide" },
+    { day: 115, channel: "call", label: "Check-in call — budget / approvals" },
+    { day: 120, channel: "whatsapp", label: "Nurture — help decide" },
+    { day: 125, channel: "whatsapp", label: "Nurture — demo invite" },
+    { day: 130, channel: "whatsapp", label: "Nurture — feature spotlight" },
+    { day: 135, channel: "whatsapp", label: "Nurture — financing" },
+    { day: 140, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
+    { day: 145, channel: "whatsapp", label: "Nurture — event invite" },
+    { day: 150, channel: "whatsapp", label: "Nurture — reminder" },
+    { day: 151, channel: "call", label: "Closing anchor call — lock a visit" },
+    { day: 152, channel: "whatsapp", label: "Soft close — value recap" },
+    { day: 153, channel: "call", label: "Objection-handling call" },
+    { day: 154, channel: "whatsapp", label: "Social proof — case study" },
+    { day: 157, channel: "call", label: "Decision call — offer a meeting" },
+    { day: 160, channel: "whatsapp", label: "Offer — seasonal / financing" },
+    { day: 163, channel: "call", label: "Last-value call — final objection handling" },
+    { day: 166, channel: "whatsapp", label: "Financing — make it easy to proceed" },
+    { day: 168, channel: "whatsapp", label: "Breakup — closing your enquiry" },
   ],
 }
 
 const SPRINT_START: Record<string, number> = {
   "3_month": 13,
-  "6_plus_month": 19,
+  "6_plus_month": 20,
+}
+
+const RAMP_START: Record<string, number> = {
+  "6_plus_month": 7,
 }
 
 // ─── Drip Tab — Gap #6: DripStateBadge + Gap #7: Manual Exit ───────────
@@ -3127,6 +3132,14 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
               {trackLabels[lead.dripTrack!]}
             </CardTitle>
             <div className="flex items-center gap-1.5 flex-wrap">
+              {RAMP_START[lead.dripTrack!] != null
+                && (lead.dripMessageIndex ?? 0) >= RAMP_START[lead.dripTrack!]
+                && (SPRINT_START[lead.dripTrack!] == null || (lead.dripMessageIndex ?? 0) < SPRINT_START[lead.dripTrack!]) && (
+                <Badge className="gap-1 bg-blue-500/15 text-blue-700 border-blue-500/40 text-[10px] font-bold">
+                  <Zap className="size-3" />
+                  3-month pace · closing in
+                </Badge>
+              )}
               {SPRINT_START[lead.dripTrack!] != null && (lead.dripMessageIndex ?? 0) >= SPRINT_START[lead.dripTrack!] && (
                 <Badge className="gap-1 bg-amber-500/15 text-amber-700 border-amber-500/40 text-[10px] font-bold">
                   <Zap className="size-3" />
@@ -3187,8 +3200,22 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                   const sprintStart = SPRINT_START[lead.dripTrack!]
                   const inSprint = sprintStart != null && i >= sprintStart
                   const sprintCount = sprintStart != null ? DRIP_SEQUENCE[lead.dripTrack!].length - sprintStart : 0
+                  const rampStart = RAMP_START[lead.dripTrack!]
+                  const inRamp = rampStart != null && i >= rampStart && (sprintStart == null || i < sprintStart)
+                  const rampCount = rampStart != null ? (sprintStart ?? DRIP_SEQUENCE[lead.dripTrack!].length) - rampStart : 0
                   return (
                     <Fragment key={i}>
+                      {rampStart != null && i === rampStart && (
+                        <li className="mt-2 rounded-md border-2 border-blue-500/50 bg-blue-500/10 px-2 py-1.5">
+                          <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-blue-700">
+                            <Zap className="size-3.5 text-blue-600" />
+                            Enters 3-month pace — {rampCount} accelerated touches
+                          </p>
+                          <p className="text-[10px] font-semibold text-blue-700/90">
+                            Within ~3 months of the buy date the track matches the 3-Month drip — {rampCount} touches at a ~5-day cadence, then the final-month sprint.
+                          </p>
+                        </li>
+                      )}
                       {sprintStart != null && i === sprintStart && (
                         <li className="mt-2 rounded-md border-2 border-amber-500/60 bg-amber-500/10 px-2 py-1.5">
                           <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
@@ -3205,6 +3232,7 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                           "flex items-center gap-2 rounded px-2 py-1 text-xs",
                           state === "current" && "bg-primary/10 ring-1 ring-primary/30",
                           state === "upcoming" && "opacity-60",
+                          inRamp && "border-l-2 border-blue-500/60 bg-blue-500/5 pl-1.5",
                           inSprint && "border-l-2 border-amber-500/70 bg-amber-500/5 pl-1.5",
                         )}
                       >
@@ -3224,7 +3252,8 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                           )}
                         </span>
                         <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
-                        <span className={cn("truncate", state === "current" && "font-medium text-foreground", inSprint && "font-bold text-amber-800")}>{t.label}</span>
+                        <span className={cn("truncate", state === "current" && "font-medium text-foreground", inRamp && "font-semibold text-blue-800", inSprint && "font-bold text-amber-800")}>{t.label}</span>
+                        {inRamp && state !== "current" && <Badge className="ml-auto text-[9px] bg-blue-500/15 text-blue-700 border-blue-500/40 shrink-0">3-month pace</Badge>}
                         {inSprint && state !== "current" && <Badge className="ml-auto text-[9px] bg-amber-500/15 text-amber-700 border-amber-500/40 shrink-0">1-month pace</Badge>}
                         {state === "current" && <Badge className="ml-auto text-[9px] bg-primary/15 text-primary border-primary/30 shrink-0">Next</Badge>}
                       </li>
