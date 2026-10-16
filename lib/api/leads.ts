@@ -655,6 +655,7 @@ export interface PipelineRow extends ReplyRowFields {
   state?: string | null
   created_at: string
   updated_at: string
+  predicted_closing_date?: string | null
   failed_attempts: number
   last_attempt_time: string | null
   last_outcome?: CallOutcome | null
