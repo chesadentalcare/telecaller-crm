@@ -462,7 +462,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripTrack: d.drip?.track,
     dripMessageIndex: d.drip?.current_message_index,
     dripTotalMessages:
-      d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 22 : d.drip?.track === "6_plus_month" ? 28 : d.drip?.track === "24_month" ? 16 : 13,
+      d.drip?.track === "1_month" ? 9 : d.drip?.track === "3_month" ? 22 : d.drip?.track === "6_plus_month" ? 29 : d.drip?.track === "24_month" ? 16 : 13,
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
     dripStartedAt: d.drip?.started_at ? new Date(d.drip.started_at) : undefined,
     dripProjection: d.drip?.projection ?? undefined,
@@ -2945,68 +2945,68 @@ const DRIP_SEQUENCE: Record<string, { day: number; channel: "call" | "whatsapp";
   "1_month": [
     { day: 0, channel: "call", label: "Anchor call — warm re-open" },
     { day: 1, channel: "whatsapp", label: "Recap + brochure" },
-    { day: 2, channel: "call", label: "Nudge call — handle the objection" },
-    { day: 3, channel: "whatsapp", label: "Social proof — nearby clinic / model" },
+    { day: 2, channel: "call", label: "Nudge call — handle the captured objection" },
+    { day: 3, channel: "whatsapp", label: "Social proof — nearby clinic runs Chesa" },
     { day: 6, channel: "call", label: "Decision call — offer a meeting" },
-    { day: 9, channel: "whatsapp", label: "Offer — financing / demo slot" },
-    { day: 12, channel: "call", label: "Last-value call — final objection" },
-    { day: 15, channel: "whatsapp", label: "Soft close — hold a demo slot" },
-    { day: 17, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 9, channel: "whatsapp", label: "Offer — EMI / financing + demo slot" },
+    { day: 12, channel: "call", label: "Last-value call — final objections" },
+    { day: 15, channel: "whatsapp", label: "Soft close — demo slot held this week" },
+    { day: 17, channel: "whatsapp", label: "Break-up — pausing your enquiry" },
   ],
   "3_month": [
     { day: 0, channel: "call", label: "Anchor call — confirm 3-month timeline" },
     { day: 5, channel: "whatsapp", label: "Catalogue — models & specifications" },
-    { day: 10, channel: "whatsapp", label: "Education — ROI" },
+    { day: 10, channel: "whatsapp", label: "Education — ROI / value" },
     { day: 15, channel: "whatsapp", label: "Education — clinic story" },
     { day: 20, channel: "whatsapp", label: "Education — comparison guide" },
     { day: 25, channel: "call", label: "Check-in call — timeline / budget" },
-    { day: 30, channel: "whatsapp", label: "Nurture — comparison" },
-    { day: 35, channel: "whatsapp", label: "Nurture — demo invite" },
-    { day: 40, channel: "whatsapp", label: "Nurture — feature spotlight" },
-    { day: 45, channel: "whatsapp", label: "Nurture — financing" },
+    { day: 30, channel: "whatsapp", label: "Decision help — compare vs other options" },
+    { day: 35, channel: "whatsapp", label: "Demo — see it in action" },
+    { day: 40, channel: "whatsapp", label: "Build value — feature spotlight" },
+    { day: 45, channel: "whatsapp", label: "Offer — EMI / financing" },
     { day: 50, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
-    { day: 55, channel: "whatsapp", label: "Nurture — event invite" },
-    { day: 60, channel: "whatsapp", label: "Nurture — reminder" },
-    { day: 61, channel: "call", label: "Closing anchor call — lock a visit" },
-    { day: 62, channel: "whatsapp", label: "Soft close — value recap" },
-    { day: 63, channel: "call", label: "Objection-handling call" },
-    { day: 64, channel: "whatsapp", label: "Social proof — case study" },
-    { day: 67, channel: "call", label: "Decision call — offer a meeting" },
-    { day: 70, channel: "whatsapp", label: "Offer — seasonal / financing" },
-    { day: 73, channel: "call", label: "Last-value call — final objection handling" },
-    { day: 76, channel: "whatsapp", label: "Soft close — hold a demo slot this week" },
-    { day: 78, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 55, channel: "whatsapp", label: "Invite — live demo / walkthrough" },
+    { day: 60, channel: "whatsapp", label: "Soft close — next-step reminder" },
+    { day: 61, channel: "call", label: "Closing · Visit-booking call — lock a visit" },
+    { day: 62, channel: "whatsapp", label: "Closing · value recap" },
+    { day: 63, channel: "call", label: "Closing · Objection-handling call" },
+    { day: 64, channel: "whatsapp", label: "Closing · case-study proof" },
+    { day: 67, channel: "call", label: "Closing · Decision call — offer a meeting" },
+    { day: 70, channel: "whatsapp", label: "Closing · offer — seasonal / financing" },
+    { day: 73, channel: "call", label: "Closing · Final-offer call — present the offer" },
+    { day: 76, channel: "whatsapp", label: "Closing · soft close — demo / quote this week" },
+    { day: 78, channel: "whatsapp", label: "Break-up — pausing your enquiry" },
   ],
   "6_plus_month": [
-    { day: 0, channel: "whatsapp", label: "Seeded re-open — low pressure" },
-    { day: 14, channel: "whatsapp", label: "Education — long-horizon value" },
-    { day: 28, channel: "whatsapp", label: "Education — no ask" },
-    { day: 42, channel: "call", label: "Anchor call — confirm still ~6 months out" },
-    { day: 56, channel: "whatsapp", label: "Nurture — new models" },
-    { day: 70, channel: "whatsapp", label: "Nurture — events" },
+    { day: 0, channel: "whatsapp", label: "Re-open — low pressure, no rush" },
+    { day: 14, channel: "whatsapp", label: "Educate — what lasts (service, upkeep)" },
+    { day: 28, channel: "whatsapp", label: "Planning tip — no ask" },
+    { day: 42, channel: "call", label: "Check-in call — still ~6 months out?" },
+    { day: 56, channel: "whatsapp", label: "Update — new models in the range" },
+    { day: 70, channel: "whatsapp", label: "Invite — demo / walkthrough (early)" },
     { day: 84, channel: "whatsapp", label: "Gentle reminder — here when planning starts" },
-    { day: 90, channel: "call", label: "Enters 3-month pace — check-in, timeline firming up?" },
-    { day: 95, channel: "whatsapp", label: "Catalogue — models & specifications" },
-    { day: 100, channel: "whatsapp", label: "Education — ROI / value" },
-    { day: 105, channel: "whatsapp", label: "Education — clinic story" },
-    { day: 110, channel: "whatsapp", label: "Education — comparison guide" },
-    { day: 115, channel: "call", label: "Check-in call — budget / approvals" },
-    { day: 120, channel: "whatsapp", label: "Nurture — help decide" },
-    { day: 125, channel: "whatsapp", label: "Nurture — demo invite" },
-    { day: 130, channel: "whatsapp", label: "Nurture — feature spotlight" },
-    { day: 135, channel: "whatsapp", label: "Nurture — financing" },
-    { day: 140, channel: "call", label: "Mid-cycle call — objections / Zoom walkthrough" },
-    { day: 145, channel: "whatsapp", label: "Nurture — event invite" },
-    { day: 150, channel: "whatsapp", label: "Nurture — reminder" },
-    { day: 151, channel: "call", label: "Closing anchor call — lock a visit" },
-    { day: 152, channel: "whatsapp", label: "Soft close — value recap" },
-    { day: 153, channel: "call", label: "Objection-handling call" },
-    { day: 154, channel: "whatsapp", label: "Social proof — case study" },
-    { day: 157, channel: "call", label: "Decision call — offer a meeting" },
-    { day: 160, channel: "whatsapp", label: "Offer — seasonal / financing" },
-    { day: 163, channel: "call", label: "Last-value call — final objection handling" },
-    { day: 166, channel: "whatsapp", label: "Financing — make it easy to proceed" },
-    { day: 168, channel: "whatsapp", label: "Breakup — closing your enquiry" },
+    { day: 90, channel: "call", label: "3-month pace · check-in call — timeline firming up?" },
+    { day: 95, channel: "whatsapp", label: "3-month pace · catalogue — models & specs" },
+    { day: 100, channel: "whatsapp", label: "3-month pace · ROI / value" },
+    { day: 105, channel: "whatsapp", label: "3-month pace · clinic story" },
+    { day: 110, channel: "whatsapp", label: "3-month pace · comparison guide" },
+    { day: 115, channel: "call", label: "3-month pace · check-in call — budget / approvals" },
+    { day: 120, channel: "whatsapp", label: "3-month pace · compare vs other options" },
+    { day: 125, channel: "whatsapp", label: "3-month pace · demo invite" },
+    { day: 130, channel: "whatsapp", label: "3-month pace · feature spotlight" },
+    { day: 135, channel: "whatsapp", label: "3-month pace · EMI / financing" },
+    { day: 140, channel: "call", label: "3-month pace · mid-cycle call — objections / Zoom" },
+    { day: 145, channel: "whatsapp", label: "3-month pace · event invite" },
+    { day: 150, channel: "whatsapp", label: "3-month pace · next-step reminder" },
+    { day: 151, channel: "call", label: "Closing · Visit-booking call — lock a visit" },
+    { day: 152, channel: "whatsapp", label: "Closing · value recap" },
+    { day: 153, channel: "call", label: "Closing · Objection-handling call" },
+    { day: 154, channel: "whatsapp", label: "Closing · case-study proof" },
+    { day: 157, channel: "call", label: "Closing · Decision call — offer a meeting" },
+    { day: 160, channel: "whatsapp", label: "Closing · offer — today's value" },
+    { day: 163, channel: "call", label: "Closing · Final-offer call — present the offer" },
+    { day: 166, channel: "whatsapp", label: "Closing · financing — when the timing's right" },
+    { day: 168, channel: "whatsapp", label: "Break-up — pausing your enquiry" },
   ],
 }
 
@@ -3164,6 +3164,11 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                 style={{ width: `${progress}%` }}
               />
             </div>
+            {SPRINT_START[lead.dripTrack!] != null && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Up to {lead.dripTotalMessages} touches — fewer if the buy date is near. The drip accelerates toward the expected buy date and can skip ahead to the closing sprint.
+              </p>
+            )}
           </div>
           {lead.dripNextMessageAt && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -3188,9 +3193,14 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
           {/* Issue 4 — the entire nurture sequence end-to-end. */}
           {lead.dripTrack && DRIP_SEQUENCE[lead.dripTrack] && (
             <div>
-              <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+              <p className="text-xs font-semibold mb-1 flex items-center gap-1.5">
                 <Timer className="size-3.5 text-muted-foreground" />Full nurture sequence
               </p>
+              {SPRINT_START[lead.dripTrack!] != null && (
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  Day numbers are nominal — real send dates accelerate toward the expected buy date.
+                </p>
+              )}
               <ol className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                 {DRIP_SEQUENCE[lead.dripTrack].map((t, i) => {
                   const idx = lead.dripMessageIndex ?? 0
