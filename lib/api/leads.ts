@@ -913,6 +913,7 @@ export interface CallNudgeRow extends ReplyRowFields {
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null
   last_outcome_by?: string | null
+  requalify_attempts?: number
   // Post-meeting follow-up only — the rep to also call + their latest reported update.
   sales_name?: string | null
   sales_phone?: string | null

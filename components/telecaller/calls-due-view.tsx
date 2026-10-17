@@ -149,13 +149,17 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
     const tel = lead.phone.replace(/\D/g, "")
     const salesTel = (lead.salesPhone ?? "").replace(/\D/g, "")
     const expanded = expandedIds.has(lead.id)
+    const isRequalify = lead.reason === "requalification"
+    const requalifyCall = isRequalify ? Math.min((lead.requalifyAttempts ?? 0) + 1, 4) : null
     const rowClass = lead.flagged
       ? "bg-slate-900 text-white border-l-4 border-l-amber-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-slate-900 [&_*]:text-white [&_*]:hover:text-white"
       : tone === "past"
         ? "bg-rose-100/60 hover:bg-rose-100"
         : tone === "overdue"
           ? "bg-rose-50 hover:bg-rose-100/70"
-          : undefined
+          : isRequalify
+            ? "border-l-4 border-l-violet-500 bg-violet-50/40 hover:bg-violet-50"
+            : undefined
     return (
       <div key={`${lead.id}-${lead.reason}`}>
         <LeadQueueRow
@@ -171,6 +175,11 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
           onOpen={() => toggle(lead.id)}
           meta={
             <span className="flex flex-wrap items-center gap-1.5">
+              {isRequalify && (
+                <span className="inline-flex items-center gap-1 font-semibold text-violet-700">
+                  🔁 Requalifying · call {requalifyCall}/4
+                </span>
+              )}
               {lead.reason === "callback" ? (
                 <span className="inline-flex items-center gap-1 font-medium text-foreground">
                   <PhoneCall className="size-3" />Callback at {lead.scheduledAt.toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
