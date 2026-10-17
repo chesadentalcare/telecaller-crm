@@ -243,6 +243,8 @@ export interface CallsDueLead extends LeadBase {
   lastOutcomeAt?: string | null
   // Who logged that most recent disposition (the accountability trail).
   lastOutcomeBy?: string | null
+  requalifyAttempts?: number
+  dripCycles?: number
   // Post-meeting follow-up only — the sales rep the telecaller may also call to verify
   // the visit went ahead, plus that rep's latest reported update (null until they respond).
   salesName?: string | null

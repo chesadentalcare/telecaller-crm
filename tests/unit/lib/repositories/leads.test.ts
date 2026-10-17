@@ -69,7 +69,7 @@ describe("fetchPipelineLeads — toPipeline mapping", () => {
     expect(lead.value).toBe("5-8L")
     expect(lead.flagged).toBe(false)
     expect(lead.dripTrack).toBe("3-month")
-    expect(lead.totalMessages).toBe(19)
+    expect(lead.totalMessages).toBe(22)
   })
 
   it("substitutes placeholders when name / phone / equipment are missing", async () => {
@@ -171,9 +171,9 @@ describe("fetchDripLeads — toDrip mapping", () => {
     ])
     const leads = await fetchDripLeads()
     expect(leads[0].track).toBe("3-month")
-    expect(leads[0].totalMessages).toBe(19)
+    expect(leads[0].totalMessages).toBe(22)
     expect(leads[1].track).toBe("6-month")
-    expect(leads[1].totalMessages).toBe(13)
+    expect(leads[1].totalMessages).toBe(29)
   })
 
   it("computes a non-negative seconds-until-next from a future next_message_at", async () => {
@@ -354,6 +354,25 @@ describe("fetchCallsDueLeads — toCallsDue mapping", () => {
     const [lead] = await fetchCallsDueLeads()
     expect(lead.salesUpdate).toBeNull()
     expect(lead.name).toBe("Lead #2")
+  })
+
+  it("maps a requalification nudge with its X/4 attempt count", async () => {
+    queues.calling.mockResolvedValue([
+      { id: 7, reason: "requalification", scheduled_at: "2026-10-17T09:00:00.000Z", slot: "morning", status: "pending", assigned_to: "neha", equipment: "Chair", customer_name: "Dr R", phone: "9811111111", requalify_attempts: 2, drip_cycles: 1 },
+    ])
+    const [lead] = await fetchCallsDueLeads()
+    expect(lead.reason).toBe("requalification")
+    expect(lead.requalifyAttempts).toBe(2)
+    expect(lead.dripCycles).toBe(1)
+  })
+
+  it("defaults requalifyAttempts to 0 when the backend omits it", async () => {
+    queues.calling.mockResolvedValue([
+      { id: 8, reason: "requalification", scheduled_at: "2026-10-17T09:00:00.000Z", slot: null, status: "pending", assigned_to: "neha", equipment: null, customer_name: null, phone: "9000" },
+    ])
+    const [lead] = await fetchCallsDueLeads()
+    expect(lead.requalifyAttempts).toBe(0)
+    expect(lead.dripCycles).toBe(0)
   })
 })
 

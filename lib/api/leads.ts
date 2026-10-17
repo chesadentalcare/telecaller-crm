@@ -226,6 +226,7 @@ export interface LeadExtensionRow {
   sales_assigned_name: string | null
   sales_assigned_at: string | null
   stage: string
+  drip_cycles?: number
   handed_off_at: string | null
   handoff_from: string | null
   first_call_route: "online_meeting" | "physical_meeting" | "drip_info" | "pending" | "not_interested" | "nurture"
@@ -913,6 +914,8 @@ export interface CallNudgeRow extends ReplyRowFields {
   last_outcome?: CallOutcome | null
   last_outcome_at?: string | null
   last_outcome_by?: string | null
+  requalify_attempts?: number
+  drip_cycles?: number
   // Post-meeting follow-up only — the rep to also call + their latest reported update.
   sales_name?: string | null
   sales_phone?: string | null

@@ -309,6 +309,8 @@ const toCallsDue = (r: CallNudgeRow): CallsDueLead => ({
   lastOutcome: r.last_outcome ?? null,
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
+  requalifyAttempts: r.requalify_attempts ?? 0,
+  dripCycles: r.drip_cycles ?? 0,
   salesName: r.sales_name ?? null,
   salesPhone: r.sales_phone ?? null,
   salesUpdate: r.sales_update
