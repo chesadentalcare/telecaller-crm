@@ -39,6 +39,12 @@ interface CallsDueViewProps {
   onOpenLead: (id: string) => void
 }
 
+const cycleOrdinal = (n: number): string => {
+  const v = n % 100
+  if (v >= 11 && v <= 13) return `${n}th`
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`
+}
+
 // Post-meeting follow-up — a small dialog to record the sales rep's response when the
 // telecaller had to call the rep (the rep's side wasn't yet reported via the sales app /
 // their WhatsApp). Mirrors RemoveFromDripButton's structure.
@@ -177,7 +183,7 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
             <span className="flex flex-wrap items-center gap-1.5">
               {isRequalify && (
                 <span className="inline-flex items-center gap-1 font-semibold text-violet-700">
-                  🔁 Requalifying · call {requalifyCall}/4
+                  🔁 Requalifying · call {requalifyCall}/4{lead.dripCycles ? ` · ${cycleOrdinal(lead.dripCycles + 1)} cycle` : ""}
                 </span>
               )}
               {lead.reason === "callback" ? (

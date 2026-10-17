@@ -358,11 +358,12 @@ describe("fetchCallsDueLeads — toCallsDue mapping", () => {
 
   it("maps a requalification nudge with its X/4 attempt count", async () => {
     queues.calling.mockResolvedValue([
-      { id: 7, reason: "requalification", scheduled_at: "2026-10-17T09:00:00.000Z", slot: "morning", status: "pending", assigned_to: "neha", equipment: "Chair", customer_name: "Dr R", phone: "9811111111", requalify_attempts: 2 },
+      { id: 7, reason: "requalification", scheduled_at: "2026-10-17T09:00:00.000Z", slot: "morning", status: "pending", assigned_to: "neha", equipment: "Chair", customer_name: "Dr R", phone: "9811111111", requalify_attempts: 2, drip_cycles: 1 },
     ])
     const [lead] = await fetchCallsDueLeads()
     expect(lead.reason).toBe("requalification")
     expect(lead.requalifyAttempts).toBe(2)
+    expect(lead.dripCycles).toBe(1)
   })
 
   it("defaults requalifyAttempts to 0 when the backend omits it", async () => {
@@ -371,6 +372,7 @@ describe("fetchCallsDueLeads — toCallsDue mapping", () => {
     ])
     const [lead] = await fetchCallsDueLeads()
     expect(lead.requalifyAttempts).toBe(0)
+    expect(lead.dripCycles).toBe(0)
   })
 })
 

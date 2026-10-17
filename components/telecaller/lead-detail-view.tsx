@@ -235,6 +235,7 @@ type LeadDetail = {
   dripTrack?: "1_month" | "3_month" | "6_plus_month"
   dripMessageIndex?: number
   dripTotalMessages?: number
+  dripCycles?: number
   dripNextMessageAt?: Date
   dripStartedAt?: Date
   // Issue 4 — projected nurture completion + current stage (from the backend).
@@ -344,6 +345,12 @@ function parsePayload(p: unknown): { text?: string; sentBy?: string | null; mess
   return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null }
 }
 
+const cycleOrdinal = (n: number): string => {
+  const v = n % 100
+  if (v >= 11 && v <= 13) return `${n}th`
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`
+}
+
 export function mapDetail(d: ApiLeadDetail): LeadDetail {
   const ext = d.extension
   const id = String(ext.opportunity_doc_entry)
@@ -429,6 +436,7 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     sapLive: d.sapLive ?? true,
     predictedClosingDate: ext.predicted_closing_date ?? undefined,
     predictedCloseSource: ext.predicted_close_source ?? undefined,
+    dripCycles: ext.drip_cycles ?? 0,
     status: (
       ext.stage === "physical_meeting_scheduled" || ext.stage === "zoom_meeting_done"
         ? "meeting-scheduled"
@@ -1040,6 +1048,9 @@ function overviewCards(lead: LeadDetail, productName: (id: string) => string) {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <InfoRow icon={ChevronRight} label="Stage" value={stageLabel(lead.stage, lead.dripTrack)} />
+          {!!lead.dripCycles && (
+            <InfoRow icon={Clock} label="Drip cycle" value={`${cycleOrdinal(lead.dripCycles + 1)} — requalified after a completed drip`} />
+          )}
           {/* SAP-native predicted closing date (live-read; "cached" when SAP was unreachable). */}
           <InfoRow
             icon={CalendarClock}
