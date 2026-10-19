@@ -253,6 +253,8 @@ type LeadDetail = {
   recoveryWhatsappSentAt?: Date
   // Attempts
   attempts: CallAttempt[]
+  // Superseded (previous-cycle) attempts — shown read-only under the Call History "Past" tab
+  pastAttempts?: CallAttempt[]
   // Phase 6 — lifecycle / routing (all optional so the mock literal stays valid)
   archived?: boolean
   archiveReason?: string
@@ -481,6 +483,17 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     scheduledMeetings,
     recoveryWhatsappSentAt: latestRecovery ? new Date(latestRecovery.sent_at) : undefined,
     attempts: d.attempts.map((a) => ({
+      id: String(a.id),
+      attemptedAt: new Date(a.attempted_at),
+      attemptNumber: a.attempt_number,
+      outcome: a.outcome,
+      notes: a.notes ?? undefined,
+      attemptedBy: a.attempted_by,
+      edited: !!a.edited_at,
+      notInterestedReason: a.not_interested_reason ?? undefined,
+      attemptType: a.attempt_type,
+    })),
+    pastAttempts: (d.pastAttempts ?? []).map((a) => ({
       id: String(a.id),
       attemptedAt: new Date(a.attempted_at),
       attemptNumber: a.attempt_number,
@@ -1409,6 +1422,9 @@ export function CallsTab({
   })()
   const autoPredictedClose = currentPredictedClose || dripProjClose || timelineEstimate
 
+  const [histTab, setHistTab] = useState<"current" | "past">("current")
+  const shownAttempts = histTab === "past" ? (lead.pastAttempts ?? []) : lead.attempts
+
   const { control, handleSubmit, reset, watch, formState } = useForm<CallAttemptValues>({
     resolver: zodResolver(callAttemptSchema),
     // Cast: "" doesn't satisfy the enum, but RHF needs concrete defaults to
@@ -2047,9 +2063,28 @@ export function CallsTab({
           <CardTitle className="text-sm flex items-center gap-2">
             <History className="size-4 text-muted-foreground" />
             Call History
-            <Badge variant="outline" className="ml-auto text-[10px]">
-              {lead.attempts.length} attempts
-            </Badge>
+            {(lead.pastAttempts?.length ?? 0) > 0 ? (
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setHistTab("current")}
+                  className={cn("rounded px-2 py-0.5 text-[10px] font-medium transition", histTab === "current" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}
+                >
+                  Current ({lead.attempts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistTab("past")}
+                  className={cn("rounded px-2 py-0.5 text-[10px] font-medium transition", histTab === "past" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}
+                >
+                  Past ({lead.pastAttempts?.length ?? 0})
+                </button>
+              </div>
+            ) : (
+              <Badge variant="outline" className="ml-auto text-[10px]">
+                {lead.attempts.length} attempts
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -2061,17 +2096,17 @@ export function CallsTab({
               </span>
             </div>
           )}
-          {lead.attempts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No attempts logged yet</p>
+          {shownAttempts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">{histTab === "past" ? "No past attempts" : "No attempts logged yet"}</p>
           ) : (
             <ol className="space-y-3">
-              {lead.attempts.map((a) => {
+              {shownAttempts.map((a) => {
                 const cfg = OUTCOME_CONFIG[a.outcome as CallOutcome]
                 const Icon = cfg.icon
                 // Only the FIRST call attempt is correctable — a mis-logged
                 // initial disposition. Later attempts stay read-only.
                 const isFirstAttempt = firstAttempt && a.id === firstAttempt.id
-                const canEdit = isFirstAttempt && !lead.crmLocked && lead.phoneVerified
+                const canEdit = histTab === "current" && isFirstAttempt && !lead.crmLocked && lead.phoneVerified
                 // Full call-log detail: what this outcome did + its reason + type.
                 const effect = attemptEffect(a)
                 const typeLabel = a.attemptType && a.attemptType !== "call" ? ATTEMPT_TYPE_LABEL[a.attemptType] : null
