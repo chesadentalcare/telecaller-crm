@@ -603,6 +603,7 @@ export interface ScoreHistory {
 export interface LeadDetail {
   extension: LeadExtensionRow
   attempts: AttemptRow[]
+  pastAttempts?: AttemptRow[]
   drip: DripStateRow | null
   meetings: MeetingRow[]
   whatsapp: Array<{
