@@ -50,6 +50,7 @@ import { AllocateSalesButton } from "./allocate-sales-button"
 import { toast } from "sonner"
 import { ApiError } from "@/lib/api/client"
 import type { PipelineLead, DripTrack } from "@/lib/types/lead"
+import { applyModalFilters, applyTrackFilter, countTracks } from "@/lib/pipeline/pipeline-filters"
 
 const IDLE_DAYS = 14
 const DRIP_STUCK_DAYS = 2
@@ -202,26 +203,13 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
 
   const flaggedCount = leads.filter((l) => l.flagged).length
 
-  const filteredLeads = scopeLeads
-    .filter((l) => !repliedOnly || isReplied(l))
-    .filter((l) => !meetingPendingOnly || !!l.meetingPending)
-    .filter((l) => !unverifiedOnly || !l.phoneVerified)
-    .filter((l) => {
-      if (!closeFrom && !closeTo) return true
-      if (!l.projectedClose) return false
-      const t = l.projectedClose.getTime()
-      if (closeFrom && t < new Date(`${closeFrom}T00:00:00`).getTime()) return false
-      if (closeTo && t > new Date(`${closeTo}T23:59:59`).getTime()) return false
-      return true
-    })
-    .filter((l) => !flaggedOnly || !!l.flagged)
-    .filter(
-      (l) =>
-        trackFilter === "all" ||
-        (trackFilter === "none"
-          ? !l.dripTrack
-          : l.dripTrack === trackFilter),
-    )
+  const preTrackLeads = applyModalFilters(
+    scopeLeads,
+    { repliedOnly, meetingPendingOnly, unverifiedOnly, flaggedOnly, closeFrom, closeTo },
+    isReplied,
+  )
+
+  const filteredLeads = applyTrackFilter(preTrackLeads, trackFilter)
     .sort((a, b) => {
       // Flagged leads always float to the top.
       if (!!a.flagged !== !!b.flagged) {
@@ -247,12 +235,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
       return b.createdAt.getTime() - a.createdAt.getTime()
     })
 
-  const trackCounts = {
-    "1-month": scopeLeads.filter((l) => l.dripTrack === "1-month").length,
-    "3-month": scopeLeads.filter((l) => l.dripTrack === "3-month").length,
-    "6-month": scopeLeads.filter((l) => l.dripTrack === "6-month").length,
-    none: scopeLeads.filter((l) => !l.dripTrack).length,
-  }
+  const trackCounts = countTracks(preTrackLeads)
 
   const anyFilterActive =
     activeTab !== "all" ||
