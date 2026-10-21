@@ -18,6 +18,8 @@ interface Props {
   setMeetingPendingOnly: (v: boolean) => void
   unverifiedOnly: boolean
   setUnverifiedOnly: (v: boolean) => void
+  closingCadenceOnly: boolean
+  setClosingCadenceOnly: (v: boolean) => void
   closeFrom: string
   setCloseFrom: (v: string) => void
   closeTo: string
@@ -28,18 +30,21 @@ export function PipelineFilterModal({
   repliedOnly, setRepliedOnly,
   meetingPendingOnly, setMeetingPendingOnly,
   unverifiedOnly, setUnverifiedOnly,
+  closingCadenceOnly, setClosingCadenceOnly,
   closeFrom, setCloseFrom,
   closeTo, setCloseTo,
 }: Props) {
   const [open, setOpen] = useState(false)
 
   const activeCount =
-    (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0) + (closeFrom || closeTo ? 1 : 0)
+    (repliedOnly ? 1 : 0) + (meetingPendingOnly ? 1 : 0) + (unverifiedOnly ? 1 : 0)
+    + (closingCadenceOnly ? 1 : 0) + (closeFrom || closeTo ? 1 : 0)
 
   const clearAll = () => {
     setRepliedOnly(false)
     setMeetingPendingOnly(false)
     setUnverifiedOnly(false)
+    setClosingCadenceOnly(false)
     setCloseFrom("")
     setCloseTo("")
   }
@@ -75,6 +80,16 @@ export function PipelineFilterModal({
               <Checkbox checked={unverifiedOnly} onCheckedChange={(v) => setUnverifiedOnly(!!v)} />
               Unverified number
             </label>
+          </div>
+
+          <div className="space-y-1.5 border-t pt-3">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={closingCadenceOnly} onCheckedChange={(v) => setClosingCadenceOnly(!!v)} />
+              In 1-month closing cadence
+            </label>
+            <p className="text-[11px] text-muted-foreground">
+              Leads now in the fast 1-month calling rhythm — every 1-Month lead, plus 3-Month and 6-Month leads that have reached their closing sprint.
+            </p>
           </div>
 
           <div className="space-y-2 border-t pt-3">

@@ -9,6 +9,22 @@ export interface PipelineModalFilters {
   flaggedOnly: boolean
   closeFrom: string
   closeTo: string
+  closingCadenceOnly: boolean
+}
+
+// The system's "closing sprint" — the step at which a longer track switches to the
+// fast 1-month calling rhythm (mirrors BAND_PACED_TRACKS.sprintStartIndex in the backend).
+export const CLOSING_SPRINT_START: Record<string, number> = { "3-month": 13, "6-month": 20 }
+
+// A lead is "in the 1-month closing cadence" if it is a native 1-month lead, or a
+// 3/6-month lead that has reached its closing sprint.
+export function inClosingCadence(lead: { dripTrack?: DripTrack | null; messagesSent?: number | null }): boolean {
+  const track = lead.dripTrack
+  if (track === "1-month") return true
+  if (track === "3-month" || track === "6-month") {
+    return (lead.messagesSent ?? 0) >= CLOSING_SPRINT_START[track]
+  }
+  return false
 }
 
 export interface TrackCounts {
@@ -23,6 +39,8 @@ interface ModalFields {
   meetingPending?: boolean | null
   phoneVerified?: boolean | null
   flagged?: boolean | null
+  dripTrack?: DripTrack | null
+  messagesSent?: number | null
 }
 
 interface TrackField {
@@ -53,6 +71,7 @@ export function applyModalFilters<T extends ModalFields>(
     .filter((l) => !f.unverifiedOnly || !l.phoneVerified)
     .filter((l) => inCloseRange(l.projectedClose, f.closeFrom, f.closeTo))
     .filter((l) => !f.flaggedOnly || !!l.flagged)
+    .filter((l) => !f.closingCadenceOnly || inClosingCadence(l))
 }
 
 export function countTracks(leads: TrackField[]): TrackCounts {
