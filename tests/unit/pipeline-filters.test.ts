@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   inCloseRange,
+  inClosingCadence,
   applyModalFilters,
   applyTrackFilter,
   countTracks,
@@ -12,6 +13,7 @@ type TestLead = {
   id: string
   dripTrack: DripTrack | null
   projectedClose: Date | null
+  messagesSent?: number
   meetingPending?: boolean
   phoneVerified?: boolean
   flagged?: boolean
@@ -22,6 +24,7 @@ const lead = (over: Partial<TestLead> = {}): TestLead => ({
   id: over.id ?? "x",
   dripTrack: over.dripTrack ?? null,
   projectedClose: over.projectedClose ?? null,
+  messagesSent: over.messagesSent,
   meetingPending: over.meetingPending,
   phoneVerified: over.phoneVerified ?? true,
   flagged: over.flagged,
@@ -39,6 +42,7 @@ const NO_FILTERS: PipelineModalFilters = {
   flaggedOnly: false,
   closeFrom: "",
   closeTo: "",
+  closingCadenceOnly: false,
 }
 
 const isReplied = (l: TestLead) => !!l.repliedUnread
@@ -178,5 +182,46 @@ describe("regression: track counts follow the closing-date filter", () => {
       expect(applyTrackFilter(preTrack, track)).toHaveLength(counts[track])
     }
     expect(applyTrackFilter(preTrack, "none")).toHaveLength(counts.none)
+  })
+})
+
+describe("inClosingCadence", () => {
+  it("every native 1-month lead counts, at any step", () => {
+    expect(inClosingCadence(lead({ dripTrack: "1-month", messagesSent: 0 }))).toBe(true)
+    expect(inClosingCadence(lead({ dripTrack: "1-month", messagesSent: 8 }))).toBe(true)
+  })
+
+  it("a 3-month lead counts only from its sprint (step 13)", () => {
+    expect(inClosingCadence(lead({ dripTrack: "3-month", messagesSent: 12 }))).toBe(false)
+    expect(inClosingCadence(lead({ dripTrack: "3-month", messagesSent: 13 }))).toBe(true)
+  })
+
+  it("a 6-month lead counts only from its sprint (step 20)", () => {
+    expect(inClosingCadence(lead({ dripTrack: "6-month", messagesSent: 19 }))).toBe(false)
+    expect(inClosingCadence(lead({ dripTrack: "6-month", messagesSent: 20 }))).toBe(true)
+  })
+
+  it("a lead not in a drip never counts", () => {
+    expect(inClosingCadence(lead({ dripTrack: null }))).toBe(false)
+  })
+})
+
+describe("applyModalFilters — closingCadenceOnly", () => {
+  const set = [
+    lead({ id: "1m", dripTrack: "1-month", messagesSent: 2 }),          // in
+    lead({ id: "3m-early", dripTrack: "3-month", messagesSent: 5 }),    // out (before sprint)
+    lead({ id: "3m-sprint", dripTrack: "3-month", messagesSent: 15 }),  // in
+    lead({ id: "6m-early", dripTrack: "6-month", messagesSent: 10 }),   // out
+    lead({ id: "6m-sprint", dripTrack: "6-month", messagesSent: 22 }),  // in
+    lead({ id: "nodrip", dripTrack: null }),                            // out
+  ]
+
+  it("keeps only leads in the 1-month closing cadence", () => {
+    const out = applyModalFilters(set, { ...NO_FILTERS, closingCadenceOnly: true }, isReplied)
+    expect(out.map((l) => l.id)).toEqual(["1m", "3m-sprint", "6m-sprint"])
+  })
+
+  it("does nothing when the toggle is off", () => {
+    expect(applyModalFilters(set, NO_FILTERS, isReplied)).toHaveLength(set.length)
   })
 })

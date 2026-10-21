@@ -121,6 +121,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [repliedOnly, setRepliedOnly] = useState(false)
   const [meetingPendingOnly, setMeetingPendingOnly] = useState(false)
   const [unverifiedOnly, setUnverifiedOnly] = useState(false)
+  const [closingCadenceOnly, setClosingCadenceOnly] = useState(false)
   const [closeFrom, setCloseFrom] = useState("")
   const [closeTo, setCloseTo] = useState("")
   const [flaggedOnly, setFlaggedOnly] = useState(false)
@@ -205,7 +206,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
 
   const preTrackLeads = applyModalFilters(
     scopeLeads,
-    { repliedOnly, meetingPendingOnly, unverifiedOnly, flaggedOnly, closeFrom, closeTo },
+    { repliedOnly, meetingPendingOnly, unverifiedOnly, flaggedOnly, closeFrom, closeTo, closingCadenceOnly },
     isReplied,
   )
 
@@ -242,6 +243,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     repliedOnly ||
     meetingPendingOnly ||
     unverifiedOnly ||
+    closingCadenceOnly ||
     !!closeFrom ||
     !!closeTo ||
     flaggedOnly ||
@@ -253,6 +255,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
     setRepliedOnly(false)
     setMeetingPendingOnly(false)
     setUnverifiedOnly(false)
+    setClosingCadenceOnly(false)
     setCloseFrom("")
     setCloseTo("")
     setFlaggedOnly(false)
@@ -508,6 +511,8 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 setMeetingPendingOnly={setMeetingPendingOnly}
                 unverifiedOnly={unverifiedOnly}
                 setUnverifiedOnly={setUnverifiedOnly}
+                closingCadenceOnly={closingCadenceOnly}
+                setClosingCadenceOnly={setClosingCadenceOnly}
                 closeFrom={closeFrom}
                 setCloseFrom={setCloseFrom}
                 closeTo={closeTo}
