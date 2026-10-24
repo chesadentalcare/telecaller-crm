@@ -127,7 +127,7 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
   const [flaggedOnly, setFlaggedOnly] = useState(false)
   const [sortBy, setSortBy] = useState("recent")
   const [trackFilter, setTrackFilter] = useState<
-    "all" | DripTrack | "none"
+    "all" | DripTrack | "none" | "second-round"
   >("all")
 
   useEffect(() => {
@@ -624,6 +624,13 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                 </TabsTrigger>
 
                 <TabsTrigger
+                  value="second-round"
+                  className="text-xs px-3 h-6"
+                >
+                  Second round ({trackCounts["second-round"]})
+                </TabsTrigger>
+
+                <TabsTrigger
                   value="none"
                   className="text-xs px-3 h-6"
                 >
@@ -867,11 +874,15 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                                 With sales
                               </Badge>
                             )}
-                            {lead.dripTrack && (
+                            {lead.requalifyPending ? (
+                              <Badge variant="outline" className="text-[10px] border-amber-400/50 bg-amber-50 text-amber-700">
+                                Second round
+                              </Badge>
+                            ) : lead.dripTrack ? (
                               <Badge variant="outline" className="text-[10px] border-chart-2/20 bg-chart-2/10 text-chart-2">
                                 {lead.dripTrack === "1-month" ? "1-Month" : lead.dripTrack === "3-month" ? "3-Month" : "6-Month"}
                               </Badge>
-                            )}
+                            ) : null}
                           </span>
                         }
 

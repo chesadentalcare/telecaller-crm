@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react"
 import {
   PlusCircle, PhoneOutgoing, CheckCircle2, PhoneCall, Droplets, MessageSquare,
   CalendarCheck, FileText, Handshake, Moon, MapPin, ChevronRight, ChevronLeft,
-  CornerDownLeft, CornerDownRight, type LucideIcon,
+  CornerDownLeft, CornerDownRight, RotateCw, type LucideIcon,
 } from "lucide-react"
 
 import type { LeadDetail } from "@/lib/api/leads"
@@ -91,6 +91,23 @@ function StepBox({ step, order }: { step: JourneyStep; order: number }) {
   )
 }
 
+const ORDINAL: Record<number, string> = { 2: "Second", 3: "Third", 4: "Fourth", 5: "Fifth", 6: "Sixth" }
+
+function RoundDivider({ round, at }: { round: number; at?: string | null }) {
+  const label = ORDINAL[round] ? `${ORDINAL[round]} round started` : `Round ${round} started`
+  return (
+    <div className="flex items-center gap-2 py-1.5">
+      <div className="h-0.5 flex-1 rounded bg-amber-400/70" />
+      <span className="flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700">
+        <RotateCw className="size-3.5" strokeWidth={3} />
+        {label}
+        {at ? <span className="font-medium text-amber-600/80">· {fmt(at)}</span> : null}
+      </span>
+      <div className="h-0.5 flex-1 rounded bg-amber-400/70" />
+    </div>
+  )
+}
+
 export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
   const cols = useCols()
   if (!detail) {
@@ -99,9 +116,19 @@ export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
 
   const { steps, summary } = buildLeadJourney(detail)
 
-  const rows: { step: JourneyStep; gi: number }[][] = []
-  for (let i = 0; i < steps.length; i += cols) {
-    rows.push(steps.slice(i, i + cols).map((step, j) => ({ step, gi: i + j })))
+  // Group consecutive steps by round so each round gets its own serpentine block,
+  // separated by a bold "Second round started" divider. The flow still reads
+  // top→bottom; within a block it snakes L→R then R→L.
+  const groups: { round: number; items: { step: JourneyStep; gi: number }[] }[] = []
+  steps.forEach((step, gi) => {
+    const g = groups[groups.length - 1]
+    if (!g || g.round !== step.round) groups.push({ round: step.round, items: [{ step, gi }] })
+    else g.items.push({ step, gi })
+  })
+  const serpentine = (items: { step: JourneyStep; gi: number }[]) => {
+    const rows: { step: JourneyStep; gi: number }[][] = []
+    for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols))
+    return rows
   }
 
   return (
@@ -115,6 +142,7 @@ export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
         </div>
         <div className="flex flex-wrap gap-1">
           {summary.qualified && <Badge className="bg-violet-500/15 text-violet-600 border-violet-500/30 text-[10px]">Qualified</Badge>}
+          {summary.rounds > 1 && <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px]">Round {summary.rounds}</Badge>}
           {summary.inDrip && <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-[10px]">Drip · {summary.dripTrack}</Badge>}
           {summary.awaitingReply && <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">Needs reply</Badge>}
           {summary.optedOut && <Badge className="bg-rose-500/15 text-rose-600 border-rose-500/30 text-[10px]">Opted out</Badge>}
@@ -122,32 +150,40 @@ export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
         </div>
       </div>
 
-      {/* Serpentine flow — small boxes snaking L→R then R→L, connected by arrows. */}
-      <div className="space-y-0.5">
-        {rows.map((rowItems, r) => {
-          const ltr = r % 2 === 0
-          const ordered = ltr ? rowItems : [...rowItems].reverse()
+      {/* Per-round serpentine flow — bold arrows show the direction; a divider marks each new round. */}
+      <div className="space-y-1">
+        {groups.map((g) => {
+          const grpRows = serpentine(g.items)
           return (
-            <div key={r}>
-              <div className="flex items-stretch gap-1">
-                {ordered.map(({ step, gi }, i) => (
-                  <Fragment key={step.key}>
-                    <StepBox step={step} order={gi} />
-                    {i < ordered.length - 1 && (
-                      ltr
-                        ? <ChevronRight className="size-4 shrink-0 self-center text-muted-foreground/50" />
-                        : <ChevronLeft className="size-4 shrink-0 self-center text-muted-foreground/50" />
+            <div key={`round-${g.round}`} className="space-y-0.5">
+              {g.round > 1 && <RoundDivider round={g.round} at={g.items[0]?.step.at} />}
+              {grpRows.map((rowItems, r) => {
+                const ltr = r % 2 === 0
+                const ordered = ltr ? rowItems : [...rowItems].reverse()
+                return (
+                  <div key={r}>
+                    <div className="flex items-stretch gap-1">
+                      {ordered.map(({ step, gi }, i) => (
+                        <Fragment key={step.key}>
+                          <StepBox step={step} order={gi} />
+                          {i < ordered.length - 1 && (
+                            ltr
+                              ? <ChevronRight className="size-5 shrink-0 self-center text-primary" strokeWidth={3} />
+                              : <ChevronLeft className="size-5 shrink-0 self-center text-primary" strokeWidth={3} />
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                    {r < grpRows.length - 1 && (
+                      <div className={cn("flex px-3 py-0.5", ltr ? "justify-end" : "justify-start")}>
+                        {ltr
+                          ? <CornerDownLeft className="size-5 text-primary" strokeWidth={3} />
+                          : <CornerDownRight className="size-5 text-primary" strokeWidth={3} />}
+                      </div>
                     )}
-                  </Fragment>
-                ))}
-              </div>
-              {r < rows.length - 1 && (
-                <div className={cn("flex px-3 py-0.5", ltr ? "justify-end" : "justify-start")}>
-                  {ltr
-                    ? <CornerDownLeft className="size-4 text-muted-foreground/50" />
-                    : <CornerDownRight className="size-4 text-muted-foreground/50" />}
-                </div>
-              )}
+                  </div>
+                )
+              })}
             </div>
           )
         })}

@@ -69,6 +69,9 @@ export interface PipelineLead extends LeadBase {
   meetingPending?: boolean
   // Active drip track this lead is on (null when not in a drip) — drives the Active-tab track filter.
   dripTrack?: DripTrack | null
+  // True when the lead finished a drip and is being re-worked (re-qualification) — a "second
+  // round" lead. Takes precedence over its (now stale) drip track in the Second-round filter.
+  requalifyPending?: boolean | null
   // Drip detail — present only when the lead is on an active 1/3/6-month drip (mirrors DripLead),
   // so the merged Active row can show the same progress / next / projection block the old Nurturing tab did.
   messagesSent?: number

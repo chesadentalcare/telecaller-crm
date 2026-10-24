@@ -1,6 +1,6 @@
 import type { DripTrack } from "@/lib/types/lead"
 
-export type TrackFilter = "all" | DripTrack | "none"
+export type TrackFilter = "all" | DripTrack | "none" | "second-round"
 
 export interface PipelineModalFilters {
   repliedOnly: boolean
@@ -32,6 +32,7 @@ export interface TrackCounts {
   "3-month": number
   "6-month": number
   none: number
+  "second-round": number
 }
 
 interface ModalFields {
@@ -45,6 +46,15 @@ interface ModalFields {
 
 interface TrackField {
   dripTrack?: DripTrack | null
+  requalifyPending?: boolean | null
+}
+
+// A re-qualified ("second round") lead is bucketed on its own — NOT under its now-stale
+// drip track nor "Not in drip" — so the pipeline stops mislabelling it as 1-Month.
+export function trackBucket(l: TrackField): DripTrack | "none" | "second-round" {
+  if (l.requalifyPending) return "second-round"
+  if (l.dripTrack) return l.dripTrack
+  return "none"
 }
 
 export function inCloseRange(
@@ -75,11 +85,13 @@ export function applyModalFilters<T extends ModalFields>(
 }
 
 export function countTracks(leads: TrackField[]): TrackCounts {
+  const by = (b: DripTrack | "none" | "second-round") => leads.filter((l) => trackBucket(l) === b).length
   return {
-    "1-month": leads.filter((l) => l.dripTrack === "1-month").length,
-    "3-month": leads.filter((l) => l.dripTrack === "3-month").length,
-    "6-month": leads.filter((l) => l.dripTrack === "6-month").length,
-    none: leads.filter((l) => !l.dripTrack).length,
+    "1-month": by("1-month"),
+    "3-month": by("3-month"),
+    "6-month": by("6-month"),
+    none: by("none"),
+    "second-round": by("second-round"),
   }
 }
 
@@ -87,9 +99,6 @@ export function applyTrackFilter<T extends TrackField>(
   leads: T[],
   trackFilter: TrackFilter,
 ): T[] {
-  return leads.filter(
-    (l) =>
-      trackFilter === "all" ||
-      (trackFilter === "none" ? !l.dripTrack : l.dripTrack === trackFilter),
-  )
+  if (trackFilter === "all") return leads
+  return leads.filter((l) => trackBucket(l) === trackFilter)
 }

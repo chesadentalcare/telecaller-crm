@@ -30,6 +30,7 @@ export interface JourneyStep {
   detail?: string
   at?: string | null
   tone: JourneyTone
+  round: number
 }
 
 export interface JourneySummary {
@@ -42,6 +43,7 @@ export interface JourneySummary {
   optedOut: boolean
   terminal: "won" | "lost" | "archived" | null
   totalEvents: number
+  rounds: number
 }
 
 export interface LeadJourney {
@@ -129,10 +131,30 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
     : stage === "archived" ? "archived"
     : null
   const isTerminal = TERMINAL_STAGES.has(stage)
-  const awaitingReply = inbound.length > 0 && !isTerminal
+  // "Needs reply" must clear the moment the rep responds — mirror the backend
+  // awaitingReplyExpr / Replies tab: a customer inbound only still needs a reply if it
+  // arrived AFTER the rep's last manual WhatsApp AND last engaged call. (A STOP / a
+  // sales-side inbound never counts as the customer awaiting us.)
+  const toMs = (s?: string | null): number => {
+    const v = s ? Date.parse(s) : NaN
+    return Number.isNaN(v) ? 0 : v
+  }
+  const lastCustomerInboundAt = inbound
+    .filter((r) => !r.from_sales && r.intent !== "stop")
+    .reduce((mx, r) => Math.max(mx, toMs(r.received_at)), 0)
+  const lastRepRespondedAt = Math.max(
+    whatsapp
+      .filter((w) => w.message_type === "manual")
+      .reduce((mx, w) => Math.max(mx, toMs(w.sent_at)), 0),
+    attempts
+      .filter((a) => a.outcome === "engaged" && (a.attempt_type === "call" || a.attempt_type === "retry_call"))
+      .reduce((mx, a) => Math.max(mx, toMs(a.attempted_at)), 0),
+  )
+  const awaitingReply = lastCustomerInboundAt > 0 && lastCustomerInboundAt > lastRepRespondedAt && !isTerminal
 
-  const raw: (JourneyStep & { _t: number; _seq: number })[] = []
-  const push = (s: JourneyStep, seq: number) => raw.push({ ...s, _t: ms(s.at), _seq: seq })
+  // `round` is assigned later (after chronological sort), so steps are pushed without it.
+  const raw: (Omit<JourneyStep, "round"> & { _t: number; _seq: number })[] = []
+  const push = (s: Omit<JourneyStep, "round">, seq: number) => raw.push({ ...s, _t: ms(s.at), _seq: seq })
 
   const equipment = (ext.equipment_interest as string) || (ext.equipment as string) || null
   const source = (ext.source as string) || null
@@ -223,18 +245,30 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
   }
 
   raw.sort((a, b) => (a._t !== b._t ? a._t - b._t : a._seq - b._seq))
-  const steps: JourneyStep[] = raw.map((r) => ({
-    key: r.key, phase: r.phase, actor: r.actor, title: r.title, detail: r.detail, at: r.at, tone: r.tone,
-  }))
+  // Split the life into "rounds": round 1 is the first contact→drip cycle; a new round
+  // begins each time the lead is re-qualified (drip ended, re-worked) or re-enters a drip
+  // after one completed. The UI uses this to print a "Second round started" divider.
+  let round = 1
+  let sawDripExit = false
+  const steps: JourneyStep[] = raw.map((r) => {
+    const reentryDrip = r.key.startsWith("drip-in") && sawDripExit
+    if (r.key === "requalify" || reentryDrip) round += 1
+    if (r.key === "drip-out") sawDripExit = true
+    return { key: r.key, phase: r.phase, actor: r.actor, title: r.title, detail: r.detail, at: r.at, tone: r.tone, round }
+  })
+  const totalRounds = round
+
+  const requalifying = !!ext.requalify_pending
 
   const current = ((): JourneyStep => {
-    const base = { key: "current", phase: "current" as const, actor: "system" as const, at: ext.updated_at ?? null }
+    const base = { key: "current", phase: "current" as const, actor: "system" as const, at: ext.updated_at ?? null, round: totalRounds }
     if (terminal === "won") return { ...base, title: "Now · Deal WON", detail: "closed_won", tone: "good" }
     if (terminal === "lost") return { ...base, title: "Now · Deal LOST", detail: (ext.archive_reason as string) || "closed_lost", tone: "bad" }
     if (terminal === "archived") return { ...base, title: "Now · Archived", detail: (ext.archive_reason as string) || undefined, tone: "bad" }
     if (optedOut) return { ...base, title: "Now · Opted out", tone: "bad" }
     if (ext.dormant_since) return { ...base, title: "Now · Dormant", detail: (ext.archive_reason as string) || "no engagement", tone: "warn" }
     if (awaitingReply) return { ...base, title: "Now · Needs reply", detail: "customer messaged", tone: "warn" }
+    if (requalifying) return { ...base, title: "Now · Re-qualification", detail: (ext.requalify_reason as string) || "re-qualification call due", tone: "warn" }
     if (inDrip) return { ...base, title: "Now · In drip nurture", detail: `${TRACK_LABEL[drip!.track] ?? drip!.track} · touch ${drip!.current_message_index}`, tone: "good" }
     if (ext.callback_at) return { ...base, title: "Now · Callback scheduled", tone: "neutral" }
     if (qualified) return { ...base, title: `Now · Qualified`, detail: route, tone: "neutral" }
@@ -247,7 +281,7 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
     summary: {
       stage, route, qualified, inDrip,
       dripTrack: drip ? (TRACK_LABEL[drip.track] ?? drip.track) : null,
-      awaitingReply, optedOut, terminal, totalEvents: steps.length,
+      awaitingReply, optedOut, terminal, totalEvents: steps.length, rounds: totalRounds,
     },
   }
 }

@@ -682,6 +682,9 @@ export interface PipelineRow extends ReplyRowFields {
   projection?: DripProjectionPayload | null
   // Close-Readiness Index — latest persisted daily score (0..100), null until first scored.
   cri?: number | null
+  // 1 when the lead has finished a drip and is being re-worked (re-qualification) — i.e. a
+  // "second round" lead. Powers the Second-round filter so it isn't shown as a stale 1-Month.
+  requalify_pending?: 0 | 1 | boolean
 }
 
 export interface NoResponseRow extends ReplyRowFields {
