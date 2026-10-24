@@ -193,6 +193,40 @@ describe("buildLeadJourney — terminal & current-state precedence", () => {
     expect(j.steps[j.steps.length - 1].title).toBe("Now · Needs reply")
   })
 
+  it("clears awaitingReply once the rep replies (manual WhatsApp) after the customer's last inbound", () => {
+    const j = buildLeadJourney(
+      makeDetail({
+        ext: { stage: "new" },
+        inbound: [{ id: 1, intent: "vague", body: "Request a callback", received_at: "2026-09-30T05:06:00.000Z", from_sales: 0 }],
+        whatsapp: [{ id: 7, message_type: "manual", template_name: "manual_reply", sent_at: "2026-09-30T06:09:00.000Z", payload: { text: "we spoke mam" } }],
+      }),
+    )
+    expect(j.summary.awaitingReply).toBe(false)
+    expect(j.steps[j.steps.length - 1].title).not.toBe("Now · Needs reply")
+  })
+
+  it("an engaged call logged after the inbound also clears awaitingReply", () => {
+    const j = buildLeadJourney(
+      makeDetail({
+        ext: { stage: "new" },
+        inbound: [{ id: 1, intent: "vague", body: "hi", received_at: "2026-09-30T05:00:00.000Z", from_sales: 0 }],
+        attempts: [{ id: 2, attempt_type: "call", attempt_number: 1, outcome: "engaged", attempted_at: "2026-09-30T07:00:00.000Z", attempted_by: "Neha", notes: null, not_interested_reason: null, edited_at: null }],
+      }),
+    )
+    expect(j.summary.awaitingReply).toBe(false)
+  })
+
+  it("still awaits a reply when the rep's response predates the customer's inbound", () => {
+    const j = buildLeadJourney(
+      makeDetail({
+        ext: { stage: "new" },
+        inbound: [{ id: 1, intent: "vague", body: "hello again", received_at: "2026-09-30T10:00:00.000Z", from_sales: 0 }],
+        whatsapp: [{ id: 7, message_type: "manual", template_name: "manual_reply", sent_at: "2026-09-29T10:00:00.000Z", payload: { text: "older reply" } }],
+      }),
+    )
+    expect(j.summary.awaitingReply).toBe(true)
+  })
+
   it("opt-out (STOP) wins the current step over drip nurture", () => {
     const j = buildLeadJourney(
       makeDetail({

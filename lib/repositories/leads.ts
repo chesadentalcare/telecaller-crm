@@ -121,6 +121,7 @@ const toPipeline = (r: PipelineRow): PipelineLead => ({
   lastOutcomeAt: r.last_outcome_at ?? null,
   lastOutcomeBy: r.last_outcome_by ?? null,
   meetingPending: !!r.meeting_pending,
+  requalifyPending: !!r.requalify_pending,
   dripTrack: r.drip_track ? trackBackToFront(r.drip_track) : null,
   messagesSent: r.drip_track ? (r.drip_index ?? 0) : undefined,
   totalMessages: r.drip_track ? (r.drip_track === "1_month" ? 9 : r.drip_track === "3_month" ? 22 : r.drip_track === "6_plus_month" ? 29 : r.drip_track === "24_month" ? 16 : 13) : undefined,

@@ -18,6 +18,7 @@ type TestLead = {
   phoneVerified?: boolean
   flagged?: boolean
   repliedUnread?: boolean
+  requalifyPending?: boolean
 }
 
 const lead = (over: Partial<TestLead> = {}): TestLead => ({
@@ -29,6 +30,7 @@ const lead = (over: Partial<TestLead> = {}): TestLead => ({
   phoneVerified: over.phoneVerified ?? true,
   flagged: over.flagged,
   repliedUnread: over.repliedUnread,
+  requalifyPending: over.requalifyPending,
 })
 
 // Dates are built with LOCAL time (no trailing "Z") to match how the predicate
@@ -142,12 +144,22 @@ describe("countTracks", () => {
   ]
 
   it("counts each bucket", () => {
-    expect(countTracks(set)).toEqual({ "1-month": 2, "3-month": 1, "6-month": 1, none: 1 })
+    expect(countTracks(set)).toEqual({ "1-month": 2, "3-month": 1, "6-month": 1, none: 1, "second-round": 0 })
   })
 
-  it("the four buckets partition the list (counts sum to length)", () => {
+  it("the buckets partition the list (counts sum to length)", () => {
     const c = countTracks(set)
-    expect(c["1-month"] + c["3-month"] + c["6-month"] + c.none).toBe(set.length)
+    expect(c["1-month"] + c["3-month"] + c["6-month"] + c.none + c["second-round"]).toBe(set.length)
+  })
+
+  it("a re-qualified lead buckets as second-round, not its stale drip track", () => {
+    const requal = [
+      lead({ dripTrack: "1-month", requalifyPending: true }),
+      lead({ dripTrack: "1-month" }),
+    ]
+    expect(countTracks(requal)).toEqual({ "1-month": 1, "3-month": 0, "6-month": 0, none: 0, "second-round": 1 })
+    expect(applyTrackFilter(requal, "second-round")).toHaveLength(1)
+    expect(applyTrackFilter(requal, "1-month")).toHaveLength(1)
   })
 })
 
@@ -167,12 +179,12 @@ describe("regression: track counts follow the closing-date filter", () => {
   const filters: PipelineModalFilters = { ...NO_FILTERS, closeFrom: "2026-11-01", closeTo: "2026-11-30" }
 
   it("unfiltered counts are the full totals", () => {
-    expect(countTracks(leads)).toEqual({ "1-month": 2, "3-month": 2, "6-month": 1, none: 1 })
+    expect(countTracks(leads)).toEqual({ "1-month": 2, "3-month": 2, "6-month": 1, none: 1, "second-round": 0 })
   })
 
   it("counts shrink to only in-range leads after the modal filter", () => {
     const preTrack = applyModalFilters(leads, filters, isReplied)
-    expect(countTracks(preTrack)).toEqual({ "1-month": 1, "3-month": 1, "6-month": 1, none: 1 })
+    expect(countTracks(preTrack)).toEqual({ "1-month": 1, "3-month": 1, "6-month": 1, none: 1, "second-round": 0 })
   })
 
   it("the per-track list length equals that track's badge count", () => {
