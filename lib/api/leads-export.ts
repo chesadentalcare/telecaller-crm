@@ -47,6 +47,8 @@ export const LEAD_EXPORT_COLUMNS: { key: string; label: string }[] = [
   { key: "timeline", label: "Timeline" },
   { key: "drip_track", label: "Drip Track" },
   { key: "drip_status", label: "Drip Status" },
+  { key: "second_round", label: "Second Round?" },
+  { key: "requalify_reason", label: "Re-qualify Reason" },
   { key: "total_calls", label: "# Calls" },
   { key: "engaged_calls", label: "# Engaged" },
   { key: "no_response_calls", label: "# No-Resp" },
