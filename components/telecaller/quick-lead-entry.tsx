@@ -42,7 +42,8 @@ const TIMELINES = [
 ] as const
 
 const EQUIPMENT_OPTIONS = [
-  "Dental Chair", "Full Chair Setup", "X-Ray Unit", "Autoclave", "Compressor", "Handpiece",
+  "Dental Chair", "Full Chair Setup", "Intraoral Scanner", "3D Printer", "Milling Machine",
+  "Resin / Material", "X-Ray Unit", "Autoclave", "Compressor", "Handpiece",
   "Scaler", "Light Cure", "Imaging System", "Other",
 ] as const
 
