@@ -129,10 +129,13 @@ export function LeadQueueRow({
           </div>
           {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
           {replied?.body && (
-            <p className="text-xs italic text-foreground/80 bg-muted/60 rounded px-2 py-1 mt-1 max-w-md line-clamp-2">
+            <p className={cn(
+              "text-xs italic rounded px-2 py-1 mt-1 max-w-md line-clamp-2",
+              flagged ? "bg-slate-800 text-white ring-1 ring-white/10" : "text-foreground/80 bg-muted/60",
+            )}>
               “{replied.body}”
               {replied.intent && (
-                <span className="not-italic text-muted-foreground"> · {INTENT_LABEL[replied.intent] ?? replied.intent}</span>
+                <span className={cn("not-italic", flagged ? "text-white/70" : "text-muted-foreground")}> · {INTENT_LABEL[replied.intent] ?? replied.intent}</span>
               )}
             </p>
           )}

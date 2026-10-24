@@ -875,11 +875,27 @@ export function PipelineView({ onOpenLead }: PipelineViewProps = {}) {
                               </Badge>
                             )}
                             {lead.requalifyPending ? (
-                              <Badge variant="outline" className="text-[10px] border-amber-400/50 bg-amber-50 text-amber-700">
+                              <Badge
+                                variant="outline"
+                                className={[
+                                  "text-[10px]",
+                                  lead.flagged
+                                    ? "border-amber-400/60 bg-slate-800 text-amber-300"
+                                    : "border-amber-400/50 bg-amber-50 text-amber-700",
+                                ].join(" ")}
+                              >
                                 Second round
                               </Badge>
                             ) : lead.dripTrack ? (
-                              <Badge variant="outline" className="text-[10px] border-chart-2/20 bg-chart-2/10 text-chart-2">
+                              <Badge
+                                variant="outline"
+                                className={[
+                                  "text-[10px]",
+                                  lead.flagged
+                                    ? "border-slate-500 bg-slate-800 text-white"
+                                    : "border-chart-2/20 bg-chart-2/10 text-chart-2",
+                                ].join(" ")}
+                              >
                                 {lead.dripTrack === "1-month" ? "1-Month" : lead.dripTrack === "3-month" ? "3-Month" : "6-Month"}
                               </Badge>
                             ) : null}

@@ -74,6 +74,7 @@ function StepBox({ step, order }: { step: JourneyStep; order: number }) {
       )}
     >
       <div className="flex items-center gap-1">
+        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold leading-none text-primary-foreground">{order + 1}</span>
         <span className={cn("size-1.5 shrink-0 rounded-full", TONE[step.tone])} />
         <Icon className={cn("size-3.5 shrink-0", s.text)} />
         <span className="truncate text-[11px] font-semibold leading-tight">{step.title}</span>
@@ -138,6 +139,7 @@ export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
           <h3 className="text-sm font-semibold">Lead journey</h3>
           <p className="text-[11px] text-muted-foreground">
             Every event this lead went through — rep actions, customer replies and automated jobs. {summary.totalEvents} events.
+            {" "}Follow the numbers <span className="font-semibold text-foreground">1→{summary.totalEvents}</span> — rows zig-zag, so each row continues just below and reverses direction.
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -175,10 +177,22 @@ export function LeadJourney({ detail }: { detail?: LeadDetail | null }) {
                       ))}
                     </div>
                     {r < grpRows.length - 1 && (
-                      <div className={cn("flex px-3 py-0.5", ltr ? "justify-end" : "justify-start")}>
-                        {ltr
-                          ? <CornerDownLeft className="size-5 text-primary" strokeWidth={3} />
-                          : <CornerDownRight className="size-5 text-primary" strokeWidth={3} />}
+                      <div className={cn("flex py-0.5", ltr ? "justify-end pr-3" : "justify-start pl-3")}>
+                        <span className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">
+                          {ltr ? (
+                            <>
+                              <CornerDownLeft className="size-3.5" strokeWidth={3} />
+                              continues below, now
+                              <ChevronLeft className="size-3.5" strokeWidth={3} />
+                            </>
+                          ) : (
+                            <>
+                              <ChevronRight className="size-3.5" strokeWidth={3} />
+                              now continues below
+                              <CornerDownRight className="size-3.5" strokeWidth={3} />
+                            </>
+                          )}
+                        </span>
                       </div>
                     )}
                   </div>

@@ -196,9 +196,11 @@ export function CallsDueView({ onOpenLead }: CallsDueViewProps) {
               {/* Previous call outcome — or "Fresh call" if never called. */}
               <span
                 className={
-                  lead.lastOutcome
-                    ? "inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                    : "inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                  lead.flagged
+                    ? "inline-flex items-center rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-white ring-1 ring-white/15"
+                    : lead.lastOutcome
+                      ? "inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      : "inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
                 }
               >
                 {lastOutcomeLabel(lead.lastOutcome)}
