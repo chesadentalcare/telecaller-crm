@@ -73,6 +73,16 @@ const DRIP_EXIT_LABEL: Record<string, string> = {
   exited_meeting_booked: "meeting booked",
 }
 
+// Plain-English re-qualification wording — the raw DB reason is internal jargon
+// ("Drip-completed: manager rejected archive"), so the journey shows what it means
+// and what's needed instead.
+const REQUALIFY_REASON_LABEL: Record<string, string> = {
+  "Drip-completed: manager rejected archive": "Follow-up cycle finished — call to re-confirm interest (kept active, not archived)",
+  "Un-archived — re-qualify": "Re-opened — call to re-confirm interest",
+}
+const requalifyDetail = (reason?: string | null): string =>
+  (reason && REQUALIFY_REASON_LABEL[reason]) || "Call to re-confirm interest, then re-start follow-up or close"
+
 const WA_MAP: Record<string, { title: string; phase: JourneyPhase; actor: JourneyActor }> = {
   drip: { title: "Drip WhatsApp", phase: "drip", actor: "system" },
   recovery: { title: "Recovery WhatsApp", phase: "drip", actor: "system" },
@@ -169,11 +179,20 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
   }
 
   if (qualified) {
-    const firstAttemptAt = attempts.length
+    // Qualification happens at the first ENGAGED call (which routes the lead to drip/meeting).
+    // Prefer that — or the drip start — over the "earliest visible attempt": a requalify reset
+    // supersedes the round-1 calls, so the earliest *non-superseded* attempt can be a later
+    // no-response, which would wrongly date "Qualified" onto an RNR in the second round.
+    const engagedAt = attempts
+      .filter((a) => a.outcome === "engaged")
+      .map((a) => a.attempted_at)
+      .sort((x, y) => ms(x) - ms(y))[0]
+    const earliestAttemptAt = attempts.length
       ? attempts.reduce((min, a) => (ms(a.attempted_at) < ms(min) ? a.attempted_at : min), attempts[0].attempted_at)
       : null
+    const qualifiedAt = engagedAt ?? drip?.started_at ?? earliestAttemptAt ?? ext.created_at
     push({ key: "qualified", phase: "qualify", actor: "rep", title: "Qualified",
-      detail: `route: ${route}`, at: firstAttemptAt ?? ext.created_at, tone: "good" }, 2)
+      detail: `route: ${route}`, at: qualifiedAt, tone: "good" }, 2)
   }
 
   attempts.forEach((a) => {
@@ -228,8 +247,8 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
       at: ext.wrong_number_at as string, tone: "bad" }, 3)
   }
   if (ext.requalify_at) {
-    push({ key: "requalify", phase: "qualify", actor: "system", title: "Re-qualification requested",
-      detail: (ext.requalify_reason as string) || undefined, at: ext.requalify_at as string, tone: "warn" }, 3)
+    push({ key: "requalify", phase: "qualify", actor: "system", title: "Re-qualification needed",
+      detail: requalifyDetail(ext.requalify_reason as string), at: ext.requalify_at as string, tone: "warn" }, 3)
   }
   if (ext.handed_off_at) {
     push({ key: "handoff", phase: "sales", actor: "sales", title: "Handed to Sales",
@@ -268,7 +287,7 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
     if (optedOut) return { ...base, title: "Now · Opted out", tone: "bad" }
     if (ext.dormant_since) return { ...base, title: "Now · Dormant", detail: (ext.archive_reason as string) || "no engagement", tone: "warn" }
     if (awaitingReply) return { ...base, title: "Now · Needs reply", detail: "customer messaged", tone: "warn" }
-    if (requalifying) return { ...base, title: "Now · Re-qualification", detail: (ext.requalify_reason as string) || "re-qualification call due", tone: "warn" }
+    if (requalifying) return { ...base, title: "Now · Re-qualification call due", detail: requalifyDetail(ext.requalify_reason as string), tone: "warn" }
     if (inDrip) return { ...base, title: "Now · In drip nurture", detail: `${TRACK_LABEL[drip!.track] ?? drip!.track} · touch ${drip!.current_message_index}`, tone: "good" }
     if (ext.callback_at) return { ...base, title: "Now · Callback scheduled", tone: "neutral" }
     if (qualified) return { ...base, title: `Now · Qualified`, detail: route, tone: "neutral" }

@@ -68,6 +68,25 @@ describe("buildLeadJourney — base skeleton", () => {
     expect(j.summary.qualified).toBe(false)
     expect(j.steps.some((s) => s.key === "qualified")).toBe(false)
   })
+
+  it("dates 'Qualified' from the drip start, not a later no-response, when round-1 calls are superseded", () => {
+    // Mirrors lead 4628: the engaged round-1 call is superseded (absent from attempts), so the
+    // only visible attempts are second-round no-responses. 'Qualified' must stay at the drip
+    // start (Sep 29), not borrow the Oct 21 RNR timestamp.
+    const j = buildLeadJourney(
+      makeDetail({
+        ext: { first_call_route: "drip_info", created_at: "2026-09-29T04:21:00.000Z" },
+        drip: { track: "1_month", status: "exited_completed", started_at: "2026-09-29T04:22:00.000Z", exited_at: "2026-10-16T02:44:00.000Z", current_message_index: 9, origin_outcome: "engaged_not_ready" },
+        attempts: [
+          { id: 1, attempt_type: "call", attempt_number: 1, outcome: "no_response", attempted_at: "2026-10-21T10:08:00.000Z", attempted_by: "Neha", notes: "RNR", not_interested_reason: null, edited_at: null },
+          { id: 2, attempt_type: "call", attempt_number: 2, outcome: "no_response", attempted_at: "2026-10-22T03:38:00.000Z", attempted_by: "Neha", notes: "Call declined", not_interested_reason: null, edited_at: null },
+        ],
+      }),
+    )
+    const qualified = j.steps.find((s) => s.key === "qualified")!
+    expect(qualified.at).toBe("2026-09-29T04:22:00.000Z")
+    expect(qualified.round).toBe(1)
+  })
 })
 
 describe("buildLeadJourney — attempts", () => {
