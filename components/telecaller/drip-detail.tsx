@@ -55,13 +55,16 @@ export function DripMeta({
   lastLabel?: string | null
   projection?: DripProjection
 }) {
-  const progress = totalMessages > 0 ? (messagesSent / totalMessages) * 100 : 0
+  // `messagesSent` is the backend's 0-based current_message_index; the human stage (the touch
+  // the lead is currently on) is index + 1 — matching the Drip tab, projection and Overview.
+  const stage = totalMessages > 0 ? Math.min(messagesSent + 1, totalMessages) : messagesSent + 1
+  const progress = totalMessages > 0 ? (stage / totalMessages) * 100 : 0
   const hasLast = !!lastEngagement && lastEngagement.getTime() !== 0
   return (
     <div className="mt-1 space-y-0.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
         <Progress value={progress} className="h-1.5 w-16" />
-        <span className="font-medium text-foreground/80">Stage {messagesSent}/{totalMessages}</span>
+        <span className="font-medium text-foreground/80">Stage {stage}/{totalMessages}</span>
         <span>•</span>
         <span title={nextLabel ?? undefined}>
           <Countdown seconds={nextMessageIn} channel={nextChannel} />
