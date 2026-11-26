@@ -245,7 +245,11 @@ type LeadDetail = {
   dripSends?: { index: number; sentAt: Date; template: string }[]
   // Past completed drip rounds (second round, third round…) — oldest first; powers the
   // per-round tabs. `sends` may be empty for a same-track re-run (its sends weren't re-logged).
-  dripRounds?: { round: number; track: string; endIndex: number; endedAt: Date | null; sends: { index: number; sentAt: Date; template: string }[] }[]
+  dripRounds?: { round: number; track: string; endIndex: number; startedAt: Date | null; endedAt: Date | null; sends: { index: number; sentAt: Date; template: string }[]; calls: { index: number; at: Date; done: boolean }[] }[]
+  // Current round's anchor/engaged date — shown on the "Day 0" anchor touch.
+  dripRoundStartedAt?: Date
+  // Current round's drip CALL dates (from call_nudges) — fills dates on call stages.
+  dripCallDates?: { index: number; at: Date; done: boolean }[]
   // CRM lock (SOP §4B — quote SLA breach)
   crmLocked: boolean
   crmLockedReason?: string
@@ -312,7 +316,9 @@ type WhatsappOutbound = {
   deliveredAt?: Date
   readAt?: Date
   toSales?: boolean
+  toCoordinator?: boolean
   sentToName?: string | null
+  coordinatorName?: string | null
 }
 
 type ZoomMeetingSummary = {
@@ -345,12 +351,12 @@ type ScheduledMeeting = {
 // reuse the exact same mapping + tab components instead of duplicating them.
 // whatsapp_messages.payload arrives as a JSON object (mysql2) or a JSON string
 // (depending on the driver/column) — normalise both to { text, sentBy } | null.
-function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null } | null {
+function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null; coordinatorName?: string | null } | null {
   if (!p) return null
   if (typeof p === "string") {
     try { return JSON.parse(p) } catch { return null }
   }
-  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null }
+  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null; coordinatorName?: string | null }
 }
 
 const cycleOrdinal = (n: number): string => {
@@ -420,7 +426,9 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       deliveredAt: w.delivered_at ? new Date(w.delivered_at) : undefined,
       readAt: w.read_at ? new Date(w.read_at) : undefined,
       toSales: p?.sentTo === "sales",
+      toCoordinator: p?.sentTo === "coordinator",
       sentToName: p?.salesRepName ?? null,
+      coordinatorName: p?.coordinatorName ?? null,
     }
   })
 
@@ -490,9 +498,15 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
           round: r.round,
           track: r.track,
           endIndex: r.endIndex,
+          startedAt: r.startedAt ? new Date(r.startedAt) : null,
           endedAt: r.endedAt ? new Date(r.endedAt) : null,
           sends: r.sends.map((s) => ({ index: s.index, sentAt: new Date(s.sentAt), template: s.template })),
+          calls: (r.calls ?? []).map((cc) => ({ index: cc.index, at: new Date(cc.at), done: cc.done })),
         }))
+      : undefined,
+    dripRoundStartedAt: d.dripRoundStartedAt ? new Date(d.dripRoundStartedAt) : undefined,
+    dripCallDates: d.dripCallDates
+      ? d.dripCallDates.map((cc) => ({ index: cc.index, at: new Date(cc.at), done: cc.done }))
       : undefined,
     crmLocked: !!ext.crm_locked,
     crmLockedReason: ext.crm_locked_reason ?? undefined,
@@ -2698,8 +2712,10 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
 // with a composer to reply directly from the dashboard. Free text is only permitted
 // inside Meta's 24h customer-care window (composer disabled + notice otherwise).
 // Sales-rep thread bubble — our message out (right) and the rep's reply in (left).
-function SalesBubble({ text, at, inbound, sentBy }: { text: string | null; at: Date; inbound?: boolean; sentBy?: string | null }) {
-  const outLabel = sentBy && sentBy !== "system" ? "You → sales rep" : "Reminder → sales rep"
+function SalesBubble({ text, at, inbound, sentBy, toCoordinator, coordinatorName }: { text: string | null; at: Date; inbound?: boolean; sentBy?: string | null; toCoordinator?: boolean; coordinatorName?: string | null }) {
+  const outLabel = toCoordinator
+    ? `Reminder → coordinator${coordinatorName ? `: ${coordinatorName}` : ""}`
+    : sentBy && sentBy !== "system" ? "You → sales rep" : "Reminder → sales rep"
   return (
     <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
       <div className={cn("max-w-[85%] rounded-lg px-3 py-2 text-xs", inbound ? "border bg-muted text-foreground" : "border border-indigo-500/20 bg-indigo-500/10 text-foreground")}>
@@ -2864,7 +2880,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
                 ) : item.msg.kind === "quotation" ? (
                   <OutboundBubble key={item.key} m={item.msg} />
                 ) : (
-                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} sentBy={item.msg.sentBy} />
+                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} sentBy={item.msg.sentBy} toCoordinator={item.msg.toCoordinator} coordinatorName={item.msg.coordinatorName} />
                 ),
               )}
             </div>
@@ -3179,6 +3195,15 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
   for (const s of isCurrentRound ? (lead.dripSends ?? []) : (pastRound?.sends ?? [])) {
     if (!viewSentByIndex.has(s.index)) viewSentByIndex.set(s.index, { sentAt: s.sentAt, template: s.template })
   }
+  // "Day 0" anchor date — the lead's engaged / drip-entry date for this round. The anchor call
+  // is skipped for engaged leads (the qualification call stood in for it), so index 0 has no
+  // send of its own; show the engaged date there instead of leaving it blank.
+  const roundStartDate = (isCurrentRound ? (lead.dripRoundStartedAt ?? lead.dripStartedAt) : pastRound?.startedAt) ?? null
+  // Real dates for CALL touches (check-in / closing calls), which aren't in whatsapp_messages.
+  const callDateByIndex = new Map<number, Date>()
+  for (const cc of isCurrentRound ? (lead.dripCallDates ?? []) : (pastRound?.calls ?? [])) {
+    if (!callDateByIndex.has(cc.index)) callDateByIndex.set(cc.index, cc.at)
+  }
 
   return (
     <div className="space-y-4">
@@ -3352,7 +3377,8 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                     state = i < idx ? "done" : isCurrentTouch ? "current" : "upcoming"
                   }
                   const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
-                  const shownDate = sent?.sentAt ?? (isCurrentTouch ? (lead.dripNextMessageAt ?? null) : null)
+                  const callAt = t.channel === "call" ? (callDateByIndex.get(i) ?? null) : null
+                  const shownDate = sent?.sentAt ?? callAt ?? (isCurrentTouch ? (lead.dripNextMessageAt ?? null) : null) ?? (i === 0 ? roundStartDate : null)
                   const sprintStart = SPRINT_START[viewTrack]
                   const inSprint = sprintStart != null && i >= sprintStart
                   const sprintCount = sprintStart != null ? DRIP_SEQUENCE[viewTrack].length - sprintStart : 0
