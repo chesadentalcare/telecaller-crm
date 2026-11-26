@@ -240,6 +240,12 @@ type LeadDetail = {
   dripStartedAt?: Date
   // Issue 4 — projected nurture completion + current stage (from the backend).
   dripProjection?: DripProjection
+  // Real per-touch drip sends (actual sent dates from whatsapp_messages) — powers the
+  // Drip-tab sequence's TRUE send dates. Undefined when the backend predates the field.
+  dripSends?: { index: number; sentAt: Date; template: string }[]
+  // Past completed drip rounds (second round, third round…) — oldest first; powers the
+  // per-round tabs. `sends` may be empty for a same-track re-run (its sends weren't re-logged).
+  dripRounds?: { round: number; track: string; endIndex: number; endedAt: Date | null; sends: { index: number; sentAt: Date; template: string }[] }[]
   // CRM lock (SOP §4B — quote SLA breach)
   crmLocked: boolean
   crmLockedReason?: string
@@ -476,6 +482,18 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
     dripNextMessageAt: d.drip?.next_message_at ? new Date(d.drip.next_message_at) : undefined,
     dripStartedAt: d.drip?.started_at ? new Date(d.drip.started_at) : undefined,
     dripProjection: d.drip?.projection ?? undefined,
+    dripSends: d.dripSends
+      ? d.dripSends.map((s) => ({ index: s.index, sentAt: new Date(s.sentAt), template: s.template }))
+      : undefined,
+    dripRounds: d.dripRounds
+      ? d.dripRounds.map((r) => ({
+          round: r.round,
+          track: r.track,
+          endIndex: r.endIndex,
+          endedAt: r.endedAt ? new Date(r.endedAt) : null,
+          sends: r.sends.map((s) => ({ index: s.index, sentAt: new Date(s.sentAt), template: s.template })),
+        }))
+      : undefined,
     crmLocked: !!ext.crm_locked,
     crmLockedReason: ext.crm_locked_reason ?? undefined,
     latestPhysicalMeetingId: latestPhysicalMeeting?.id,
@@ -3069,6 +3087,10 @@ const RAMP_START: Record<string, number> = {
 export function DripTab({ lead }: { lead: LeadDetail }) {
   const [exitOpen, setExitOpen] = useState(false)
   const [exitReason, setExitReason] = useState("")
+  // Which drip round the sequence shows; null = the current/live round (default).
+  const [activeRound, setActiveRound] = useState<number | null>(null)
+  // Reset the round selection back to "current" whenever the open lead changes.
+  useEffect(() => { setActiveRound(null) }, [lead.id])
   const { mutateAsync: exitDrip, isPending: exiting } = useExitDrip(lead.id)
 
   const handleExit = async () => {
@@ -3120,27 +3142,43 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
     "6_plus_month": "6+ Month Track",
   }
 
-  const progress = lead.dripMessageIndex && lead.dripTotalMessages
-    ? Math.round((lead.dripMessageIndex / lead.dripTotalMessages) * 100)
-    : 0
+  // Stage number is 1-based (the touch the lead is CURRENTLY on), matching the projection
+  // line, the Overview row and the lead-card chip. `dripMessageIndex` is the backend's
+  // 0-based pointer to the next touch, so the human stage is index + 1.
+  const total = lead.dripTotalMessages ?? 0
+  const stageNum = total
+    ? Math.min((lead.dripMessageIndex ?? 0) + 1, total)
+    : (lead.dripMessageIndex ?? 0) + 1
+  const progress = total ? Math.round((stageNum / total) * 100) : 0
 
-  // Real calendar date for each "Day N" touch. The schedule is relative (each touch
-  // is cadence-offset from when the previous one actually sent), so a server restart
-  // shifts the time but not the day. Anchor on the known next-send date and space the
-  // rest by their day-offsets; fall back to the enrolment date if next-send is missing.
-  const dripSeq = lead.dripTrack ? DRIP_SEQUENCE[lead.dripTrack] : undefined
-  const dripIdx = lead.dripMessageIndex ?? 0
-  const nextTouch = dripSeq?.[dripIdx]
-  let dripAnchorDate: Date | null = null
-  let dripAnchorDay = 0
-  if (lead.dripNextMessageAt && nextTouch) {
-    dripAnchorDate = lead.dripNextMessageAt
-    dripAnchorDay = nextTouch.day
-  } else if (lead.dripStartedAt) {
-    dripAnchorDate = lead.dripStartedAt
+  // Real send history per touch index (from whatsapp_messages via the backend). This replaces
+  // the old nominal back-projection so the dates here MATCH the Journey tab. A touch with no
+  // record was a call stage (no message) or was skipped when the drip accelerated to the
+  // closing sprint. `hasSendData` is false on an older backend — we then omit per-touch dates
+  // rather than inventing them.
+  const hasSendData = Array.isArray(lead.dripSends)
+  const sentByIndex = new Map<number, { sentAt: Date; template: string }>()
+  for (const s of lead.dripSends ?? []) {
+    if (!sentByIndex.has(s.index)) sentByIndex.set(s.index, { sentAt: s.sentAt, template: s.template })
   }
-  const touchDate = (day: number) =>
-    dripAnchorDate ? new Date(dripAnchorDate.getTime() + (day - dripAnchorDay) * 86_400_000) : null
+  const sentCount = sentByIndex.size
+
+  // ── Per-round view (re-qualified "second round"+ leads). Past completed rounds come from the
+  // backend; the current/live round is appended last and selected by default. `activeRound`
+  // (the hook above) picks which round's sequence the card renders.
+  const pastRounds = lead.dripRounds ?? []
+  const currentRoundNo = pastRounds.length + 1
+  // Clamp so a selection left over from another lead can never point past this lead's rounds.
+  const active = Math.min(Math.max(activeRound ?? currentRoundNo, 1), currentRoundNo)
+  const isCurrentRound = active === currentRoundNo
+  const pastRound = isCurrentRound ? null : pastRounds[active - 1]
+  const viewTrack = (isCurrentRound ? lead.dripTrack : pastRound?.track) as string | undefined
+  const viewIndex = isCurrentRound ? (lead.dripMessageIndex ?? 0) : (pastRound?.endIndex ?? 0)
+  const viewHasSendData = isCurrentRound ? hasSendData : true
+  const viewSentByIndex = new Map<number, { sentAt: Date; template: string }>()
+  for (const s of isCurrentRound ? (lead.dripSends ?? []) : (pastRound?.sends ?? [])) {
+    if (!viewSentByIndex.has(s.index)) viewSentByIndex.set(s.index, { sentAt: s.sentAt, template: s.template })
+  }
 
   return (
     <div className="space-y-4">
@@ -3175,10 +3213,10 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Timer className="size-4 text-amber-500" />
-              {trackLabels[lead.dripTrack!]}
+              {trackLabels[viewTrack ?? ""] ?? viewTrack}
             </CardTitle>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {RAMP_START[lead.dripTrack!] != null
+              {isCurrentRound && RAMP_START[lead.dripTrack!] != null
                 && (lead.dripMessageIndex ?? 0) >= RAMP_START[lead.dripTrack!]
                 && (SPRINT_START[lead.dripTrack!] == null || (lead.dripMessageIndex ?? 0) < SPRINT_START[lead.dripTrack!]) && (
                 <Badge className="gap-1 bg-blue-500/15 text-blue-700 border-blue-500/40 text-[10px] font-bold">
@@ -3186,79 +3224,141 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                   3-month pace · closing in
                 </Badge>
               )}
-              {SPRINT_START[lead.dripTrack!] != null && (lead.dripMessageIndex ?? 0) >= SPRINT_START[lead.dripTrack!] && (
+              {isCurrentRound && SPRINT_START[lead.dripTrack!] != null && (lead.dripMessageIndex ?? 0) >= SPRINT_START[lead.dripTrack!] && (
                 <Badge className="gap-1 bg-amber-500/15 text-amber-700 border-amber-500/40 text-[10px] font-bold">
                   <Zap className="size-3" />
                   Final-month sprint · 1-month pace
                 </Badge>
               )}
-              <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">
-                Active
-              </Badge>
+              {isCurrentRound ? (
+                <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">
+                  Active
+                </Badge>
+              ) : (
+                <Badge className="bg-muted text-muted-foreground border-border text-[10px]">
+                  Completed{pastRound?.endedAt ? ` · ${pastRound.endedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}` : ""}
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div>
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="font-medium">Message {lead.dripMessageIndex} of {lead.dripTotalMessages}</span>
-              <span className="text-xs text-muted-foreground">{progress}%</span>
-            </div>
-            <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full bg-amber-500 transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            {SPRINT_START[lead.dripTrack!] != null && (
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Up to {lead.dripTotalMessages} touches — fewer if the buy date is near. The drip accelerates toward the expected buy date and can skip ahead to the closing sprint.
-              </p>
-            )}
-          </div>
-          {lead.dripNextMessageAt && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="size-3.5" />
-              Next message: {lead.dripNextMessageAt.toLocaleString()}
+          {/* Per-round tabs — only shown once the lead has at least one completed earlier round. */}
+          {pastRounds.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 border-b pb-2.5">
+              {pastRounds.map((r) => (
+                <button
+                  key={r.round}
+                  type="button"
+                  onClick={() => setActiveRound(r.round)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    active === r.round ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  Round {r.round} · {(trackLabels[r.track] ?? r.track).replace(" Track", "")}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setActiveRound(currentRoundNo)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  isCurrentRound ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted",
+                )}
+              >
+                Round {currentRoundNo} · {(trackLabels[lead.dripTrack!] ?? lead.dripTrack ?? "").replace(" Track", "")} · now
+              </button>
             </div>
           )}
 
-          {/* Issue 4 — predicted closure, recomputed at every stage. */}
-          {lead.dripProjection && (
-            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 space-y-0.5">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                <Calendar className="size-4" />
-                Projected closing date: {new Date(lead.dripProjection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+          {isCurrentRound ? (
+            <>
+              <div>
+                <div className="flex items-baseline justify-between text-sm">
+                  <span className="font-medium">Stage {stageNum} of {total}</span>
+                  <span className="text-xs text-muted-foreground">{progress}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-amber-500 transition-all" style={{ width: `${progress}%` }} />
+                </div>
+                {hasSendData && (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    {sentCount} WhatsApp message{sentCount === 1 ? "" : "s"} actually sent so far — the rest of the {total} stages are calls or were skipped as the drip accelerated.
+                  </p>
+                )}
+                {SPRINT_START[lead.dripTrack!] != null && (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    Up to {total} touches — fewer if the buy date is near. The drip accelerates toward the expected buy date and can skip ahead to the closing sprint.
+                  </p>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Currently at stage {lead.dripProjection.stageIndex + 1} of {lead.dripProjection.totalStages} — {lead.dripProjection.stageLabel}. The predicted date updates as each stage sends.
-              </p>
+              {lead.dripNextMessageAt && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="size-3.5" />
+                  Next message: {lead.dripNextMessageAt.toLocaleString()}
+                </div>
+              )}
+
+              {/* Issue 4 — predicted closure, recomputed at every stage. */}
+              {lead.dripProjection && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 space-y-0.5">
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <Calendar className="size-4" />
+                    Projected closing date: {new Date(lead.dripProjection.projectedCompletionAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Currently at stage {lead.dripProjection.stageIndex + 1} of {lead.dripProjection.totalStages} — {lead.dripProjection.stageLabel}. The predicted date updates as each stage sends.
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              {trackLabels[pastRound!.track] ?? pastRound!.track} · completed{pastRound?.endedAt ? ` on ${pastRound.endedAt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}.{" "}
+              {pastRound?.sends.length
+                ? `${pastRound.sends.length} WhatsApp message${pastRound.sends.length === 1 ? "" : "s"} logged this round.`
+                : "Per-message dates weren't recorded for this round (it re-ran the same track)."}
             </div>
           )}
 
-          {/* Issue 4 — the entire nurture sequence end-to-end. */}
-          {lead.dripTrack && DRIP_SEQUENCE[lead.dripTrack] && (
+          {/* The entire nurture sequence end-to-end for the selected round. */}
+          {viewTrack && DRIP_SEQUENCE[viewTrack] && (
             <div>
               <p className="text-xs font-semibold mb-1 flex items-center gap-1.5">
                 <Timer className="size-3.5 text-muted-foreground" />Full nurture sequence
               </p>
-              {SPRINT_START[lead.dripTrack!] != null && (
+              {viewHasSendData ? (
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  Dates are the actual send dates (they match the Journey tab). No date = a call stage (no message) or a touch skipped as the drip accelerated.
+                </p>
+              ) : SPRINT_START[viewTrack] != null && (
                 <p className="mb-2 text-[11px] text-muted-foreground">
                   Day numbers are nominal — real send dates accelerate toward the expected buy date.
                 </p>
               )}
               <ol className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                {DRIP_SEQUENCE[lead.dripTrack].map((t, i) => {
-                  const idx = lead.dripMessageIndex ?? 0
-                  const state = i < idx ? "done" : i === idx ? "current" : "upcoming"
+                {DRIP_SEQUENCE[viewTrack].map((t, i) => {
+                  const idx = viewIndex
+                  const sent = viewSentByIndex.get(i)
+                  const isCurrentTouch = isCurrentRound && i === idx
+                  let state: "done" | "passed" | "current" | "skipped" | "upcoming"
+                  if (viewHasSendData) {
+                    if (sent) state = "done"
+                    else if (isCurrentTouch) state = "current"
+                    else if (i < idx) state = t.channel === "call" ? "passed" : (isCurrentRound ? "skipped" : "passed")
+                    else state = "upcoming"
+                  } else {
+                    state = i < idx ? "done" : isCurrentTouch ? "current" : "upcoming"
+                  }
                   const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
-                  const td = touchDate(t.day)
-                  const sprintStart = SPRINT_START[lead.dripTrack!]
+                  const shownDate = sent?.sentAt ?? (isCurrentTouch ? (lead.dripNextMessageAt ?? null) : null)
+                  const sprintStart = SPRINT_START[viewTrack]
                   const inSprint = sprintStart != null && i >= sprintStart
-                  const sprintCount = sprintStart != null ? DRIP_SEQUENCE[lead.dripTrack!].length - sprintStart : 0
-                  const rampStart = RAMP_START[lead.dripTrack!]
+                  const sprintCount = sprintStart != null ? DRIP_SEQUENCE[viewTrack].length - sprintStart : 0
+                  const rampStart = RAMP_START[viewTrack]
                   const inRamp = rampStart != null && i >= rampStart && (sprintStart == null || i < sprintStart)
-                  const rampCount = rampStart != null ? (sprintStart ?? DRIP_SEQUENCE[lead.dripTrack!].length) - rampStart : 0
+                  const rampCount = rampStart != null ? (sprintStart ?? DRIP_SEQUENCE[viewTrack].length) - rampStart : 0
                   return (
                     <Fragment key={i}>
                       {rampStart != null && i === rampStart && (
@@ -3288,24 +3388,31 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                           "flex items-center gap-2 rounded px-2 py-1 text-xs",
                           state === "current" && "bg-primary/10 ring-1 ring-primary/30",
                           state === "upcoming" && "opacity-60",
+                          state === "skipped" && "opacity-50",
                           inRamp && "border-l-2 border-blue-500/60 bg-blue-500/5 pl-1.5",
                           inSprint && "border-l-2 border-amber-500/70 bg-amber-500/5 pl-1.5",
                         )}
                       >
                         {state === "done" ? (
                           <CheckCircle2 className="size-3.5 text-success shrink-0" />
+                        ) : state === "passed" ? (
+                          <CheckCircle2 className="size-3.5 text-muted-foreground/50 shrink-0" />
                         ) : state === "current" ? (
                           <Clock className="size-3.5 text-primary shrink-0" />
+                        ) : state === "skipped" ? (
+                          <ChannelIcon className="size-3.5 text-muted-foreground/40 shrink-0" />
                         ) : (
                           <ChannelIcon className="size-3.5 text-muted-foreground shrink-0" />
                         )}
                         <span className="font-mono text-[10px] text-muted-foreground w-16 shrink-0 leading-tight">
                           Day {t.day}
-                          {td && (
+                          {shownDate ? (
                             <span className="block text-[9px] text-muted-foreground/70">
-                              {td.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                              {shownDate.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                             </span>
-                          )}
+                          ) : state === "skipped" ? (
+                            <span className="block text-[9px] text-amber-600/70">skipped</span>
+                          ) : null}
                         </span>
                         <ChannelIcon className="size-3 text-muted-foreground shrink-0" />
                         <span className={cn("truncate", state === "current" && "font-medium text-foreground", inRamp && "font-semibold text-blue-800", inSprint && "font-bold text-amber-800")}>{t.label}</span>

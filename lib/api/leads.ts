@@ -639,6 +639,20 @@ export interface LeadDetail {
   // LIVE from SAP. `sapLive` is false when that read failed and the values shown are the
   // MySQL last-known cache (decision #6) — the UI surfaces a "cached" indicator.
   sapLive?: boolean
+  // Real drip send log: the actual whatsapp_messages row per touch index (message_type='drip').
+  // Lets the Drip tab show TRUE send dates instead of a nominal back-projection. Absent when
+  // the backend predates this field (the tab then omits per-touch dates rather than faking them).
+  dripSends?: Array<{ index: number; sentAt: string; template: string }>
+  // Past completed drip rounds (re-qualified "second round" leads) — one entry per completed
+  // cycle, oldest first. Powers the per-round tabs; the current/active round is not in here.
+  // `sends` can be empty for a same-track re-run (its per-message rows weren't re-logged).
+  dripRounds?: Array<{
+    round: number
+    track: string
+    endIndex: number
+    endedAt: string | null
+    sends: Array<{ index: number; sentAt: string; template: string }>
+  }>
 }
 
 export interface PipelineRow extends ReplyRowFields {
