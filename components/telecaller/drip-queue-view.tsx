@@ -134,7 +134,10 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
             <div className="divide-y">
               {filteredLeads.map((lead) => {
                 const trackConfig = getTrackConfig(lead.track)
-                const progress = (lead.messagesSent / lead.totalMessages) * 100
+                // `messagesSent` is the backend 0-based current_message_index; the human stage is
+                // index + 1, matching the Drip tab / card / Overview.
+                const stage = lead.totalMessages > 0 ? Math.min(lead.messagesSent + 1, lead.totalMessages) : lead.messagesSent + 1
+                const progress = lead.totalMessages > 0 ? (stage / lead.totalMessages) * 100 : 0
                 const expanded = expandedIds.has(lead.id)
                 return (
                   <div key={lead.id}>
@@ -154,7 +157,7 @@ export function DripQueueView({ onOpenLead }: { onOpenLead?: (id: string) => voi
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Progress value={progress} className="h-1.5 w-16" />
-                          <span className="font-medium">Stage {lead.messagesSent}/{lead.totalMessages}</span>
+                          <span className="font-medium">Stage {stage}/{lead.totalMessages}</span>
                           <span>•</span>
                           <Countdown seconds={lead.nextMessageIn} channel={lead.dripNextChannel} />
                           {lead.lastEngagement.getTime() !== 0 && (

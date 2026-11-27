@@ -3156,6 +3156,7 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
     "1_month": "1-Month Track",
     "3_month": "3-Month Track",
     "6_plus_month": "6+ Month Track",
+    "24_month": "24-Month Nurture",
   }
 
   // Stage number is 1-based (the touch the lead is CURRENTLY on), matching the projection
@@ -3367,18 +3368,23 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                   const idx = viewIndex
                   const sent = viewSentByIndex.get(i)
                   const isCurrentTouch = isCurrentRound && i === idx
+                  const callAt = t.channel === "call" ? (callDateByIndex.get(i) ?? null) : null
+                  const anchorAt = i === 0 ? roundStartDate : null
+                  const hasRealDate = !!sent || !!callAt || !!anchorAt
                   let state: "done" | "passed" | "current" | "skipped" | "upcoming"
                   if (viewHasSendData) {
                     if (sent) state = "done"
                     else if (isCurrentTouch) state = "current"
-                    else if (i < idx) state = t.channel === "call" ? "passed" : (isCurrentRound ? "skipped" : "passed")
+                    // Behind the pointer: a real date = it happened (passed); no date in the CURRENT
+                    // round = it was jumped by acceleration (skipped). A completed PAST round's touch
+                    // stays "passed" — it ran; its per-touch date may just be unrecorded.
+                    else if (i < idx) state = isCurrentRound ? (hasRealDate ? "passed" : "skipped") : "passed"
                     else state = "upcoming"
                   } else {
                     state = i < idx ? "done" : isCurrentTouch ? "current" : "upcoming"
                   }
                   const ChannelIcon = t.channel === "call" ? Phone : MessageSquare
-                  const callAt = t.channel === "call" ? (callDateByIndex.get(i) ?? null) : null
-                  const shownDate = sent?.sentAt ?? callAt ?? (isCurrentTouch ? (lead.dripNextMessageAt ?? null) : null) ?? (i === 0 ? roundStartDate : null)
+                  const shownDate = sent?.sentAt ?? callAt ?? (isCurrentTouch ? (lead.dripNextMessageAt ?? null) : null) ?? anchorAt
                   const sprintStart = SPRINT_START[viewTrack]
                   const inSprint = sprintStart != null && i >= sprintStart
                   const sprintCount = sprintStart != null ? DRIP_SEQUENCE[viewTrack].length - sprintStart : 0
@@ -3436,8 +3442,8 @@ export function DripTab({ lead }: { lead: LeadDetail }) {
                             <span className="block text-[9px] text-muted-foreground/70">
                               {shownDate.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                             </span>
-                          ) : state === "skipped" ? (
-                            <span className="block text-[9px] text-amber-600/70">skipped</span>
+                          ) : i < idx ? (
+                            <span className="block text-[9px] text-amber-600/70">{isCurrentRound ? "skipped" : "—"}</span>
                           ) : null}
                         </span>
                         <ChannelIcon className="size-3 text-muted-foreground shrink-0" />

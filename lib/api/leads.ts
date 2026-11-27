@@ -650,9 +650,20 @@ export interface LeadDetail {
     round: number
     track: string
     endIndex: number
+    startedAt: string | null
     endedAt: string | null
     sends: Array<{ index: number; sentAt: string; template: string }>
+    calls: Array<{ index: number; at: string; done: boolean }>
   }>
+  // The current round's anchor/engaged date — fills the "Day 0" anchor touch (skipped for
+  // engaged leads, so it has no send of its own).
+  dripRoundStartedAt?: string | null
+  // Drip CALL touch dates for the current round (from call_nudges) — calls aren't in
+  // whatsapp_messages, so this fills the dates on call stages (check-in / closing calls).
+  dripCallDates?: Array<{ index: number; at: string; done: boolean }>
+  // The track the lead actually ENTERED the drip on (earliest send), for the Journey's
+  // "Entered drip · <track>" label — the current drip track can be a later promoted one.
+  dripEntryTrack?: string | null
 }
 
 export interface PipelineRow extends ReplyRowFields {

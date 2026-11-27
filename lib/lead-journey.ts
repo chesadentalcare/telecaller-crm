@@ -216,7 +216,10 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
 
   if (drip) {
     const origin = (drip as unknown as Record<string, unknown>).origin_outcome as string | null
-    push({ key: "drip-in", phase: "drip", actor: "system", title: `Entered drip · ${TRACK_LABEL[drip.track] ?? drip.track}`,
+    // Label the entry with the track the lead actually STARTED on (earliest send), not the
+    // current track — a lead auto-promoted 1-month → 3-month entered on 1-month.
+    const entryTrack = detail.dripEntryTrack ?? drip.track
+    push({ key: "drip-in", phase: "drip", actor: "system", title: `Entered drip · ${TRACK_LABEL[entryTrack] ?? entryTrack}`,
       detail: origin ? `origin: ${origin}` : undefined, at: drip.started_at, tone: "good" }, 3)
     if (drip.status !== "active" && drip.exited_at) {
       push({ key: "drip-out", phase: "drip", actor: "system", title: `Auto-left drip · ${DRIP_EXIT_LABEL[drip.status] ?? drip.status}`,
@@ -288,7 +291,7 @@ export function buildLeadJourney(detail: LeadDetail): LeadJourney {
     if (ext.dormant_since) return { ...base, title: "Now · Dormant", detail: (ext.archive_reason as string) || "no engagement", tone: "warn" }
     if (awaitingReply) return { ...base, title: "Now · Needs reply", detail: "customer messaged", tone: "warn" }
     if (requalifying) return { ...base, title: "Now · Re-qualification call due", detail: requalifyDetail(ext.requalify_reason as string), tone: "warn" }
-    if (inDrip) return { ...base, title: "Now · In drip nurture", detail: `${TRACK_LABEL[drip!.track] ?? drip!.track} · touch ${drip!.current_message_index}`, tone: "good" }
+    if (inDrip) return { ...base, title: "Now · In drip nurture", detail: `${TRACK_LABEL[drip!.track] ?? drip!.track} · stage ${drip!.current_message_index + 1}`, tone: "good" }
     if (ext.callback_at) return { ...base, title: "Now · Callback scheduled", tone: "neutral" }
     if (qualified) return { ...base, title: `Now · Qualified`, detail: route, tone: "neutral" }
     return { ...base, title: `Now · ${stage}`, tone: "neutral" }
