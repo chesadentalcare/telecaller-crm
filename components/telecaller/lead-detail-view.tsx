@@ -316,7 +316,9 @@ type WhatsappOutbound = {
   deliveredAt?: Date
   readAt?: Date
   toSales?: boolean
+  toCoordinator?: boolean
   sentToName?: string | null
+  coordinatorName?: string | null
 }
 
 type ZoomMeetingSummary = {
@@ -349,12 +351,12 @@ type ScheduledMeeting = {
 // reuse the exact same mapping + tab components instead of duplicating them.
 // whatsapp_messages.payload arrives as a JSON object (mysql2) or a JSON string
 // (depending on the driver/column) — normalise both to { text, sentBy } | null.
-function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null } | null {
+function parsePayload(p: unknown): { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null; coordinatorName?: string | null } | null {
   if (!p) return null
   if (typeof p === "string") {
     try { return JSON.parse(p) } catch { return null }
   }
-  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null }
+  return p as { text?: string; sentBy?: string | null; message?: SentMessage | null; sentTo?: string; salesRepName?: string | null; coordinatorName?: string | null }
 }
 
 const cycleOrdinal = (n: number): string => {
@@ -424,7 +426,9 @@ export function mapDetail(d: ApiLeadDetail): LeadDetail {
       deliveredAt: w.delivered_at ? new Date(w.delivered_at) : undefined,
       readAt: w.read_at ? new Date(w.read_at) : undefined,
       toSales: p?.sentTo === "sales",
+      toCoordinator: p?.sentTo === "coordinator",
       sentToName: p?.salesRepName ?? null,
+      coordinatorName: p?.coordinatorName ?? null,
     }
   })
 
@@ -2708,8 +2712,10 @@ function OutboundBubble({ m }: { m: WhatsappOutbound }) {
 // with a composer to reply directly from the dashboard. Free text is only permitted
 // inside Meta's 24h customer-care window (composer disabled + notice otherwise).
 // Sales-rep thread bubble — our message out (right) and the rep's reply in (left).
-function SalesBubble({ text, at, inbound, sentBy }: { text: string | null; at: Date; inbound?: boolean; sentBy?: string | null }) {
-  const outLabel = sentBy && sentBy !== "system" ? "You → sales rep" : "Reminder → sales rep"
+function SalesBubble({ text, at, inbound, sentBy, toCoordinator, coordinatorName }: { text: string | null; at: Date; inbound?: boolean; sentBy?: string | null; toCoordinator?: boolean; coordinatorName?: string | null }) {
+  const outLabel = toCoordinator
+    ? `Reminder → coordinator${coordinatorName ? `: ${coordinatorName}` : ""}`
+    : sentBy && sentBy !== "system" ? "You → sales rep" : "Reminder → sales rep"
   return (
     <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
       <div className={cn("max-w-[85%] rounded-lg px-3 py-2 text-xs", inbound ? "border bg-muted text-foreground" : "border border-indigo-500/20 bg-indigo-500/10 text-foreground")}>
@@ -2874,7 +2880,7 @@ export function InboundRepliesTab({ lead }: { lead: LeadDetail }) {
                 ) : item.msg.kind === "quotation" ? (
                   <OutboundBubble key={item.key} m={item.msg} />
                 ) : (
-                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} sentBy={item.msg.sentBy} />
+                  <SalesBubble key={item.key} text={item.msg.text || item.msg.templateName} at={item.at} sentBy={item.msg.sentBy} toCoordinator={item.msg.toCoordinator} coordinatorName={item.msg.coordinatorName} />
                 ),
               )}
             </div>
